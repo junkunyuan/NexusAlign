@@ -1,0 +1,12 @@
+name: hps_v3
+path: MizzenAI/HPSv3/
+mode: eval
+model_dtype: bf16
+amp_dtype: bf16
+
+fsdp:
+  fsdp_strategy: full_shard
+  fsdp_cpu_offload: false
+
+eval:
+  eval_batch_size: 4

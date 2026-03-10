@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite it using the metadata from this file.
+title: NexusAlign: A Unified and Extensible Framework for Aligning Foundation Models
+abstract: >-
+  A unified and extensible framework for aligning foundation models across
+  multiple modalities, including large language models, multimodal large language 
+  models, image generation models, and video generation models.
+authors: 
+  - given-names: Junkun
+  - family-names: Yuan
+  - given-names: You
+  - family-names: Huang
+version: 0.1.0-dev
+# date-released: "2026-03-08"
+license: Apache-2.0
+repository-code: https://github.com/junkunyuan/NexusAlign
+url: https://github.com/junkunyuan/NexusAlign
+type: software
+keywords:
+  - alignment
+  - rlhf
+  - post-training
+  - foundation models
+  - large language models
+  - multimodal models
+  - image generation
+  - video generation
+  - diffusion models

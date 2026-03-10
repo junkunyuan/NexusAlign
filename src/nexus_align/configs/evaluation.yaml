@@ -1,0 +1,14 @@
+defaults:
+  - _base_
+  - _self_
+  - data: hpd_v2_benchmark
+  - model: flux
+  - reward_model: hps_v2  # evaluation model
+
+common:
+  cache_log_dir: null  # resume evaluation
+
+log:
+  result_dir: inference_results  # dir to save inference results
+
+name: evaluation

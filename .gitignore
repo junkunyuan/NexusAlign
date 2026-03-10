@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+
+# Configs
+/*.yaml
+
+# Test and logs
+test/
+logs/
+wandb/
+
+# Distribution / packaging
+*.egg-info/
+
+# Else
+.ruff_cache/

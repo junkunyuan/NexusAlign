@@ -1,0 +1,23 @@
+common:
+  task: image_gen
+  seed: 42
+  deterministic: true
+  debug: false
+  debug_console: false
+  time_cost_analysis: false
+  data_and_model_dir: ""
+
+log:
+  exp_info: temp
+  log_dir: logs/${log.exp_info}
+  wandb:
+    entity: my_entity
+    project: my_project
+    name: ${log.exp_info}
+    wandb_offline: true
+
+hydra:
+  run:
+    dir: ${log.log_dir}
+  job:
+    chdir: true

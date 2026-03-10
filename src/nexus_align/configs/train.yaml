@@ -1,0 +1,24 @@
+defaults:
+  - _base_
+  - _self_
+  - data: hpd_v2
+  - model: flux
+  - reward_model: hps_v2
+  - algorithm: grpo
+
+common:
+  init_epoch: 0
+  init_step: 0
+  init_total_steps: 0
+
+ckpt_manager:
+  load_ckpt_path: ""
+  load_ckpt_only_model: true
+  save_ckpt_root: checkpoints/
+  save_ckpt_only_model: true
+  save_ckpt_every_n_steps: 20
+  save_ckpt_keep_last_n_steps: 3
+  save_ckpt_every_n_epochs: 1
+  save_ckpt_keep_last_n_epochs: 3
+
+name: train

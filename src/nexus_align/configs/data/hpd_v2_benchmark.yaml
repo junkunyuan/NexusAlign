@@ -1,0 +1,12 @@
+name: hpd_v2_benchmark
+path: null
+
+load:
+  sample_ratio: 1
+  deduplicate: true
+  remove_non_english: true
+  drop_last: false
+  shuffle: false
+  pin_memory: true
+  num_workers: 4
+  cache_dir: null

@@ -1,0 +1,12 @@
+name: aesthetic_predictor_v1
+path: shunk031/aesthetics-predictor-v1-vit-large-patch14
+mode: eval
+model_dtype: bf16
+amp_dtype: bf16
+
+fsdp:
+  fsdp_strategy: full_shard
+  fsdp_cpu_offload: false
+
+eval:
+  eval_batch_size: 64

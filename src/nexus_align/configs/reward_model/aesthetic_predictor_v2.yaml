@@ -1,0 +1,12 @@
+name: aesthetic_predictor_v2
+path: shunk031/aesthetics-predictor-v2-sac-logos-ava1-l14-linearMSE
+mode: eval
+model_dtype: bf16
+amp_dtype: bf16
+
+fsdp:
+  fsdp_strategy: full_shard
+  fsdp_cpu_offload: false
+
+eval:
+  eval_batch_size: 64

@@ -1,0 +1,22 @@
+name: grpo
+
+train:
+  num_epochs: 1
+  max_train_total_steps: 1000
+  train_batch_size: 8
+  grad_accu_step: 1
+  max_grad_norm: 1.
+
+optimizer:
+  lr: 1e-5
+  optimizer: adamw
+  weight_decay: 0.
+  warmup_steps: 0
+  lr_schedule: constant_with_warmup
+
+run:
+  sample_batch_size: 8
+  sample_save_dir: grpo_sampling
+  group_size: 8
+  adv_clip_max: 5.0
+  clip_range: 1e-2

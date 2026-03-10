@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-align"
+version = "0.1.0-a1"
+description = "NexusAlign: a unified and extensible framework for aligning foundation models."
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+  { name = "Junkun Yuan" },
+  { name = "You Huang" }
+]
+keywords = [
+    "alignment",
+    "rlhf",
+    "post-training",
+    "foundation models",
+    "large language models",
+    "multimodal large language models",
+    "image generation",
+    "video generation",
+    "diffusion models"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Machine Learning",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+    # torch>=2.7 introduces regressions observed in the training pipeline:
+    #   - Noticeable slowdown during training
+    #   - Mixed-precision instability in normalization layers
+    # We pin torch<2.7 until these issues are resolved upstream.
+    "torch>=2.5.0, <2.7.0",
+    
+    # transformers>=4.57.0 is required by Qwen3-VL
+    "transformers>=4.57.0",
+
+    "numpy>=1.24.0",
+    "diffusers>=0.30.0",
+    "accelerate>=1.0.1",
+    "hydra-core>=1.3.0",
+    "omegaconf>=2.3.0",
+    "tqdm>=4.65.0",
+    "matplotlib>=3.7",
+    "pyinstrument>=4.0.0",
+    "psutil>=5.9.0",
+    "Pillow>=10.0.0",
+    "wandb>=0.16.0",
+    "tensorboard>=2.14.0",
+    
+    # Reward models for image generation 
+    "hpsv3 @ git+https://github.com/junkunyuan/HPSv3",  # HPSv3
+    "hpsv2x>=1.2.0",  # HPSv2
+    "image-reward @ git+https://github.com/junkunyuan/ImageReward",  # ImageReward
+    "simple-aesthetics-predictor>=0.1.2",  # AestheticPredictorV1&V2
+]
+
+[project.urls]
+Homepage = "https://github.com/junkunyuan/NexusAlign"
+Repository = "https://github.com/junkunyuan/NexusAlign"
+Issues = "https://github.com/junkunyuan/NexusAlign/issues"
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "hf-doc-builder",
+    "ipdb"
+]
+
+[project.scripts]
+nexus-align = "nexus_align.cli.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
