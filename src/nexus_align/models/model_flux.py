@@ -3,9 +3,11 @@
 import os
 
 import torch
-
+from accelerate import init_empty_weights
 from diffusers import AutoencoderKL
 from diffusers import FluxTransformer2DModel
+from torch.distributed.checkpoint.state_dict import set_model_state_dict, StateDictOptions
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, StateDictType
 from transformers import CLIPTextModel, CLIPTokenizer, T5EncoderModel, T5TokenizerFast
 from diffusers.models.transformers.transformer_flux import (
     FluxTransformerBlock,
@@ -34,6 +36,8 @@ class FluxModel(BaseModel):
         device: torch.device,
         model_dtype: str,
         kwargs: dict,
+        *,
+        env=None,
     ) -> None:
         self.model_name = "FLUX"
         self.data_and_model_dir = kwargs["common"]["data_and_model_dir"]
@@ -47,6 +51,12 @@ class FluxModel(BaseModel):
         self.fsdp_cpu_offload = kwargs["model"]["fsdp"]["fsdp_cpu_offload"]
         self.activation_ckpt = kwargs["model"]["fsdp"]["activation_ckpt"]
         self.text_encoder_offload = kwargs["model"]["fsdp"]["text_encoder_offload"]
+        self.use_sharded_weights = kwargs["model"]["fsdp"].get("use_sharded_weights", False)
+        self.sharded_weights_dir = kwargs["model"]["fsdp"].get("sharded_weights_dir", "")
+        self.rank = env.rank if env else None
+        self.world_size = env.world_size if env else None
+        if self.use_sharded_weights and (env is None or self.rank is None or self.world_size is None):
+            raise ValueError("❌ env (with rank/world_size) required when use_sharded_weights is true")
 
         self.model, self.wrap_modules, self.params_train = self.load_model()
         self.vae = self.load_vae()
@@ -69,27 +79,16 @@ class FluxModel(BaseModel):
         Returns:
             (model, wrap_modules, params_train)
         """
-        subfolder = "transformer"
-        print(f"⏳ Loading FLUX model from <{self.pipe_path}>/{subfolder}")
-        model = FluxTransformer2DModel.from_pretrained(
-            pretrained_model_name_or_path=self.pipe_path,
-            subfolder=subfolder,
-            torch_dtype=self.model_dtype,
-        )
-
         wrap_modules = (FluxTransformerBlock, FluxSingleTransformerBlock)
-        model = fsdp_wrap(
-            model=model,
-            wrap_modules=wrap_modules,
-            param_dtype=self.model_dtype,
-            strategy=self.fsdp_strategy,
-            cpu_offload=self.fsdp_cpu_offload,
-            model_name=self.model_name,
-        )
+
+        if self.use_sharded_weights:
+            model = self._load_sharded(wrap_modules)
+        else:
+            model = self._load_pretrained(wrap_modules)
 
         if self.activation_ckpt:
             activation_wrap(model, wrap_modules, model_name=self.model_name)
-        
+
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -110,6 +109,69 @@ class FluxModel(BaseModel):
         torch.cuda.empty_cache()
 
         return model, wrap_modules, para_train
+
+    def _load_pretrained(self, wrap_modules: tuple) -> FSDP:
+        """Load transformer from HF pretrained weights and wrap with FSDP."""
+        subfolder = "transformer"
+        print(f"⏳ Loading FLUX model from <{self.pipe_path}>/{subfolder}")
+        model = FluxTransformer2DModel.from_pretrained(
+            pretrained_model_name_or_path=self.pipe_path,
+            subfolder=subfolder,
+            torch_dtype=self.model_dtype,
+        )
+        return fsdp_wrap(
+            model=model,
+            wrap_modules=wrap_modules,
+            param_dtype=self.model_dtype,
+            strategy=self.fsdp_strategy,
+            cpu_offload=self.fsdp_cpu_offload,
+            model_name=self.model_name,
+        )
+
+    def _load_sharded(self, wrap_modules: tuple) -> FSDP:
+        """Load transformer from pre-converted FSDP shards and wrap with FSDP."""
+        if not (self.sharded_weights_dir and self.sharded_weights_dir.strip()):
+            raise ValueError("❌ use_sharded_weights is true but sharded_weights_dir is empty")
+        shard_dir = os.path.join(self.data_and_model_dir, self.sharded_weights_dir)
+        if not os.path.isdir(shard_dir):
+            raise ValueError(f"❌ sharded_weights_dir not a directory: {shard_dir}")
+        missing = []
+        for i in range(self.world_size):
+            p = os.path.join(shard_dir, f"flux_shard-{i + 1:05d}-of-{self.world_size:05d}.pt")
+            if not os.path.isfile(p):
+                missing.append(p)
+        if missing:
+            raise ValueError(
+                f"❌ missing {len(missing)} shard(s) in {shard_dir} (expected {self.world_size}): {missing}"
+            )
+        shard_path = os.path.join(
+            shard_dir, f"flux_shard-{self.rank + 1:05d}-of-{self.world_size:05d}.pt"
+        )
+        print(f"⏳ Loading FLUX sharded weights (rank {self.rank}/{self.world_size}) from {shard_path}")
+
+        config = FluxTransformer2DModel.load_config(self.pipe_path, subfolder="transformer")
+        with init_empty_weights():
+            model = FluxTransformer2DModel.from_config(config, torch_dtype=self.model_dtype)
+
+        model = fsdp_wrap(
+            model=model,
+            wrap_modules=wrap_modules,
+            param_dtype=self.model_dtype,
+            strategy=self.fsdp_strategy,
+            cpu_offload=self.fsdp_cpu_offload,
+            from_empty_weights=True,
+            model_name=self.model_name,
+        )
+
+        with FSDP.state_dict_type(model, StateDictType.SHARDED_STATE_DICT):
+            local_sd = torch.load(shard_path, map_location="cpu", weights_only=False)
+            set_model_state_dict(
+                model,
+                model_state_dict=local_sd,
+                options=StateDictOptions(full_state_dict=False, cpu_offload=True),
+            )
+
+        return model
 
     def load_vae(self) -> AutoencoderKL:
         """Load VAE module."""
