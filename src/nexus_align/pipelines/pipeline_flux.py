@@ -52,29 +52,29 @@ class FluxInferPipeline:
             kwargs["common"]["data_and_model_dir"], 
             kwargs["model"]["path"]
         )
-        print(f"⏳ Loading {self.model_name} VAE from <{pipeline_path}>/vae")
+        print(f"⏳ Loading {self.model_name} VAE from <{pipeline_path}/vae>")
         vae = AutoencoderKL.from_pretrained(pipeline_path, subfolder="vae")
 
-        print(f"⏳ Loading {self.model_name} text_encoder from <{pipeline_path}>/text_encoder")
+        print(f"⏳ Loading {self.model_name} text_encoder from <{pipeline_path}/text_encoder>")
         text_encoder = CLIPTextModel.from_pretrained(
             pipeline_path, subfolder="text_encoder"
         )
         
-        print(f"⏳ Loading {self.model_name} text_encoder_2 from <{pipeline_path}>/text_encoder_2")
+        print(f"⏳ Loading {self.model_name} text_encoder_2 from <{pipeline_path}/text_encoder_2>")
         text_encoder_2 = T5EncoderModel.from_pretrained(
             pipeline_path, subfolder="text_encoder_2"
         )
         
-        print(f"⏳ Loading {self.model_name} tokenizer from <{pipeline_path}>/tokenizer")
+        print(f"⏳ Loading {self.model_name} tokenizer from <{pipeline_path}/tokenizer>")
         tokenizer = CLIPTokenizer.from_pretrained(pipeline_path, subfolder="tokenizer")
         
-        print(f"⏳ Loading {self.model_name} tokenizer 2 from <{pipeline_path}>/tokenizer_2")
+        print(f"⏳ Loading {self.model_name} tokenizer 2 from <{pipeline_path}/tokenizer_2>")
         tokenizer_2 = T5TokenizerFast.from_pretrained(pipeline_path, subfolder="tokenizer_2")
 
-        print(f"⏳ Loading {self.model_name} transformer from <{pipeline_path}>/transformer")
+        print(f"⏳ Loading {self.model_name} transformer from <{pipeline_path}/transformer>")
         transformer = FluxTransformer2DModel.from_pretrained(pipeline_path, subfolder="transformer")
         
-        print(f"⏳ Loading {self.model_name} scheduler from <{pipeline_path}>/scheduler")
+        print(f"⏳ Loading {self.model_name} scheduler from <{pipeline_path}/scheduler>")
         scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(pipeline_path, subfolder="scheduler")
 
         pipe = FluxPipeline(
