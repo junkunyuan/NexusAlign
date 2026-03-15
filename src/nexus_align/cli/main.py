@@ -72,21 +72,20 @@ def _add_distributed_args(parser: argparse.ArgumentParser) -> None:
         help="Number of GPUs per node (default: 1)",
     )
     parser.add_argument(
-        "--node-rank",
+        "--node_rank",
         type=int,
         default=0,
         dest="node_rank",
         help="Rank of this node (default: 0)",
     )
     parser.add_argument(
-        "--master-ip",
+        "--master_addr",
         type=str,
         default="127.0.0.1",
-        dest="master_ip",
         help="Master node IP or hostname (default: 127.0.0.1)",
     )
     parser.add_argument(
-        "--master-port",
+        "--master_port",
         type=int,
         default=29500,
         dest="master_port",
@@ -208,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
             nnodes=args.nnodes,
             nproc_per_node=args.nproc_per_node,
             node_rank=args.node_rank,
-            master_addr=args.master_ip,
+            master_addr=args.master_addr,
             master_port=args.master_port,
             rdzv_id=args.rdzv_id,
         )
@@ -226,7 +225,7 @@ def main(argv: list[str] | None = None) -> int:
             nnodes=args.nnodes,
             nproc_per_node=args.nproc_per_node,
             node_rank=args.node_rank,
-            master_addr=args.master_ip,
+            master_addr=args.master_addr,
             master_port=args.master_port,
             rdzv_id=args.rdzv_id,
         )
