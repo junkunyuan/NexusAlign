@@ -1,5 +1,6 @@
 """FLUX model for image generation."""
 
+import json
 import os
 
 import torch
@@ -18,6 +19,25 @@ from nexus_align.core.config import DTYPE_MAP
 from nexus_align.core.base_model import BaseModel
 from nexus_align.engine.distributed import all_reduce_tensor
 from nexus_align.engine.fsdp import fsdp_wrap, activation_wrap
+
+_CONFIG_DTYPE_MAP = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
+_CONFIG_DTYPE_ALIASES = {"fp32": "float32", "fp16": "float16", "bf16": "bfloat16"}
+
+
+def _dtype_from_config(model_path: str) -> torch.dtype | None:
+    path = os.path.join(model_path, "transformer", "config.json")
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f).get("torch_dtype")
+        if not isinstance(raw, str):
+            return None
+        s = raw.lower().replace("torch.", "").strip()
+        s = _CONFIG_DTYPE_ALIASES.get(s, s)
+        return _CONFIG_DTYPE_MAP.get(s)
+    except Exception:
+        return None
 
 
 class FluxModel(BaseModel):
@@ -153,6 +173,9 @@ class FluxModel(BaseModel):
         with init_empty_weights():
             model = FluxTransformer2DModel.from_config(config, torch_dtype=self.model_dtype)
 
+        inferred = _dtype_from_config(self.pipe_path)
+        init_dtype = inferred if inferred is not None else self.model_dtype
+
         model = fsdp_wrap(
             model=model,
             wrap_modules=wrap_modules,
@@ -160,6 +183,7 @@ class FluxModel(BaseModel):
             strategy=self.fsdp_strategy,
             cpu_offload=self.fsdp_cpu_offload,
             from_empty_weights=True,
+            init_dtype=init_dtype,
             model_name=self.model_name,
         )
 

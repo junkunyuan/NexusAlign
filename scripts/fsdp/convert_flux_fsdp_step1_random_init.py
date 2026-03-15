@@ -26,6 +26,7 @@ from torch.distributed.fsdp import (
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 
 DTYPE_MAP = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
+DTYPE_ALIASES = {"fp32": "float32", "fp16": "float16", "bf16": "bfloat16"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,9 +60,8 @@ def _dtype_from_config(source_path: str) -> torch.dtype | None:
         if not isinstance(raw, str):
             return None
         s = raw.lower().replace("torch.", "").strip()
-        if s == "bf16":
-            s = "bfloat16"
-        return DTYPE_MAP[s] if s in DTYPE_MAP else None
+        s = DTYPE_ALIASES.get(s, s)
+        return DTYPE_MAP.get(s)
     except Exception:
         return None
 
