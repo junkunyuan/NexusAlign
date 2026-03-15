@@ -1,0 +1,12 @@
+name: glm_4_6v_flash
+path: GLM-4.6V-Flash
+mode: eval
+model_dtype: bf16
+amp_dtype: bf16
+
+fsdp:
+  fsdp_strategy: full_shard
+  fsdp_cpu_offload: false
+
+eval:
+  eval_batch_size: 2

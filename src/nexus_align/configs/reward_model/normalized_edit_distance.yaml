@@ -1,0 +1,8 @@
+name: normalized_edit_distance
+path: PPOCRv5
+mode: eval
+model_dtype: fp32
+amp_dtype: fp32
+
+eval:
+  eval_batch_size: 16

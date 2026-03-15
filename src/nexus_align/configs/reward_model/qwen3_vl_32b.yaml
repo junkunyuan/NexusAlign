@@ -1,0 +1,12 @@
+name: qwen3_vl_32b
+path: Qwen3-VL-32B
+mode: eval
+model_dtype: bf16
+amp_dtype: bf16
+
+fsdp:
+  fsdp_strategy: full_shard
+  fsdp_cpu_offload: false
+
+eval:
+  eval_batch_size: 1

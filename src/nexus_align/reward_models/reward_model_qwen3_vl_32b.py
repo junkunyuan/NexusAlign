@@ -1,4 +1,4 @@
-"""Qwen3-VL reward model for image generation."""
+"""Qwen3-VL-32B reward model for image generation."""
 
 import json
 import re
@@ -33,18 +33,18 @@ Return the evaluation result in JSON format:
 """
 
 
-class Qwen3_VL_8B(BaseRewardModel):
+class Qwen3_VL_32B(BaseRewardModel):
     """
-    Qwen3-VL reward model for image generation.
-    
+    Qwen3-VL-32B reward model for image generation.
+
     References:
         - Qwen3-VL paper: https://arxiv.org/pdf/2511.21631.
         - Official repo: https://github.com/QwenLM/Qwen3-VL.
-        - Checkpoint: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct.
+        - Checkpoint: https://huggingface.co/Qwen/Qwen3-VL-32B.
     """
 
     def __init__(self, device: torch.device, kwargs: dict) -> None:
-        super().__init__("Qwen3-VL-8B", device, kwargs)
+        super().__init__("Qwen3-VL-32B", device, kwargs)
 
         self.model, self.processor = self.load_model()
 
@@ -56,15 +56,15 @@ class Qwen3_VL_8B(BaseRewardModel):
         """
         Load model.
 
-        Follow the repo:https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
+        Follow the repo: https://huggingface.co/Qwen/Qwen3-VL-32B
         """
         from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
         model = Qwen3VLForConditionalGeneration.from_pretrained(
-            self.model_path, 
-            dtype=self.model_dtype, 
-            device_map=f"cuda:{self.device.index}"
+            self.model_path,
+            dtype=self.model_dtype,
+            device_map=f"cuda:{self.device.index}",
         )
 
         if self.mode == "train":
@@ -85,20 +85,19 @@ class Qwen3_VL_8B(BaseRewardModel):
         Evaluate a batch of (image, text) pairs.
 
         Follow the repo: https://github.com/QwenLM/Qwen3-VL.
-        
+
         Args:
             data (`dict`):
                 image (`list`): List of paths to images.
                 text (`list`): List of text strings.
             return_tensor (`bool`): Whether to return a tensor.
-        
+
         Returns:
             `list` | `torch.Tensor`: Scores between each pair of images and texts.
         """
         images = data["image"]
         prompts = data["text"]
 
-        # Qwen3-VL needs to disable deterministic
         deter_status = torch.are_deterministic_algorithms_enabled()
         torch.use_deterministic_algorithms(False)
 
@@ -167,6 +166,6 @@ class Qwen3_VL_8B(BaseRewardModel):
         torch.use_deterministic_algorithms(deter_status)
 
         if return_tensor:
-            return torch.tensor(overall_scores, device=self.device).contiguous()  
+            return torch.tensor(overall_scores, device=self.device).contiguous()
         else:
             return overall_scores
