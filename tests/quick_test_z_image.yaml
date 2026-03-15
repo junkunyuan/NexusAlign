@@ -1,0 +1,43 @@
+# Quick test config: Z-Image + Normalized Edit Distance reward + text_rendering
+# Usage: nexus-align train --nproc_per_node=1 -c tests/quick_test_z_image.yaml
+
+common:
+  data_and_model_dir: /HOME/neuq_mxcui/neuq_mxcui_1/HDD_POOL/MODELS
+  seed: 42
+
+model:
+  grpo:
+    sample_steps: 3
+    sample_height: 256
+    sample_width: 256
+    sample_shift: 3
+    sample_eta: 0.5
+    timestep_fraction: 1.0
+
+algorithm:
+  run:
+    sample_batch_size: 2
+    group_size: 2
+  train:
+    train_batch_size: 2
+    max_train_total_steps: 10
+    num_epochs: 1
+    grad_accu_step: 1
+
+data:
+  path: ../data
+
+validation:
+  enabled: true
+  val_every_n_steps: 5
+  val_data_name: text_rendering_benchmark
+  val_data_path: ../data
+
+ckpt_manager:
+  save_ckpt_every_n_steps: 5
+  save_ckpt_every_n_epochs: 100
+
+log:
+  exp_info: quick_test_z_image
+  wandb:
+    wandb_offline: true
