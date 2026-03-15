@@ -8,6 +8,7 @@ from datetime import datetime
 from omegaconf import OmegaConf
 
 from nexus_align.launcher import launch
+from nexus_align.cli.draw import run_draw
 
 
 def _append_datetime_to_exp_info(script_args: list[str]) -> None:
@@ -128,6 +129,57 @@ def _parse_launcher_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]
     eval_parser = subparsers.add_parser("eval", help="Launch distributed evaluation")
     _add_distributed_args(eval_parser)
 
+    # Draw: nexus-align draw -r <results.jsonl> [options]
+    draw_parser = subparsers.add_parser("draw", help="Plot results metrics")
+    draw_parser.add_argument(
+        "--result",
+        "-r",
+        type=str,
+        required=True,
+        help="Path to results.jsonl file",
+    )
+    draw_parser.add_argument(
+        "--x_data",
+        "-x",
+        type=str,
+        default="total_step",
+        help="Key for x-axis (default: total_step)",
+    )
+    draw_parser.add_argument(
+        "--y_data",
+        "-y",
+        type=str,
+        default=None,
+        help="Comma-separated metric keys for y-axis (default: all metrics), e.g., loss,lr",
+    )
+    draw_parser.add_argument(
+        "--color",
+        "-c",
+        type=str,
+        default=None,
+        help="Line color as RGB 0-255, comma-separated (default: blue), e.g., 59,130,246",
+    )
+    draw_parser.add_argument(
+        "--ema",
+        "-e",
+        type=float,
+        default=0.8,
+        metavar="ALPHA",
+        help="EMA smoothing factor (0 < alpha < 1). Raw data becomes semi-transparent (default: 0.8).",
+    )
+    draw_parser.add_argument(
+        "--dpi",
+        type=int,
+        default=150,
+        help="Output image DPI (default: 150).",
+    )
+    draw_parser.add_argument(
+        "--fontsize",
+        type=int,
+        default=15,
+        help="Base font size (default: 15).",
+    )
+
     args, remaining = parser.parse_known_args(argv)
 
     return args, remaining
@@ -178,6 +230,9 @@ def main(argv: list[str] | None = None) -> int:
             master_port=args.master_port,
             rdzv_id=args.rdzv_id,
         )
+
+    if args.command == "draw":
+        return run_draw(args)
 
     return 0
 
