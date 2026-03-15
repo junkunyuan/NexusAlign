@@ -186,7 +186,7 @@ class WindowMeter:
         return self.meters["step"]["num"]
 
     @property
-    def total_steps(self) -> int:
+    def total_step(self) -> int:
         return self.meters["total_steps"]
 
     @property

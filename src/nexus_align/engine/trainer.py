@@ -82,7 +82,7 @@ class Trainer:
         train_state = {
             "epoch": algo.meters.epoch,
             "step": algo.meters.step,
-            "total_steps": algo.meters.total_steps,
+            "total_step": algo.meters.total_step,
         }
         model_state_dict = {
             "model": algo.model,
@@ -108,7 +108,7 @@ class Trainer:
             for step, data in enumerate(self.train_dataloader):
                 if step < algo.meters.step:
                     continue
-                if algo.meters.total_steps > algo.max_train_total_steps:
+                if algo.meters.total_step > algo.max_train_total_steps:
                     self.logger.close_log()
                     return
 
@@ -116,14 +116,14 @@ class Trainer:
                 train_state = {
                     "epoch": algo.meters.epoch,
                     "step": algo.meters.step,
-                    "total_step": algo.meters.total_steps,
+                    "total_step": algo.meters.total_step,
                 }
                 data.update(train_state)
 
                 epoch_f = f"Epoch {algo.meters.epoch}/{algo.num_epochs}"
                 step_f = f"Step {algo.meters.step}/{len(self.train_dataloader)}"
-                total_steps_f = f"Total step {algo.meters.total_steps}/{algo.max_train_total_steps}"
-                print(f"\n{'=' * 80}\n🚀  {epoch_f}  {step_f}  {total_steps_f}\n{'=' * 80}")
+                total_step_f = f"Total step {algo.meters.total_step}/{algo.max_train_total_steps}"
+                print(f"\n{'=' * 80}\n🚀  {epoch_f}  {step_f}  {total_step_f}\n{'=' * 80}")
 
                 print(f"➡️  Preparing data")
                 data = algo.prepare_data(data)
@@ -151,7 +151,7 @@ class Trainer:
                     train_state={
                         "epoch": algo.meters.epoch,
                         "step": algo.meters.step,
-                        "total_steps": algo.meters.total_steps,
+                        "total_step": algo.meters.total_step,
                     },
                 )
 

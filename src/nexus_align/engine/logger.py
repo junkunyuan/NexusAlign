@@ -322,7 +322,7 @@ class TrainingLogger:
         if dist.get_rank() != 0:
             return
         if step is None and meters is not None:
-            step = meters.total_steps
+            step = meters.total_step
         if name is None or value is None:
             if meters is not None:
                 exp_info = meters.latest_exp_info()
@@ -343,7 +343,7 @@ class TrainingLogger:
         record = {
             "epoch": meters.epoch, 
             "step": meters.step, 
-            "total_steps": meters.total_steps,
+            "total_step": meters.total_step,
             **meters.latest_exp_info()
         }
         jsonl_path = os.path.join(self.log_dir, "results.jsonl")
