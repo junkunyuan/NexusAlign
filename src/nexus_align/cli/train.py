@@ -80,12 +80,33 @@ def main(cfg, env):
     )
 
     # --------------------------------------------------------------------------------
-    # 5. Build Trainer and run training
+    # 5. Prepare validation dataset (optional)
+    # --------------------------------------------------------------------------------
+    val_dataset = None
+    val_cfg = cfg_dict.get("validation", {})
+    if val_cfg.get("enabled", False):
+        val_data_name = val_cfg["val_data_name"]
+        val_data_path = val_cfg.get("val_data_path", cfg_dict["data"]["path"])
+        val_cfg_dict = {
+            **cfg_dict,
+            "data": {**cfg_dict["data"], "path": val_data_path},
+        }
+        val_dataset = registry.get("dataset", val_data_name)(val_cfg_dict)
+        info = ["\n📚 Validation data:"]
+        info += [f"    dataset: {val_data_name}"]
+        info += [f"    sample count: {len(val_dataset)}"]
+        info += [f"    val_every_n_steps: {val_cfg['val_every_n_steps']}"]
+        print("\n".join(info))
+        print("✅ Prepared validation dataset")
+
+    # --------------------------------------------------------------------------------
+    # 6. Build Trainer and run training
     # --------------------------------------------------------------------------------
     trainer = Trainer(
         train_dataset=train_dataset,
         algorithm=algorithm,
         cfg=cfg_dict,
+        val_dataset=val_dataset,
     )
     trainer.train()
     

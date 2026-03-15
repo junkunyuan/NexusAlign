@@ -21,4 +21,10 @@ ckpt_manager:
   save_ckpt_every_n_epochs: 1
   save_ckpt_keep_last_n_epochs: 3
 
+validation:
+  enabled: false
+  val_every_n_steps: 50
+  val_data_name: text_rendering_benchmark
+  val_data_path: data
+
 name: train

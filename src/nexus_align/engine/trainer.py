@@ -1,5 +1,8 @@
 """Generic training loop."""
 
+import os
+
+import torch
 import torch.distributed as dist
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
@@ -19,6 +22,7 @@ class Trainer:
         train_dataset: Dataset,
         algorithm: BaseAlgorithm,
         cfg: dict,
+        val_dataset: Dataset | None = None,
     ) -> None:
         self.algorithm = algorithm
 
@@ -41,6 +45,22 @@ class Trainer:
             log_dir=cfg["log"]["log_dir"],
             wandb_init=cfg["log"]["wandb"]["wandb_init"],
         )
+
+        # Validation setup
+        val_cfg = cfg.get("validation", {})
+        self.val_enabled = val_dataset is not None
+        if self.val_enabled:
+            sample_batch_size = cfg["algorithm"]["run"]["sample_batch_size"]
+            self.val_dataloader = self._build_dataloader(
+                dataset=val_dataset,
+                shuffle=False,
+                seed=cfg["common"]["seed"],
+                batch_size=sample_batch_size,
+                num_workers=cfg["data"]["load"]["num_workers"],
+                drop_last=True,
+                pin_memory=cfg["data"]["load"]["pin_memory"],
+            )
+            self.val_every_n_steps = val_cfg.get("val_every_n_steps", 50)
 
     def _build_dataloader(
         self, 
@@ -71,6 +91,70 @@ class Trainer:
         )
         return loader
 
+    @torch.no_grad()
+    def validate(self) -> None:
+        """
+        Run validation: generate images on val set and score with reward model.
+
+        Reuses the training pipeline (algo.pipeline) to generate images with current
+        model weights, then scores them with the training reward model (algo.reward_model).
+        """
+        algo = self.algorithm
+        pipeline = algo.pipeline
+        total_steps = algo.meters.total_steps
+
+        print(f"\n{'~' * 80}\n🔍 Validation at total step {total_steps}\n{'~' * 80}")
+
+        # Redirect sample saves to a validation subdirectory
+        original_save_dir = pipeline.sample_save_dir
+        val_save_dir = os.path.join(original_save_dir, "validation")
+        os.makedirs(val_save_dir, exist_ok=True)
+        pipeline.sample_save_dir = val_save_dir
+
+        all_scores = []
+        for i, data in enumerate(self.val_dataloader, start=1):
+            print(f"🔍 Validation batch: {i} / {len(self.val_dataloader)}")
+
+            data.update({"epoch": 0, "step": 0, "total_step": total_steps})
+
+            data = pipeline.prepare_data(data)
+            data = pipeline.sample_responses(data)
+
+            score_list = algo.reward_model.evaluate(
+                data=data["reward_inputs"],
+                return_tensor=False,
+            )
+            scores = torch.tensor(
+                [s if s is not None else 0.0 for s in score_list],
+                device=algo.device,
+                dtype=torch.float32,
+            )
+            all_scores.append(scores)
+
+            torch.cuda.empty_cache()
+
+        pipeline.sample_save_dir = original_save_dir
+
+        all_scores = torch.cat(all_scores)
+        gathered = [torch.empty_like(all_scores) for _ in range(dist.get_world_size())]
+        dist.all_gather(gathered, all_scores)
+        gathered = torch.cat(gathered)
+
+        mean = gathered.mean().item()
+        std = gathered.std().item()
+
+        dec = 4 if mean > 1 else 6
+        print(
+            f"🔍 Validation: {len(gathered)} scores, "
+            f"mean ± std: {mean:.{dec}f} ± {std:.{dec}f}"
+        )
+
+        self.logger.to_logger("val_reward_mean", mean, total_steps)
+        self.logger.to_logger("val_reward_std", std, total_steps)
+
+        dist.barrier()
+        torch.cuda.empty_cache()
+
     def train(self) -> None:
         """
         Run the training loop.
@@ -94,6 +178,10 @@ class Trainer:
         algo.meters.update_train_state(train_state)
         
         self.logger.open_log()
+
+        # Baseline validation before training starts
+        if self.val_enabled:
+            self.validate()
 
         # Start training
         print(f"🚀 Training started!")
@@ -156,6 +244,10 @@ class Trainer:
                 )
 
                 self.logger.log_all_meters(algo.meters)
+
+                # Periodic validation
+                if self.val_enabled and algo.meters.total_steps % self.val_every_n_steps == 0:
+                    self.validate()
 
             algo.meters.end("epoch")
             self.logger.log_all_meters(algo.meters)
