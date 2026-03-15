@@ -6,7 +6,7 @@ defaults:
   - reward_model: hps_v2  # evaluation model
 
 common:
-  cache_log_dir: null  # resume evaluation
+  cache_log_dir: ""  # resume evaluation
 
 log:
   result_dir: inference_results  # dir to save inference results

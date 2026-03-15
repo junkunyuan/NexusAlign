@@ -9,4 +9,4 @@ fsdp:
   fsdp_cpu_offload: false
 
 eval:
-  eval_batch_size: 2
+  eval_batch_size: 8
