@@ -8,9 +8,12 @@ fsdp:
   fsdp_strategy: full_shard
   fsdp_cpu_offload: false
   activation_ckpt: true
-  text_encoder_offload: false  # move to GPU only when encoding prompts
+  text_encoder_offload: false  # text encoder CPUOffload (FSDP managed)
   use_sharded_weights: false   # load pre-converted FSDP shards instead of from_pretrained
   sharded_weights_dir: ""      # relative to data_and_model_dir, e.g. flux_fsdp_shards_ws4
+  use_sharded_text_encoder: false  # FULL_SHARD T5/CLIP from pre-converted shards
+  t5_fsdp_shards_dir: ""           # relative to data_and_model_dir, e.g. models/t5_fsdp_shards
+  clip_fsdp_shards_dir: ""         # relative to data_and_model_dir, e.g. models/clip_fsdp_shards
 
 grpo:
   sample_height: 720
