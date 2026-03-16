@@ -40,10 +40,10 @@ class TextRenderingDataset(BaseTextDataset):
 
 class TextRenderingBenchmark(BaseTextDataset):
     """
-    Text rendering benchmark for image generation evaluation.
+    Text rendering benchmark.
 
     CSV columns: index, text, prompt, class, text_length, prompt_length, position.
-    The ``prompt`` column is the full generation prompt.
+    The `prompt` column is the full generation prompt.
     """
 
     def __init__(self, kwargs: dict) -> None:

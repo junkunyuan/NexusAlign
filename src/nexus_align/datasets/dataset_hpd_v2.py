@@ -42,9 +42,13 @@ class HPDv2Dataset(BaseTextDataset):
 
 class HPDv2Benchmark(BaseTextDataset):
     """
-    HPDv2 Benchmark (https://arxiv.org/pdf/2306.09341).
+    HPDv2 Benchmark.
+
     Info: 3200 prompts (anime 800 + concept-art 800 + paintings 800 + photo 800)
-    Use it from https://huggingface.co/datasets/ymhao/HPDv2/
+    
+    References:
+        - HPDv2 paper: https://arxiv.org/pdf/2306.09341.
+        - Dataset: https://huggingface.co/datasets/ymhao/HPDv2/.
     """
 
     def __init__(self, kwargs: dict) -> None:
