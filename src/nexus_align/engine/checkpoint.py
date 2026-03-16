@@ -62,11 +62,11 @@ class CheckpointManager:
             train_state (dict):
                 - "epoch" (`int`)
                 - "step" (`int`)
-                - "total_steps" (`int`)
+                - "total_step" (`int`)
         """
         step = train_state["step"]
         epoch = train_state["epoch"]
-        total_steps = train_state["total_steps"]
+        total_step = train_state["total_step"]
 
         to_save_step = to_save_epoch = False
         if isinstance(self.save_ckpt_every_n_steps, int):
@@ -88,7 +88,7 @@ class CheckpointManager:
             print(f"✅ Removed old checkpoints in {end_time - start_time:.1f}s")
 
         if to_save_step or to_save_epoch:
-            save_dir = f"ckpt-epoch_{epoch}-step_{step}-total_step_{total_steps}"
+            save_dir = f"ckpt-epoch_{epoch}-step_{step}-total_step_{total_step}"
             save_path = os.path.join(self.save_ckpt_root, save_dir)
             os.makedirs(save_path, exist_ok=True)
             success_save_all = True

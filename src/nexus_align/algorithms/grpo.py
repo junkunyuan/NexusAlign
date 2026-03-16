@@ -182,7 +182,7 @@ class GRPOAlgorithm(BaseAlgorithm):
         last_group_idx = -1
         bar = None
         info = ""
-
+        
         for item in self.pipeline.iterate_training_items(data):
             old_log_probs = item["old_log_probs"]
             advantages = torch.clamp(
@@ -264,7 +264,7 @@ class GRPOAlgorithm(BaseAlgorithm):
                 
                 self.optimizer.zero_grad()
                 
-                print(f"✅ Updated model on group {group_idx + 1} / {self.group_size} ({grad_info})")
+                print(f"✅ Updated model on the batch {group_idx + 1} / {self.pipeline.train_batch_size} ({grad_info})")
 
         if bar is not None:
             bar.close()

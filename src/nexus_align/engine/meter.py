@@ -19,7 +19,7 @@ class WindowMeter:
     def __init__(self, hardware: bool = True) -> None:
         self.meters = {
             "exp_start_time": None,
-            "total_steps": 0,
+            "total_step": 0,
             "current_train_steps": 0,
         }
 
@@ -187,7 +187,7 @@ class WindowMeter:
 
     @property
     def total_step(self) -> int:
-        return self.meters["total_steps"]
+        return self.meters["total_step"]
 
     @property
     def current_train_steps(self) -> int:
@@ -207,7 +207,7 @@ class WindowMeter:
         """Update the train state."""
         self.meters["epoch"]["num"] = train_state.get("epoch", 0)
         self.meters["step"]["num"] = train_state.get("step", 0)
-        self.meters["total_steps"] = train_state.get("total_steps", 0)
+        self.meters["total_step"] = train_state.get("total_step", 0)
 
     def start(self, meter: str) -> None:
         """Call it at the beginning of every epoch/step."""
@@ -225,7 +225,7 @@ class WindowMeter:
         self.update(meter, time_cost)
 
         if meter == "step":
-            self.meters["total_steps"] += 1
+            self.meters["total_step"] += 1
             self.meters["current_train_steps"] += 1
         if meter == "epoch":
             self.meters["step"]["num"] = 0
@@ -254,7 +254,7 @@ class WindowMeter:
             infos = []
             infos.append(f"epoch: {self.meters['epoch']['num']}")
             infos.append(f"step: {self.meters['step']['num']}")
-            infos.append(f"total_steps: {self.meters['total_steps']}")
+            infos.append(f"total_step: {self.meters['total_step']}")
 
             for key in ["epoch", "step"]:
                 avg_time_cost = self.meters[key]["mean"]

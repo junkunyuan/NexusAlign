@@ -145,6 +145,7 @@ class FluxTrainPipeline(BaseTrainPipeline):
         self.amp_dtype = amp_dtype
         self.device = device
         self.grad_accu_step = cfg_algo_train["grad_accu_step"]
+        self.train_batch_size = cfg_algo_train["train_batch_size"]
         
         # Algorithm-specific
         self.algo_name = kwargs["algorithm"]["name"]
