@@ -25,6 +25,7 @@ class BaseRewardModel(ABC):
         self.amp_dtype = DTYPE_MAP[kwargs["reward_model"]["amp_dtype"]]
         self.model_dtype = DTYPE_MAP[kwargs["reward_model"]["model_dtype"]]
         self.mode = kwargs["reward_model"]["mode"]
+        self.task = kwargs["reward_model"].get("task", "aesthetic")
 
         fsdp_kwargs = kwargs["reward_model"].get("fsdp", {})
         self.fsdp_kwargs = {
