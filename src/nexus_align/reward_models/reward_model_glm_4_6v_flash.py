@@ -1,12 +1,12 @@
-"""Qwen3-VL reward model for evaluating image generation."""
+"""GLM-4.6V-Flash reward model for evaluating image generation."""
 
-import json
 import re
+import json
 import torch
 
 from nexus_align.core import BaseRewardModel
 
-EVAL_MAX_NEW_TOKENS = 32
+EVAL_MAX_NEW_TOKENS = 128
 EVAL_KEYS = ["aesthetic_quality_score", "semantic_alignment_score", "overall_score"]
 EVAL_INSTRUCTION = """
 You are a professional image generation evaluation expert. Evaluate the image using the following two criteria.
@@ -33,18 +33,18 @@ Return the evaluation result in JSON format:
 """
 
 
-class Qwen3_VL_8B(BaseRewardModel):
+class GLM_4_6V_Flash(BaseRewardModel):
     """
-    Qwen3-VL reward model for evaluating image generation.
-    
+    GLM-4.6V-Flash reward model for evaluating image generation.
+
     References:
-        - Qwen3-VL paper: https://arxiv.org/pdf/2511.21631.
-        - Official repo: https://github.com/QwenLM/Qwen3-VL.
-        - Checkpoint: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct.
+        - GLM-4 paper: https://arxiv.org/pdf/2406.12793.
+        - Official repo: https://github.com/THUDM/GLM-4.
+        - Checkpoint: https://huggingface.co/zai-org/GLM-4.6V-Flash.
     """
 
     def __init__(self, device: torch.device, kwargs: dict) -> None:
-        super().__init__("Qwen3-VL-8B", device, kwargs)
+        super().__init__("GLM-4.6V-Flash", device, kwargs)
 
         self.model, self.processor = self.load_model()
 
@@ -56,17 +56,17 @@ class Qwen3_VL_8B(BaseRewardModel):
         """
         Load model.
 
-        Follow the repo: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct.
+        Follow the repo: https://huggingface.co/zai-org/GLM-4.6V-Flash.
         """
-        from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
+        from transformers import AutoProcessor, Glm4vForConditionalGeneration
 
         print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
         processor = AutoProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
-        model = Qwen3VLForConditionalGeneration.from_pretrained(
-            self.model_path, 
-            dtype=self.model_dtype, 
-            device_map=f"cuda:{self.device.index}"
+        model = Glm4vForConditionalGeneration.from_pretrained(
+            pretrained_model_name_or_path=self.model_path,
+            torch_dtype=self.model_dtype,
+            device_map=f"cuda:{self.device.index}",
         )
 
         if self.mode == "train":
@@ -84,23 +84,19 @@ class Qwen3_VL_8B(BaseRewardModel):
         """
         Evaluate a batch of (image, text) pairs.
 
-        Follow the repo: https://github.com/QwenLM/Qwen3-VL.
-        
+        Follow the repo: https://huggingface.co/zai-org/GLM-4.6V-Flash.
+
         Args:
             data (`dict`):
                 image (`list`): List of paths to images.
                 text (`list`): List of text strings.
             return_tensor (`bool`): Whether to return a tensor.
-        
+
         Returns:
             `list` | `torch.Tensor`: Scores between each pair of images and texts.
         """
         images = data["image"]
         prompts = data["text"]
-
-        # Qwen3-VL needs to disable deterministic
-        deter_status = torch.are_deterministic_algorithms_enabled()
-        torch.use_deterministic_algorithms(False)
 
         overall_scores = []
         for image, prompt in zip(images, prompts):
@@ -124,16 +120,20 @@ class Qwen3_VL_8B(BaseRewardModel):
                 messages,
                 tokenize=True,
                 add_generation_prompt=True,
+                enable_thinking=False,
                 return_dict=True,
                 return_tensors="pt",
             )
             inputs = inputs.to(self.device)
 
+            if "token_type_ids" in inputs:
+                del inputs["token_type_ids"]
+
             with torch.amp.autocast(device_type=self.device.type, dtype=self.amp_dtype):
                 generated_ids = self.model.generate(
                     **inputs, max_new_tokens=EVAL_MAX_NEW_TOKENS
                 )
-
+            
             generated_ids_trimmed = [
                 out_ids[len(in_ids) :]
                 for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
@@ -147,6 +147,8 @@ class Qwen3_VL_8B(BaseRewardModel):
 
             scores = {}
             try:
+                # Strip thinking tags and special tokens before JSON parsing
+                res = re.sub(r"<think>.*?(</think>|$)", "", res, flags=re.DOTALL)
                 res = re.sub(r"<\|.*?\|>", "", res).strip()
                 # Strip markdown code fences (```json ... ``` or ``` ... ```)
                 res = re.sub(r"```(?:json)?\s*", "", res).strip()
@@ -164,9 +166,7 @@ class Qwen3_VL_8B(BaseRewardModel):
                 print(f"Model's output: {res}")
                 overall_scores.append(None)
 
-        torch.use_deterministic_algorithms(deter_status)
-
         if return_tensor:
-            return torch.tensor(overall_scores, device=self.device).contiguous()  
+            return torch.tensor(overall_scores, device=self.device).contiguous()
         else:
             return overall_scores

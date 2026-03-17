@@ -1,4 +1,4 @@
-"""AestheticPredictorV2 reward model for image generation."""
+"""AestheticPredictorV2 reward model for evaluating image generation."""
 
 import torch
 
@@ -8,7 +8,7 @@ from nexus_align.core.base_reward_model import BaseRewardModel
 
 class AestheticPredictorV2(BaseRewardModel):
     """
-    AestheticPredictorV2 model for image generation.
+    AestheticPredictorV2 model for evaluating image generation.
  
     References:
         - Official repo: https://github.com/christophschuhmann/improved-aesthetic-predictor.

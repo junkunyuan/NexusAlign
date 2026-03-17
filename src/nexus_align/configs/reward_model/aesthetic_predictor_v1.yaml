@@ -1,7 +1,7 @@
 name: aesthetic_predictor_v1
 path: shunk031/aesthetics-predictor-v1-vit-large-patch14
 mode: eval
-model_dtype: bf16
+model_dtype: fp32
 amp_dtype: bf16
 
 fsdp:
