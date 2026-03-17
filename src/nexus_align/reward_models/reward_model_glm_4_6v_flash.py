@@ -1,7 +1,7 @@
-"""GLM-4.6V-Flash reward model for image generation."""
+"""GLM-4.6V-Flash reward model for evaluating image generation."""
 
-import json
 import re
+import json
 import torch
 
 from nexus_align.core import BaseRewardModel
@@ -35,12 +35,12 @@ Return the evaluation result in JSON format:
 
 class GLM_4_6V_Flash(BaseRewardModel):
     """
-    GLM-4.6V-Flash reward model for image generation.
+    GLM-4.6V-Flash reward model for evaluating image generation.
 
     References:
         - GLM-4 paper: https://arxiv.org/pdf/2406.12793.
         - Official repo: https://github.com/THUDM/GLM-4.
-        - Checkpoint: https://huggingface.co/THUDM/GLM-4.6V-Flash.
+        - Checkpoint: https://huggingface.co/zai-org/GLM-4.6V-Flash.
     """
 
     def __init__(self, device: torch.device, kwargs: dict) -> None:
@@ -48,7 +48,7 @@ class GLM_4_6V_Flash(BaseRewardModel):
 
         self.model, self.processor = self.load_model()
 
-        self.dataset_kwargs = {"image_open": True}
+        self.dataset_kwargs = {}
 
         print(f"✅ Prepared reward model: {self.model_name} ({self.mode} mode)")
 
@@ -56,14 +56,16 @@ class GLM_4_6V_Flash(BaseRewardModel):
         """
         Load model.
 
-        Follow the repo: https://huggingface.co/THUDM/GLM-4.6V-Flash
+        Follow the repo: https://huggingface.co/zai-org/GLM-4.6V-Flash.
         """
-        from transformers import AutoProcessor, AutoModelForImageTextToText
+        from transformers import AutoProcessor, Glm4vForConditionalGeneration
 
+        print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
+        processor = AutoProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
-        model = AutoModelForImageTextToText.from_pretrained(
-            self.model_path,
-            dtype=self.model_dtype,
+        model = Glm4vForConditionalGeneration.from_pretrained(
+            pretrained_model_name_or_path=self.model_path,
+            torch_dtype=self.model_dtype,
             device_map=f"cuda:{self.device.index}",
         )
 
@@ -75,8 +77,6 @@ class GLM_4_6V_Flash(BaseRewardModel):
         else:
             raise ValueError(f"❌ Invalid mode: {self.mode}")
 
-        processor = AutoProcessor.from_pretrained(self.model_path)
-
         return model, processor
 
     @torch.no_grad()
@@ -84,7 +84,7 @@ class GLM_4_6V_Flash(BaseRewardModel):
         """
         Evaluate a batch of (image, text) pairs.
 
-        Follow the repo: https://github.com/THUDM/GLM-4.
+        Follow the repo: https://huggingface.co/zai-org/GLM-4.6V-Flash.
 
         Args:
             data (`dict`):
@@ -126,11 +126,14 @@ class GLM_4_6V_Flash(BaseRewardModel):
             )
             inputs = inputs.to(self.device)
 
+            if "token_type_ids" in inputs:
+                del inputs["token_type_ids"]
+
             with torch.amp.autocast(device_type=self.device.type, dtype=self.amp_dtype):
                 generated_ids = self.model.generate(
                     **inputs, max_new_tokens=EVAL_MAX_NEW_TOKENS
                 )
-
+            
             generated_ids_trimmed = [
                 out_ids[len(in_ids) :]
                 for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
@@ -161,9 +164,9 @@ class GLM_4_6V_Flash(BaseRewardModel):
                     f"⚠️ Warning: JSON parsing error, the format of the model's output is incorrect:\n {e}"
                 )
                 print(f"Model's output: {res}")
-                overall_scores.append(0.0)
+                overall_scores.append(None)
 
         if return_tensor:
-            return torch.tensor(overall_scores, dtype=torch.float32, device=self.device).contiguous()
+            return torch.tensor(overall_scores, device=self.device).contiguous()
         else:
             return overall_scores

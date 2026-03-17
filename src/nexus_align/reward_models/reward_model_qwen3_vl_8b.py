@@ -1,4 +1,4 @@
-"""Qwen3-VL reward model for image generation."""
+"""Qwen3-VL reward model for evaluating image generation."""
 
 import json
 import re
@@ -35,7 +35,7 @@ Return the evaluation result in JSON format:
 
 class Qwen3_VL_8B(BaseRewardModel):
     """
-    Qwen3-VL reward model for image generation.
+    Qwen3-VL reward model for evaluating image generation.
     
     References:
         - Qwen3-VL paper: https://arxiv.org/pdf/2511.21631.
@@ -48,7 +48,7 @@ class Qwen3_VL_8B(BaseRewardModel):
 
         self.model, self.processor = self.load_model()
 
-        self.dataset_kwargs = {"image_open": True}
+        self.dataset_kwargs = {}
 
         print(f"✅ Prepared reward model: {self.model_name} ({self.mode} mode)")
 
@@ -56,10 +56,12 @@ class Qwen3_VL_8B(BaseRewardModel):
         """
         Load model.
 
-        Follow the repo:https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
+        Follow the repo: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct.
         """
         from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 
+        print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
+        processor = AutoProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
         model = Qwen3VLForConditionalGeneration.from_pretrained(
             self.model_path, 
@@ -74,8 +76,6 @@ class Qwen3_VL_8B(BaseRewardModel):
             model.requires_grad_(False)
         else:
             raise ValueError(f"❌ Invalid mode: {self.mode}")
-
-        processor = AutoProcessor.from_pretrained(self.model_path)
 
         return model, processor
 

@@ -1,4 +1,4 @@
-"""Normalized Edit Distance reward model for text rendering evaluation."""
+"""Normalized Edit Distance reward model for evaluating image generation."""
 
 import os
 import re
@@ -11,9 +11,9 @@ from nexus_align.core.base_reward_model import BaseRewardModel
 
 class NormalizedEditDistance(BaseRewardModel):
     """
-    Normalized Edit Distance reward model for evaluating text rendering in images.
+    Normalized Edit Distance reward model for evaluating image generation.
 
-    Uses PP-OCRv5 (PaddleOCR 3.x) to extract text from generated images and
+    Uses PP-OCRv5 to extract text from generated images and
     computes the normalized Levenshtein edit distance against target text
     extracted from the prompt. Returns ``1 - NED`` as the reward so that higher
     means better.
@@ -22,7 +22,6 @@ class NormalizedEditDistance(BaseRewardModel):
     ``'hello'`` or ``"world"``). If no quotes are found the full prompt is used.
 
     Expected model directory layout (pointed to by ``model_path``)::
-
         PPOCRv5/
         ├── PP-OCRv5_server_det/   (inference.json + inference.pdiparams)
         └── PP-OCRv5_server_rec/   (inference.json + inference.pdiparams)
@@ -30,6 +29,10 @@ class NormalizedEditDistance(BaseRewardModel):
 
     def __init__(self, device: torch.device, kwargs: dict) -> None:
         super().__init__("NormalizedEditDistance", device, kwargs)
+        self.model_path_2 = os.path.join(
+            kwargs["common"]["data_and_model_dir"], 
+            kwargs["reward_model"]["path2"]
+        )
 
         self.ocr_engine = self.load_model()
 
@@ -40,35 +43,23 @@ class NormalizedEditDistance(BaseRewardModel):
     def load_model(self):
         """Load PP-OCRv5 pipeline from local model directory."""
         from paddleocr import PaddleOCR
+      
+        print(f"⏳ Loading PP-OCRv5_server_rec from <{self.model_path}>")
+        print(f"⏳ Loading PP-OCRv5_server_det from <{self.model_path_2}>")
 
-        det_model_dir = os.path.join(self.model_path, "PP-OCRv5_server_det")
-        rec_model_dir = os.path.join(self.model_path, "PP-OCRv5_server_rec")
-
-        print(
-            f"⏳ Loading {self.model_name} OCR models (PP-OCRv5) from <{self.model_path}>"
-        )
-
-        device_str = (
-            f"gpu:{self.device.index or 0}"
-            if self.device.type == "cuda"
-            else "cpu"
-        )
+        device_str = f"gpu:{self.device.index}"
 
         ocr = PaddleOCR(
             text_detection_model_name="PP-OCRv5_server_det",
-            text_detection_model_dir=det_model_dir,
+            text_detection_model_dir=self.model_path_2,
             text_recognition_model_name="PP-OCRv5_server_rec",
-            text_recognition_model_dir=rec_model_dir,
+            text_recognition_model_dir=self.model_path,
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
             use_textline_orientation=False,
             device=device_str,
         )
         return ocr
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _extract_target_text(prompt: str) -> str:
@@ -144,10 +135,6 @@ class NormalizedEditDistance(BaseRewardModel):
             return list(texts)
 
         return []
-
-    # ------------------------------------------------------------------
-    # Core
-    # ------------------------------------------------------------------
 
     @torch.no_grad()
     def evaluate(self, data: dict, return_tensor: bool = False) -> list | torch.Tensor:

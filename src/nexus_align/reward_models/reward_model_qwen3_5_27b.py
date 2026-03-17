@@ -1,4 +1,4 @@
-"""Qwen3.5-27B reward model for image generation."""
+"""Qwen3.5-27B reward model for evaluating image generation."""
 
 import json
 import re
@@ -35,11 +35,10 @@ Return the evaluation result in JSON format:
 
 class Qwen3_5_27B(BaseRewardModel):
     """
-    Qwen3.5-27B reward model for image generation.
+    Qwen3.5-27B reward model for evaluating image generation.
 
     References:
-        - Qwen3.5 blog: https://qwenlm.github.io/blog/qwen3.5/.
-        - Official repo: https://github.com/QwenLM/Qwen3.
+        - Official repo: https://github.com/QwenLM/Qwen3.5.
         - Checkpoint: https://huggingface.co/Qwen/Qwen3.5-27B.
     """
 
@@ -48,18 +47,16 @@ class Qwen3_5_27B(BaseRewardModel):
 
         self.model, self.processor = self.load_model()
 
-        self.dataset_kwargs = {"image_open": True}
+        self.dataset_kwargs = {}
 
         print(f"✅ Prepared reward model: {self.model_name} ({self.mode} mode)")
 
     def load_model(self) -> tuple[torch.nn.Module, torch.nn.Module]:
-        """
-        Load model.
-
-        Follow the repo: https://huggingface.co/Qwen/Qwen3.5-27B
-        """
+        """Load model."""
         from transformers import AutoProcessor, AutoModelForImageTextToText
 
+        print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
+        processor = AutoProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
         model = AutoModelForImageTextToText.from_pretrained(
             self.model_path,
@@ -74,8 +71,6 @@ class Qwen3_5_27B(BaseRewardModel):
             model.requires_grad_(False)
         else:
             raise ValueError(f"❌ Invalid mode: {self.mode}")
-
-        processor = AutoProcessor.from_pretrained(self.model_path)
 
         return model, processor
 
@@ -169,6 +164,6 @@ class Qwen3_5_27B(BaseRewardModel):
         torch.use_deterministic_algorithms(deter_status)
 
         if return_tensor:
-            return torch.tensor(overall_scores, dtype=torch.float32, device=self.device).contiguous()
+            return torch.tensor(overall_scores, device=self.device).contiguous()
         else:
             return overall_scores

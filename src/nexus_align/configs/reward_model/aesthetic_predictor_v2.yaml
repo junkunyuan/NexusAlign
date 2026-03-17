@@ -1,7 +1,7 @@
 name: aesthetic_predictor_v2
 path: shunk031/aesthetics-predictor-v2-sac-logos-ava1-l14-linearMSE
 mode: eval
-model_dtype: bf16
+model_dtype: fp32
 amp_dtype: bf16
 
 fsdp:

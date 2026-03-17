@@ -1,7 +1,7 @@
 name: glm_4_6v_flash
-path: GLM-4.6V-Flash
+path: zai-org/GLM-4.6V-Flash
 mode: eval
-model_dtype: bf16
+model_dtype: fp32
 amp_dtype: bf16
 
 fsdp:

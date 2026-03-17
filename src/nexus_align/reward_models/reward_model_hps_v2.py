@@ -1,4 +1,4 @@
-"""HPSv2 reward model for image generation."""
+"""HPSv2 reward model for evaluating image generation."""
 
 import os
 import torch
@@ -9,7 +9,7 @@ from nexus_align.core.base_reward_model import BaseRewardModel
 
 class HPSv2(BaseRewardModel):
     """
-    HPSv2 reward model for image generation.
+    HPSv2 reward model for evaluating image generation.
 
     References:
         - HPSv2 paper: https://arxiv.org/pdf/2306.09341.

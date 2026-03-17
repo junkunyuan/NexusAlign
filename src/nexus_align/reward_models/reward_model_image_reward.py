@@ -1,4 +1,4 @@
-"""ImageReward reward model for image generation."""
+"""ImageReward reward model for evaluating image generation."""
 
 import os
 import torch
@@ -9,7 +9,7 @@ from nexus_align.core.base_reward_model import BaseRewardModel
 
 class ImageReward(BaseRewardModel):
     """
-    ImageReward reward model for image generation.
+    ImageReward reward model for evaluating image generation.
 
     References:
         - ImageReward paper: https://arxiv.org/pdf/2304.05977.
@@ -30,7 +30,7 @@ class ImageReward(BaseRewardModel):
         """
         Load model.
 
-        Follow the repo: https://huggingface.co/zai-org/ImageReward
+        Follow the repo: https://huggingface.co/zai-org/ImageReward.
         """
         import ImageReward as reward
 

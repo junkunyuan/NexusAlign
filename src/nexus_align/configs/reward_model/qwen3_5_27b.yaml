@@ -1,7 +1,7 @@
 name: qwen3_5_27b
-path: Qwen3.5-27B
+path: Qwen/Qwen3.5-27B
 mode: eval
-model_dtype: bf16
+model_dtype: fp32
 amp_dtype: bf16
 
 fsdp:

@@ -1,7 +1,7 @@
 name: intern3_5_vl_8b
 path: OpenGVLab/InternVL3_5-8B-HF
 mode: eval
-model_dtype: bf16
+model_dtype: fp32
 amp_dtype: bf16
 
 fsdp:
