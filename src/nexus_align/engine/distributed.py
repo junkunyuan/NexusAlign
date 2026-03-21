@@ -84,7 +84,7 @@ def all_reduce_tensor(
         "min": dist.ReduceOp.MIN,
     }
     if op not in reduce_op_map:
-        raise ValueError(f"Invalid operation: {op}")
+        raise ValueError(f"❌ Invalid operation: {op}")
 
     dist.all_reduce(tensor, op=reduce_op_map[op])
 

@@ -1,0 +1,12 @@
+name: text_rendering_benchmark
+path: data
+
+load:
+  sample_ratio: 1
+  deduplicate: true
+  remove_non_english: true
+  drop_last: false
+  shuffle: false
+  pin_memory: true
+  num_workers: 4
+  cache_dir: null

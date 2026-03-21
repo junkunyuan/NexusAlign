@@ -1,0 +1,9 @@
+name: normalized_edit_distance
+path: PaddlePaddle/PP-OCRv5_server_rec
+path2: PaddlePaddle/PP-OCRv5_server_det
+mode: eval
+model_dtype: fp32
+amp_dtype: bf16
+
+eval:
+  eval_batch_size: 16

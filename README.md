@@ -54,7 +54,7 @@ nexus-align train \
   --nnodes=2 \
   --nproc_per_node=8 \
   --node_rank=${NODE_RANK} \
-  --master_addr=${MASTER_IP} \
+  --master_addr=$(hostname -I | awk '{print $1}') \
   --master_port=29500 \
   -c my_train_config.yaml
 ```

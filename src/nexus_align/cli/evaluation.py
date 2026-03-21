@@ -41,27 +41,30 @@ def main(cfg, env):
     data_name = cfg.data.name
     model_name = cfg.model.name
     evaluator_name = cfg.reward_model.name
-    result_base_name = f"{model_name}--{data_name}--{evaluator_name}--{seed}"
+    result_base_name = f"{model_name}--{data_name}--{seed}"
     meta_data = {
         "data_name": data_name,
         "model_name": model_name,
-        "evaluator_name": evaluator_name,
         "seed": seed,
         "model_ckpt_path": cfg.model.eval.ckpt_path,
     }
+    
+    infer_file = f"infer_results--{result_base_name}.jsonl"
+    infer_file = os.path.join(cfg.common.cache_log_dir, infer_file)
+    eval_file = f"eval_results--{result_base_name}--{evaluator_name}.jsonl"
+    eval_file = os.path.join(cfg.log.log_dir, eval_file)
 
     # --------------------------------------------------------------------------------
     # 2. Prepare Dataset
     # --------------------------------------------------------------------------------
-    eval_file = infer_file = None
-    if isinstance(cfg.common.cache_log_dir, str) and os.path.exists(cfg.common.cache_log_dir):
-        eval_file, infer_file = cache_check(cfg.common.cache_log_dir, meta_data)
+    if_infer_file_exists = cache_check(
+        cache_log_dir=cfg.common.cache_log_dir, 
+        meta_data=meta_data,
+        infer_file=infer_file,
+        eval_file=eval_file
+    )
 
-    if eval_file is not None:
-        print(f"✅ The evaluation results already cached in <{eval_file}>")
-        return
-
-    if infer_file is not None:
+    if if_infer_file_exists:
         bench_dataset = None
         print(f"✅ Start evaluating by using the cached inference file <{infer_file}>")
     else:
@@ -82,12 +85,12 @@ def main(cfg, env):
         )
         infer_batch_count = len(bench_dataloader)
         
-        total_batch_size = cfg.model.eval.eval_batch_size * world_size
-        info = ["\n📚 Evaluation dataset:"]
+        total_infer_batch_size = cfg.model.eval.eval_batch_size * world_size
+        info = ["\n📚 Inference dataset:"]
         info += [f"    dataset: {cfg.data.name}"]
         info += [f"    sample count: {len(bench_dataset)}"]
         info += [f"    batchsize: {cfg.model.eval.eval_batch_size}"]
-        info += [f"    total batchsize: {total_batch_size}"]
+        info += [f"    total batchsize: {total_infer_batch_size}"]
         if cfg.data.load.sample_ratio != 1.:
             info += [f"    sample_ratio: {cfg.data.load.sample_ratio}"]
         if cfg.data.load.drop_last:
@@ -95,7 +98,7 @@ def main(cfg, env):
         if cfg.data.load.cache_dir:
             info += [f"    cache_dir: {cfg.data.load.cache_dir}"]
         print("\n".join(info))
-        print("✅ Prepared evaluation dataset")
+        print("✅ Prepared inference dataset")
 
     # --------------------------------------------------------------------------------
     # 3. Build Inference Pipeline
@@ -143,9 +146,6 @@ def main(cfg, env):
 
         dist.barrier()
 
-        # Synchronize and save results
-        infer_file = f"infer_results--{result_base_name}.jsonl"
-        infer_file = os.path.join(cfg.log.log_dir, infer_file)
         synchronize_and_save_results(infer_results, infer_file, world_size)
         save_meta_data(meta_data, cfg.log.log_dir)
 
@@ -177,6 +177,16 @@ def main(cfg, env):
         batch_size=cfg.reward_model.eval.eval_batch_size,
         num_workers=cfg.data.load.num_workers,
     )
+    eval_batch_count = len(eval_dataloader)
+    
+    total_eval_batch_size = cfg.reward_model.eval.eval_batch_size * world_size
+    info = ["\n📚 Evaluation dataset:"]
+    info += [f"    dataset: {cfg.data.name}"]
+    info += [f"    sample count: {len(eval_dataset)}"]
+    info += [f"    batchsize: {cfg.reward_model.eval.eval_batch_size}"]
+    info += [f"    total batchsize: {total_eval_batch_size}"]
+    print("\n".join(info))
+    print("✅ Prepared evaluation dataset")
 
     # --------------------------------------------------------------------------------
     # 7. Evaluation
@@ -187,7 +197,7 @@ def main(cfg, env):
     eval_results = []
     result_key = "result"
     for i, data in enumerate(eval_dataloader, start=1):
-        batch_info = f"batch: {i} / {len(eval_dataloader)}"
+        batch_info = f"batch: {i} / {eval_batch_count}"
         print(f"🚀 Evaluating {model_name} on {data_name} by {evaluator_name}: {batch_info}")
         eval_meters.start("step")
 
@@ -210,8 +220,6 @@ def main(cfg, env):
 
     dist.barrier()
 
-    # Synchronize and save results
-    eval_file = f"eval_results--{result_base_name}.jsonl"
     synchronize_and_save_results(eval_results, eval_file, world_size)
 
     # --------------------------------------------------------------------------------

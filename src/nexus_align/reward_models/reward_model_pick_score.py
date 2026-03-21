@@ -1,4 +1,4 @@
-"""PickScore reward model for image generation."""
+"""PickScore reward model for evaluating image generation."""
 
 import os
 import torch
@@ -8,7 +8,7 @@ from nexus_align.core.base_reward_model import BaseRewardModel
 
 class PickScore(BaseRewardModel):
     """
-    PickScore reward model for image generation.
+    PickScore reward model for evaluating image generation.
 
     References:
         - PickScore paper: https://arxiv.org/pdf/2305.01569.

@@ -4,13 +4,17 @@ Used by the evaluation CLI.
 """
 
 import os
-import glob
 import json
 
 import torch.distributed as dist
 
 
-def cache_check(cache_log_dir: str, meta_data: dict) -> tuple[str | None, str | None]:
+def cache_check(
+    cache_log_dir: str, 
+    meta_data: dict,
+    infer_file: str | None = None,
+    eval_file: str | None = None,
+) -> tuple[str | None, str | None]:
     """
     Check that the cache directory exists and meta matches; return (eval_results_file, infer_results_file).
     One of the returned paths may be None.
@@ -23,27 +27,24 @@ def cache_check(cache_log_dir: str, meta_data: dict) -> tuple[str | None, str | 
             loaded_meta_data = json.load(f)
         if loaded_meta_data != meta_data:
             raise ValueError(f"❌ Meta data does not match the one in {meta_file}")
-
-    cache_log_dir = os.path.abspath(cache_log_dir)
-    eval_file = infer_file = None
+    
+    is_infer_file_exists = False
     if isinstance(cache_log_dir, str) and len(cache_log_dir) > 0:
         if not os.path.exists(cache_log_dir):
-            raise ValueError(f"Cache log dir does not exist in {cache_log_dir}")
-
+            raise ValueError(f"❌ Cache log dir does not exist in {cache_log_dir}")
+        
         meta_check(cache_log_dir, meta_data)
+        
+        if not os.path.exists(infer_file):
+            raise ValueError(f"❌ No appropriate inference files found in {cache_log_dir}")
+        
+        eval_file_name = eval_file.rsplit("/", 1)[-1]
+        if os.path.exists(os.path.join(cache_log_dir, eval_file_name)):
+           raise ValueError(f"❌ Evaluation file already exists in {eval_file}")
 
-        eval_files = glob.glob(os.path.join(cache_log_dir, "eval_results*.jsonl"))
-        infer_files = glob.glob(os.path.join(cache_log_dir, "infer_results*.jsonl"))
-
-        if len(eval_files) == 1:
-            eval_file = eval_files[0]
-        elif len(infer_files) == 1:
-            infer_file = infer_files[0]
-        else:
-            raise ValueError(f"❌ No appropriate result files found in {cache_log_dir}")
-
-    return eval_file, infer_file
-
+        is_infer_file_exists = True
+    
+    return is_infer_file_exists
 
 def save_meta_data(meta_data: dict, log_dir: str) -> None:
     """Save meta data to meta.json in log_dir. Only rank 0 writes."""

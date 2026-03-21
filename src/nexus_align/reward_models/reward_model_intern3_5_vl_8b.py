@@ -1,6 +1,7 @@
-"""Intern3.5-VL reward model for image generation."""
+"""Intern3.5-VL reward model for evaluating image generation."""
 
 import json
+import re
 import torch
 
 from nexus_align.core.base_reward_model import BaseRewardModel
@@ -34,7 +35,7 @@ Return the evaluation result in JSON format:
 
 class Intern3_5_VL_8B(BaseRewardModel):
     """
-    Intern3.5-VL reward model for image generation.
+    Intern3.5-VL reward model for evaluating image generation.
 
     References:
         - Intern3.5-VL paper: https://arxiv.org/pdf/2508.18265.
@@ -142,6 +143,10 @@ class Intern3_5_VL_8B(BaseRewardModel):
 
             scores = {}
             try:
+                res = re.sub(r"<\|.*?\|>", "", res).strip()
+                # Strip markdown code fences (```json ... ``` or ``` ... ```)
+                res = re.sub(r"```(?:json)?\s*", "", res).strip()
+                res = res.strip("`").strip()
                 eval_result = json.loads(res)
 
                 for key in EVAL_KEYS:

@@ -10,6 +10,7 @@ from nexus_align.utils.progress import TqdmBar
 from nexus_align.engine.meter import WindowMeter
 from nexus_align.core.base_model import BaseModel
 from nexus_align.core.base_reward_model import BaseRewardModel
+from nexus_align.engine.model_utils import clone_params, compute_update_ratio
 
 
 class GRPOAlgorithm(BaseAlgorithm):
@@ -66,6 +67,7 @@ class GRPOAlgorithm(BaseAlgorithm):
         meters.add_new_meter("unclipped_loss", window_size=100)
         meters.add_new_meter("lr", window_size=100, report_mean=False)
         meters.add_new_meter("grad_norm", window_size=100)
+        meters.add_new_meter("update_ratio", window_size=100)
         meters.add_new_meter("ratio_mean", window_size=100)
         meters.add_new_meter("ratio_std", window_size=100)
         meters.add_new_meter("clipped_ratio", window_size=100)
@@ -180,7 +182,7 @@ class GRPOAlgorithm(BaseAlgorithm):
         last_group_idx = -1
         bar = None
         info = ""
-
+        
         for item in self.pipeline.iterate_training_items(data):
             old_log_probs = item["old_log_probs"]
             advantages = torch.clamp(
@@ -251,11 +253,18 @@ class GRPOAlgorithm(BaseAlgorithm):
             
             # Update model by gradient backward and optimizer step
             if should_optimizer_step:
+                prev_params = clone_params(self.model)
                 grad_norm = self.model.clip_grad_norm_(self.max_grad_norm).item()
                 self.meters.update("grad_norm", grad_norm)
                 self.optimizer.step()
+                
+                update_ratio = compute_update_ratio(self.model, prev_params)
+                self.meters.update("update_ratio", update_ratio)
+                grad_info = f"update_ratio: {update_ratio:.6f} grad_norm: {grad_norm:.6f}"
+                
                 self.optimizer.zero_grad()
-                print(f"✅ Updated model on group {group_idx + 1} / {self.group_size}")
+                
+                print(f"✅ Updated model on the batch {group_idx + 1} / {self.pipeline.train_batch_size} ({grad_info})")
 
         if bar is not None:
             bar.close()

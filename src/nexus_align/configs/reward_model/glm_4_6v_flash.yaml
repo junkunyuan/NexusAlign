@@ -1,5 +1,5 @@
-name: qwen3_vl_8b
-path: Qwen/Qwen3-VL-8B-Instruct
+name: glm_4_6v_flash
+path: zai-org/GLM-4.6V-Flash
 mode: eval
 model_dtype: fp32
 amp_dtype: bf16
@@ -9,4 +9,4 @@ fsdp:
   fsdp_cpu_offload: false
 
 eval:
-  eval_batch_size: 8
+  eval_batch_size: 2

@@ -1,4 +1,4 @@
-"""CLIPScore reward model for image generation."""
+"""CLIPScore reward model for evaluating image generation."""
 
 import torch
 
@@ -8,7 +8,7 @@ from nexus_align.core.base_reward_model import BaseRewardModel
 
 class CLIPScore(BaseRewardModel):
     """
-    CLIPScore reward model for image generation.
+    CLIPScore reward model for evaluating image generation.
 
     References:
         - CLIPScore paper: https://arxiv.org/pdf/2104.08718.
