@@ -91,6 +91,10 @@ class FluxModel(BaseModel):
         self.text_encoder, self.text_encoder_2, self.tokenizer, self.tokenizer_2 = (
             self.load_text_encoder()
         )
+        cfg_model_ref = kwargs["model"].get("ref", {})
+        self.ref_model = None
+        if cfg_model_ref.get("enable", False):
+            self.ref_model = self._load_ref_transformer(cfg_ref=cfg_model_ref)
 
     def get_trainable_module(self):
         """Return the main trainable module (for BaseModel interface)."""
@@ -110,9 +114,24 @@ class FluxModel(BaseModel):
         wrap_modules = (FluxTransformerBlock, FluxSingleTransformerBlock)
 
         if self.use_sharded_weights:
-            model = self._load_sharded(wrap_modules)
+            model = self._load_sharded(
+                wrap_modules=wrap_modules,
+                pipe_path=self.pipe_path,
+                model_dtype=self.model_dtype,
+                fsdp_strategy=self.fsdp_strategy,
+                fsdp_cpu_offload=self.fsdp_cpu_offload,
+                sharded_weights_dir=self.sharded_weights_dir,
+                model_name=self.model_name,
+            )
         else:
-            model = self._load_pretrained(wrap_modules)
+            model = self._load_pretrained(
+                wrap_modules=wrap_modules,
+                pipe_path=self.pipe_path,
+                model_dtype=self.model_dtype,
+                fsdp_strategy=self.fsdp_strategy,
+                fsdp_cpu_offload=self.fsdp_cpu_offload,
+                model_name=self.model_name,
+            )
 
         if self.activation_ckpt:
             activation_wrap(model, wrap_modules, model_name=self.model_name)
@@ -138,29 +157,48 @@ class FluxModel(BaseModel):
 
         return model, wrap_modules, para_train
 
-    def _load_pretrained(self, wrap_modules: tuple) -> FSDP:
+    def _load_pretrained(
+        self,
+        wrap_modules: tuple,
+        *,
+        pipe_path: str,
+        model_dtype: torch.dtype,
+        fsdp_strategy: str,
+        fsdp_cpu_offload: bool,
+        model_name: str,
+    ) -> FSDP:
         """Load transformer from HF pretrained weights and wrap with FSDP."""
         subfolder = "transformer"
-        print(f"⏳ Loading FLUX model from <{self.pipe_path}>/{subfolder}")
+        print(f"⏳ Loading {model_name} from <{pipe_path}>/{subfolder}")
         model = FluxTransformer2DModel.from_pretrained(
-            pretrained_model_name_or_path=self.pipe_path,
+            pretrained_model_name_or_path=pipe_path,
             subfolder=subfolder,
-            torch_dtype=self.model_dtype,
+            torch_dtype=model_dtype,
         )
         return fsdp_wrap(
             model=model,
             wrap_modules=wrap_modules,
-            param_dtype=self.model_dtype,
-            strategy=self.fsdp_strategy,
-            cpu_offload=self.fsdp_cpu_offload,
-            model_name=self.model_name,
+            param_dtype=model_dtype,
+            strategy=fsdp_strategy,
+            cpu_offload=fsdp_cpu_offload,
+            model_name=model_name,
         )
 
-    def _load_sharded(self, wrap_modules: tuple) -> FSDP:
+    def _load_sharded(
+        self,
+        wrap_modules: tuple,
+        *,
+        pipe_path: str,
+        model_dtype: torch.dtype,
+        fsdp_strategy: str,
+        fsdp_cpu_offload: bool,
+        sharded_weights_dir: str,
+        model_name: str,
+    ) -> FSDP:
         """Load transformer from pre-converted FSDP shards and wrap with FSDP."""
-        if not (self.sharded_weights_dir and self.sharded_weights_dir.strip()):
+        if not (sharded_weights_dir and sharded_weights_dir.strip()):
             raise ValueError("❌ use_sharded_weights is true but sharded_weights_dir is empty")
-        shard_dir = os.path.join(self.data_and_model_dir, self.sharded_weights_dir)
+        shard_dir = os.path.join(self.data_and_model_dir, sharded_weights_dir)
         if not os.path.isdir(shard_dir):
             raise ValueError(f"❌ sharded_weights_dir not a directory: {shard_dir}")
         missing = []
@@ -175,24 +213,24 @@ class FluxModel(BaseModel):
         shard_path = os.path.join(
             shard_dir, f"flux_shard-{self.rank + 1:05d}-of-{self.world_size:05d}.pt"
         )
-        print(f"⏳ Loading FLUX sharded weights (rank {self.rank}/{self.world_size}) from {shard_path}")
+        print(f"⏳ Loading {model_name} sharded weights (rank {self.rank}/{self.world_size}) from {shard_path}")
 
-        config = FluxTransformer2DModel.load_config(self.pipe_path, subfolder="transformer")
+        config = FluxTransformer2DModel.load_config(pipe_path, subfolder="transformer")
         with init_empty_weights():
-            model = FluxTransformer2DModel.from_config(config, torch_dtype=self.model_dtype)
+            model = FluxTransformer2DModel.from_config(config, torch_dtype=model_dtype)
 
-        inferred = _dtype_from_config(self.pipe_path)
-        init_dtype = inferred if inferred is not None else self.model_dtype
+        inferred = _dtype_from_config(pipe_path)
+        init_dtype = inferred if inferred is not None else model_dtype
 
         model = fsdp_wrap(
             model=model,
             wrap_modules=wrap_modules,
-            param_dtype=self.model_dtype,
-            strategy=self.fsdp_strategy,
-            cpu_offload=self.fsdp_cpu_offload,
+            param_dtype=model_dtype,
+            strategy=fsdp_strategy,
+            cpu_offload=fsdp_cpu_offload,
             from_empty_weights=True,
             init_dtype=init_dtype,
-            model_name=self.model_name,
+            model_name=model_name,
         )
 
         with FSDP.state_dict_type(model, StateDictType.SHARDED_STATE_DICT):
@@ -204,6 +242,49 @@ class FluxModel(BaseModel):
             )
 
         return model
+
+    def _load_ref_transformer(self, cfg_ref: dict) -> FSDP:
+        wrap_modules = (FluxTransformerBlock, FluxSingleTransformerBlock)
+
+        ref_path = cfg_ref["model_path"].strip()
+        pipe_path = (
+            os.path.join(self.data_and_model_dir, ref_path) if ref_path else self.pipe_path
+        )
+
+        # Ref and main transformer share all import params except path/offload.
+        ref_dtype = self.model_dtype
+        ref_fsdp_strategy = self.fsdp_strategy
+        ref_use_sharded_weights = self.use_sharded_weights
+        ref_sharded_weights_dir = self.sharded_weights_dir
+        ref_offload = cfg_ref["ref_offload"]
+
+        if ref_use_sharded_weights and (self.rank is None or self.world_size is None):
+            raise ValueError("❌ env required for ref sharded weights (use_sharded_weights=true)")
+
+        if ref_use_sharded_weights:
+            ref_dit = self._load_sharded(
+                wrap_modules=wrap_modules,
+                pipe_path=pipe_path,
+                model_dtype=ref_dtype,
+                fsdp_strategy=ref_fsdp_strategy,
+                fsdp_cpu_offload=ref_offload,
+                sharded_weights_dir=ref_sharded_weights_dir,
+                model_name="ref_transformer",
+            )
+        else:
+            ref_dit = self._load_pretrained(
+                wrap_modules=wrap_modules,
+                pipe_path=pipe_path,
+                model_dtype=ref_dtype,
+                fsdp_strategy=ref_fsdp_strategy,
+                fsdp_cpu_offload=ref_offload,
+                model_name="ref_transformer",
+            )
+
+        ref_dit.eval()
+        ref_dit.requires_grad_(False)
+        print("✅ Prepared ref transformer (eval mode)")
+        return ref_dit
 
     def load_vae(self) -> AutoencoderKL:
         """Load VAE module."""
