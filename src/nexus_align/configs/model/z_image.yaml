@@ -1,5 +1,5 @@
-name: flux
-path: black-forest-labs/FLUX.1-dev
+name: z_image
+path: Tongyi-MAI/Z-Image-Turbo
 model_dtype: fp32
 amp_dtype: bf16
 mode: train
@@ -15,14 +15,13 @@ grpo:
   sample_width: 720
   sample_shift: 3
   sample_eta: 0.5
-  sample_cfg: 3.5
-  sample_steps: 20
+  sample_steps: 9
   timestep_fraction: 0.5
 
 eval:
   ckpt_path: ""
-  cfg: 3.5
+  cfg: 0.0
   height: 720
   width: 720
-  num_infer_steps: 50
-  eval_batch_size: 8
+  num_infer_steps: 9
+  eval_batch_size: 4
