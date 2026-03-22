@@ -7,12 +7,6 @@ import torch.nn.functional as F
 
 from diffusers import SD3Transformer2DModel, AutoencoderKL, StableDiffusion3Pipeline
 from diffusers.models.transformers.transformer_sd3 import SD3SingleTransformerBlock
-from transformers import (
-    CLIPTextModelWithProjection,
-    CLIPTokenizer,
-    T5EncoderModel,
-    T5TokenizerFast,
-)
 
 from nexus_align.core.config import DTYPE_MAP
 from nexus_align.core.base_model import BaseModel
@@ -24,11 +18,10 @@ class SD3Model(BaseModel):
     """
     Stable Diffusion 3 Model for image generation.
 
-    SD3 is an MMDiT-based text-to-image model using triple text encoders
-    (CLIP-L, CLIP-G, T5-XXL) and flow-matching diffusion.
+    SD3 is an MMDiT-based transformer for text-to-image generation.
 
     References:
-        - Paper: https://arxiv.org/abs/2403.03206
+        - Paper: https://arxiv.org/pdf/2403.03206.
         - Checkpoint: https://huggingface.co/stabilityai/stable-diffusion-3-medium
     """
 

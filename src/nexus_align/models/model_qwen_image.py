@@ -30,13 +30,11 @@ class QwenImageModel(BaseModel):
     """
     Qwen-Image Model for image generation.
 
-    Qwen-Image is a DiT-based text-to-image model that uses Qwen2.5-VL as
-    the text encoder, achieving strong multilingual text rendering and
-    precise image generation.
+    Qwen-Image is a DiT-based text-to-image model for text-to-image generation.
 
     References:
+        - Official repo: https://github.com/QwenLM/Qwen-Image.
         - Checkpoint: https://huggingface.co/Qwen/Qwen-Image.
-        - Pipeline docs: https://huggingface.co/docs/diffusers/api/pipelines/qwenimage.
     """
 
     def __init__(

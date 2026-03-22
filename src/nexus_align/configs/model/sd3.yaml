@@ -1,7 +1,7 @@
 name: sd3
-path: stable-diffusion-3-medium
+path: stabilityai/stable-diffusion-3-medium
 safetensors_file: sd3_medium_incl_clips_t5xxlfp16.safetensors
-model_dtype: bf16
+model_dtype: fp32
 amp_dtype: bf16
 mode: train
 
@@ -9,11 +9,11 @@ fsdp:
   fsdp_strategy: full_shard
   fsdp_cpu_offload: false
   activation_ckpt: true
-  text_encoder_offload: true  # move to GPU only when encoding prompts, saves ~20 GB/GPU
+  text_encoder_offload: true
 
 grpo:
-  sample_height: 1024
-  sample_width: 1024
+  sample_height: 720
+  sample_width: 720
   sample_shift: 3
   sample_eta: 0.5
   sample_cfg: 7.0
@@ -23,7 +23,7 @@ grpo:
 eval:
   ckpt_path: ""
   cfg: 7.0
-  height: 1024
-  width: 1024
+  height: 720
+  width: 720
   num_infer_steps: 28
   eval_batch_size: 4

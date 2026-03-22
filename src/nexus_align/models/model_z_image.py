@@ -19,13 +19,11 @@ class ZImageModel(BaseModel):
     """
     Z-Image Model for image generation.
 
-    Z-Image is a DiT-based text-to-image model that uses Qwen3 as the text
-    encoder with chat-template prompt formatting, supporting multilingual
-    text rendering and precise image generation.
+    Z-Image is a DiT-based transformer for text-to-image generation.
 
     References:
-        - Checkpoint: https://huggingface.co/Z-a-o/Z-Image-Turbo
-        - Pipeline docs: https://huggingface.co/docs/diffusers/api/pipelines/z_image
+        - Official repo: https://github.com/Tongyi-MAI/Z-Image.
+        - Checkpoint: https://huggingface.co/Tongyi-MAI/Z-Image-Turbo.
     """
 
     def __init__(
