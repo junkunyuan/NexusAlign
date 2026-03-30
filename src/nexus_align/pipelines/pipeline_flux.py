@@ -42,60 +42,35 @@ class FluxInferPipeline:
 
     def __init__(
         self,
+        model,
         dtype: torch.dtype = torch.bfloat16,
         device: torch.device = None,
         kwargs: dict = {},
     ) -> None:
         self.model_name = "FLUX"
-        
+
         pipeline_path = os.path.join(
-            kwargs["common"]["data_and_model_dir"], 
-            kwargs["model"]["path"]
+            kwargs["common"]["data_and_model_dir"],
+            kwargs["model"]["path"],
         )
-        print(f"⏳ Loading {self.model_name} VAE from <{pipeline_path}/vae>")
-        vae = AutoencoderKL.from_pretrained(pipeline_path, subfolder="vae")
-
-        print(f"⏳ Loading {self.model_name} text_encoder from <{pipeline_path}/text_encoder>")
-        text_encoder = CLIPTextModel.from_pretrained(
-            pipeline_path, subfolder="text_encoder"
+        print(
+            f"⏳ Loading {self.model_name} scheduler from <{pipeline_path}/scheduler>"
         )
-        
-        print(f"⏳ Loading {self.model_name} text_encoder_2 from <{pipeline_path}/text_encoder_2>")
-        text_encoder_2 = T5EncoderModel.from_pretrained(
-            pipeline_path, subfolder="text_encoder_2"
+        scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
+            pipeline_path, subfolder="scheduler"
         )
-        
-        print(f"⏳ Loading {self.model_name} tokenizer from <{pipeline_path}/tokenizer>")
-        tokenizer = CLIPTokenizer.from_pretrained(pipeline_path, subfolder="tokenizer")
-        
-        print(f"⏳ Loading {self.model_name} tokenizer 2 from <{pipeline_path}/tokenizer_2>")
-        tokenizer_2 = T5TokenizerFast.from_pretrained(pipeline_path, subfolder="tokenizer_2")
-
-        print(f"⏳ Loading {self.model_name} transformer from <{pipeline_path}/transformer>")
-        transformer = FluxTransformer2DModel.from_pretrained(pipeline_path, subfolder="transformer")
-        
-        print(f"⏳ Loading {self.model_name} scheduler from <{pipeline_path}/scheduler>")
-        scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(pipeline_path, subfolder="scheduler")
 
         pipe = FluxPipeline(
-            vae=vae,
-            text_encoder=text_encoder,
-            text_encoder_2=text_encoder_2,
-            tokenizer=tokenizer,
-            tokenizer_2=tokenizer_2,
-            transformer=transformer,
+            vae=model.vae,
+            text_encoder=model.text_encoder,
+            text_encoder_2=model.text_encoder_2,
+            tokenizer=model.tokenizer,
+            tokenizer_2=model.tokenizer_2,
+            transformer=model.model,
             scheduler=scheduler,
+            execution_device=device,
         )
-        print(f"✅ Loaded pipeline from <{pipeline_path}>")
-        
-        # Load checkpoint
-        ckpt_path = kwargs["model"]["eval"].get("ckpt_path", None)
-        if isinstance(ckpt_path, str) and os.path.exists(ckpt_path):
-            print(f"⏳ Loading {self.model_name} checkpoint from <{ckpt_path}>")
-            state_dict = torch.load(ckpt_path, map_location="cpu", weights_only=True)
-            pipe.transformer.load_state_dict(state_dict)
-
-        self.pipe = pipe.to(dtype=dtype, device=device)
+        self.pipe = pipe
         self.height = kwargs["model"]["eval"]["height"]
         self.width = kwargs["model"]["eval"]["width"]
         self.num_infer_steps = kwargs["model"]["eval"]["num_infer_steps"]
@@ -450,6 +425,7 @@ class FluxPipeline(
         transformer: FluxTransformer2DModel,
         image_encoder: CLIPVisionModelWithProjection = None,
         feature_extractor: CLIPImageProcessor = None,
+        execution_device: torch.device | None = None,
     ) -> None:
         super().__init__()
 
@@ -478,6 +454,14 @@ class FluxPipeline(
             else 77
         )
         self.default_sample_size = 128
+        self._override_execution_device = execution_device
+
+    @property
+    def _execution_device(self) -> torch.device:
+        override = getattr(self, "_override_execution_device", None)
+        if override is not None:
+            return override
+        return super()._execution_device
 
     def _get_t5_prompt_embeds(
         self,

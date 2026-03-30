@@ -104,10 +104,18 @@ def main(cfg, env):
     # 3. Build Inference Pipeline
     # --------------------------------------------------------------------------------
     if bench_dataset is not None:
+        model = registry.get("model", model_name)(
+            device=device,
+            model_dtype=cfg.model.model_dtype,
+            kwargs=cfg_dict,
+            env=env,
+        )
+
         pipeline = registry.get("pipeline", f"{model_name}_infer")(
-            dtype=DTYPE_MAP[cfg.model.amp_dtype], 
-            device=device, 
-            kwargs=cfg_dict
+            model=model,
+            dtype=DTYPE_MAP[cfg.model.amp_dtype],
+            device=device,
+            kwargs=cfg_dict,
         )
         print(f"✅ Built inference pipeline: {model_name}")
     # --------------------------------------------------------------------------------
@@ -125,7 +133,8 @@ def main(cfg, env):
             print(f"🚀 Inference on batch: {i} / {infer_batch_count}")
             infer_meters.start("step")
 
-            result = pipeline(data)  # inference
+            with torch.inference_mode():
+                result = pipeline(data)  # inference
 
             # Save results
             for idx, md5 in enumerate(data["md5"]):
