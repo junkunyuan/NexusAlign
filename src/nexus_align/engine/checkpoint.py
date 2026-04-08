@@ -38,6 +38,7 @@ class CheckpointManager:
         self.save_ckpt_every_n_epochs = kwargs["save_ckpt_every_n_epochs"]
         self.save_ckpt_keep_last_n_epochs = kwargs["save_ckpt_keep_last_n_epochs"]
         self.save_ckpt_only_model = kwargs["save_ckpt_only_model"]
+        self.save_final_checkpoint = kwargs.get("save_final_checkpoint", True)
 
         self.save_ckpt_root = kwargs["save_ckpt_root"]
         os.makedirs(self.save_ckpt_root, exist_ok=True)
@@ -50,7 +51,9 @@ class CheckpointManager:
 
         self.fsdp = fsdp
 
-    def save_checkpoint(self, model_state_dict: dict, train_state: dict) -> None:
+    def save_checkpoint(
+        self, model_state_dict: dict, train_state: dict, force: bool = False
+    ) -> None:
         """
         Save checkpoint to `self.save_ckpt_root`.
 
@@ -63,6 +66,7 @@ class CheckpointManager:
                 - "epoch" (`int`)
                 - "step" (`int`)
                 - "total_step" (`int`)
+            force (bool): If True, save regardless of schedule (e.g. end of training).
         """
         step = train_state["step"]
         epoch = train_state["epoch"]
@@ -72,9 +76,8 @@ class CheckpointManager:
         if isinstance(self.save_ckpt_every_n_steps, int):
             if (step + 1) % self.save_ckpt_every_n_steps == 0:
                 to_save_step = True
-        elif isinstance(self.save_ckpt_every_n_epochs, int):
-            if (epoch + 1) % self.save_ckpt_every_n_epochs == 0:
-                to_save_epoch = True
+        if force:
+            to_save_step = True
 
         to_remove_step = len(self.saved_step_paths) >= self.save_ckpt_keep_last_n_steps
         to_remove_epoch = len(self.saved_epoch_paths) >= self.save_ckpt_keep_last_n_epochs
@@ -161,6 +164,19 @@ class CheckpointManager:
                 print(f"✅ Saved checkpoint to <{save_path}>")
             else:
                 print(f"❌ Failed to save all checkpoint components to <{save_path}>")
+
+    def save_epoch_checkpoint(self, model_state_dict: dict, train_state: dict) -> None:
+        """Save checkpoint at the end of an epoch if the epoch-based schedule matches.
+
+        Note: this is called AFTER meters.end("epoch"), so train_state["epoch"] is
+        already incremented (e.g. epoch=1 means epoch 0 just finished).
+        """
+        epoch = train_state["epoch"]
+        if not isinstance(self.save_ckpt_every_n_epochs, int):
+            return
+        if epoch % self.save_ckpt_every_n_epochs != 0:
+            return
+        self.save_checkpoint(model_state_dict, train_state, force=True)
 
     def load_checkpoint(self, model_state_dict: dict) -> None:
         """

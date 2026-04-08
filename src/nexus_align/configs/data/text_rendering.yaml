@@ -9,4 +9,5 @@ load:
   shuffle: true
   pin_memory: true
   num_workers: 4
+  train_file: train_set.csv
   cache_dir: null

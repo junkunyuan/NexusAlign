@@ -71,6 +71,26 @@ class Trainer:
         )
         return loader
 
+    def _save_final_checkpoint(self, algo: BaseAlgorithm, reason: str) -> None:
+        """Force-save the current model state at the end of training."""
+        if not self.checkpoint_manager.save_final_checkpoint:
+            print(f"⏭️  Skipping final checkpoint ({reason}), save_final_checkpoint=false")
+            return
+        print(f"💾 Saving final checkpoint ({reason})")
+        self.checkpoint_manager.save_checkpoint(
+            model_state_dict={
+                "model": algo.model,
+                "optimizer": algo.optimizer,
+                "lr_scheduler": algo.lr_scheduler,
+            },
+            train_state={
+                "epoch": algo.meters.epoch,
+                "step": algo.meters.step,
+                "total_step": algo.meters.total_step,
+            },
+            force=True,
+        )
+
     def train(self) -> None:
         """
         Run the training loop.
@@ -109,6 +129,7 @@ class Trainer:
                 if step < algo.meters.step:
                     continue
                 if algo.meters.total_step > algo.max_train_total_steps:
+                    self._save_final_checkpoint(algo, "max_total_steps reached")
                     self.logger.close_log()
                     return
 
@@ -158,6 +179,21 @@ class Trainer:
                 self.logger.log_all_meters(algo.meters)
 
             algo.meters.end("epoch")
+
+            self.checkpoint_manager.save_epoch_checkpoint(
+                model_state_dict={
+                    "model": algo.model,
+                    "optimizer": algo.optimizer,
+                    "lr_scheduler": algo.lr_scheduler,
+                },
+                train_state={
+                    "epoch": algo.meters.epoch,
+                    "step": algo.meters.step,
+                    "total_step": algo.meters.total_step,
+                },
+            )
+
             self.logger.log_all_meters(algo.meters)
 
+        self._save_final_checkpoint(algo, "all epochs completed")
         self.logger.close_log()

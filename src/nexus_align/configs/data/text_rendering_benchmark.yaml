@@ -9,4 +9,5 @@ load:
   shuffle: false
   pin_memory: true
   num_workers: 4
+  test_file: test_set.csv
   cache_dir: null

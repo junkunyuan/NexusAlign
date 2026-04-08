@@ -1,9 +1,22 @@
 """Distributed environment: initialization and safe process exit."""
 
 import os
+from datetime import timedelta
 
 import torch
 import torch.distributed as dist
+
+
+def _ensure_master_addr_resolvable() -> None:
+    """Fall back to 127.0.0.1 if MASTER_ADDR (set by torchrun) is not resolvable."""
+    import socket
+    addr = os.environ.get("MASTER_ADDR", "")
+    if not addr:
+        return
+    try:
+        socket.getaddrinfo(addr, None)
+    except socket.gaierror:
+        os.environ["MASTER_ADDR"] = "127.0.0.1"
 
 
 def init_dist_env() -> tuple[int, int, torch.device]:
@@ -18,12 +31,16 @@ def init_dist_env() -> tuple[int, int, torch.device]:
 
         device = torch.device(f"cuda:{local_rank}")
 
+        _ensure_master_addr_resolvable()
+
+        nccl_timeout = int(os.environ.get("NCCL_TIMEOUT", "3600"))
         dist.init_process_group(
             backend="nccl",
             init_method="env://",
             world_size=world_size,
             rank=rank,
             device_id=device,
+            timeout=timedelta(seconds=nccl_timeout),
         )
 
         torch.cuda.set_device(local_rank)

@@ -62,9 +62,9 @@ def prepare_env(
         exp_dir=os.path.join(cfg.log.log_dir, "logs"),
     )
     wandb_init = init_wandb(
-        entity=cfg.log.wandb.entity,
-        project=cfg.log.wandb.project,
-        name=cfg.log.wandb.name,
+        entity=str(cfg.log.wandb.entity),
+        project=str(cfg.log.wandb.project),
+        name=str(cfg.log.wandb.name),
         wandb_offline=cfg.log.wandb.wandb_offline or cfg.common.debug,
     )
     with open_dict(cfg):

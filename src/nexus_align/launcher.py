@@ -5,10 +5,12 @@ import importlib.util
 import subprocess
 import sys
 
-# Default env vars set before running the script
 _LAUNCH_ENV_DEFAULTS = {
     "OMP_NUM_THREADS": "1",
-    "HYDRA_FULL_ERROR": "1"
+    "HYDRA_FULL_ERROR": "1",
+    "MASTER_ADDR": "127.0.0.1",
+    "NCCL_SOCKET_IFNAME": "lo,eth0",
+    "GLOO_SOCKET_IFNAME": "lo,eth0",
 }
 
 
@@ -51,23 +53,36 @@ def launch(
     """
     script_args = script_args or []
     script_path = _resolve_script_path(script)
-    rdzv_endpoint = f"{master_addr}:{master_port}"
 
-    cmd = [
-        sys.executable,
-        "-m",
-        "torch.distributed.run",
-        "--nnodes", str(nnodes),
-        "--nproc_per_node", str(nproc_per_node),
-        "--node_rank", str(node_rank),
-        "--rdzv_backend", "c10d",
-        "--rdzv_endpoint", rdzv_endpoint,
-        "--rdzv_id", rdzv_id,
-        script_path,
-        *script_args,
-    ]
+    if nnodes == 1:
+        cmd = [
+            sys.executable,
+            "-m",
+            "torch.distributed.run",
+            "--standalone",
+            "--nproc_per_node", str(nproc_per_node),
+            "--local-addr", "127.0.0.1",
+            script_path,
+            *script_args,
+        ]
+    else:
+        rdzv_endpoint = f"{master_addr}:{master_port}"
+        cmd = [
+            sys.executable,
+            "-m",
+            "torch.distributed.run",
+            "--nnodes", str(nnodes),
+            "--nproc_per_node", str(nproc_per_node),
+            "--node_rank", str(node_rank),
+            "--rdzv_backend", "c10d",
+            "--rdzv_endpoint", rdzv_endpoint,
+            "--rdzv_id", rdzv_id,
+            script_path,
+            *script_args,
+        ]
 
     env = os.environ.copy()
-    env.update(_LAUNCH_ENV_DEFAULTS)
+    env.update({k: v for k, v in _LAUNCH_ENV_DEFAULTS.items() if k not in env})
+    env.setdefault("MASTER_PORT", str(master_port))
 
     return subprocess.run(cmd, env=env).returncode
