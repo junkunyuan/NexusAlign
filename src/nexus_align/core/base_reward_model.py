@@ -25,6 +25,24 @@ class BaseRewardModel(ABC):
         self.amp_dtype = DTYPE_MAP[kwargs["reward_model"]["amp_dtype"]]
         self.model_dtype = DTYPE_MAP[kwargs["reward_model"]["model_dtype"]]
         self.mode = kwargs["reward_model"]["mode"]
+        self.task = kwargs["reward_model"].get("task", "aesthetic")
+        raw_dims = kwargs["reward_model"].get("eval_dimensions", None)
+        if isinstance(raw_dims, str):
+            self.eval_dimensions = [s.strip() for s in raw_dims.split(",")]
+        elif isinstance(raw_dims, (list, tuple)):
+            self.eval_dimensions = list(raw_dims)
+        else:
+            self.eval_dimensions = None
+
+        raw_keys = kwargs["reward_model"].get("eval_keys", None)
+        if isinstance(raw_keys, str):
+            self.eval_keys = [s.strip() for s in raw_keys.split(",")]
+        elif isinstance(raw_keys, (list, tuple)):
+            self.eval_keys = list(raw_keys)
+        else:
+            self.eval_keys = None
+
+        self.reward_key = kwargs["reward_model"].get("reward_key", None)
 
         fsdp_kwargs = kwargs["reward_model"].get("fsdp", {})
         self.fsdp_kwargs = {
