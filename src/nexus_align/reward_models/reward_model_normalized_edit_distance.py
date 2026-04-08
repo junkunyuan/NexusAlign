@@ -65,10 +65,13 @@ class NormalizedEditDistance(BaseRewardModel):
     def _extract_target_text(prompt: str) -> str:
         """Return quoted substrings joined by space, or the full prompt."""
         matches = re.findall(
-            r'["\u201c\u201d\']+([^"\u201c\u201d\']+)["\u201c\u201d\']+', prompt
+            r'"([^"]+)"|'
+            r"'([^']+)'|"
+            r'\u201c([^\u201d]+)\u201d',
+            prompt,
         )
         if matches:
-            return " ".join(matches)
+            return " ".join(m for group in matches for m in group if m)
         return prompt
 
     @staticmethod
