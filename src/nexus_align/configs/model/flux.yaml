@@ -1,6 +1,6 @@
 name: flux
 path: black-forest-labs/FLUX.1-dev
-model_dtype: fp32
+model_dtype: bf16
 amp_dtype: bf16
 mode: train
 
@@ -8,17 +8,7 @@ fsdp:
   fsdp_strategy: full_shard
   fsdp_cpu_offload: false
   activation_ckpt: true
-  text_encoder_offload: false  # text encoder CPUOffload (FSDP managed)
-  use_sharded_weights: false   # load pre-converted FSDP shards instead of from_pretrained
-  sharded_weights_dir: ""      # relative to data_and_model_dir, e.g. flux_fsdp_shards_ws4
-  use_sharded_text_encoder: false  # FULL_SHARD T5/CLIP from pre-converted shards
-  t5_fsdp_shards_dir: ""           # relative to data_and_model_dir, e.g. models/t5_fsdp_shards
-  clip_fsdp_shards_dir: ""         # relative to data_and_model_dir, e.g. models/clip_fsdp_shards
-
-ref:
-  enable: false
-  model_path: ""         # empty -> use model.path
-  ref_offload: true      # CPUOffload (FSDP managed), same as text_encoder_offload
+  text_encoder_offload: false  # move to GPU only when encoding prompts
 
 grpo:
   sample_height: 720
@@ -28,19 +18,6 @@ grpo:
   sample_cfg: 3.5
   sample_steps: 20
   timestep_fraction: 0.5
-
-dpo:
-  sample_height: 720
-  sample_width: 720
-  sample_shift: 3
-  sample_eta: 0.5
-  sample_cfg: 3.5
-  sample_steps: 20
-  train_scheduler_shift: 3
-  # Continuous t in (0,1), same map as rollout: sigma = shift*t / (1+(shift-1)*t)
-  train_sigma_t_mode: uniform
-  train_sigma_logit_mean: 0.0
-  train_sigma_logit_std: 1.0
 
 eval:
   ckpt_path: ""

@@ -3,7 +3,6 @@ from nexus_align.pipelines.pipeline_flux import (
     FluxTrainPipeline,
     FluxInferPipeline,
 )
-from nexus_align.pipelines.pipeline_flux_dpo import FluxDPOTrainPipeline
 from nexus_align.pipelines.pipeline_qwen_image import (
     QwenImageTrainPipeline,
     QwenImageInferPipeline,
@@ -18,7 +17,6 @@ from nexus_align.pipelines.pipeline_z_image import (
 )
 
 registry.register("pipeline", "flux_train", FluxTrainPipeline)
-registry.register("pipeline", "flux_dpo_train", FluxDPOTrainPipeline)
 registry.register("pipeline", "flux_infer", FluxInferPipeline)
 registry.register("pipeline", "qwen_image_train", QwenImageTrainPipeline)
 registry.register("pipeline", "qwen_image_infer", QwenImageInferPipeline)
@@ -29,7 +27,6 @@ registry.register("pipeline", "z_image_infer", ZImageInferPipeline)
 
 __all__ = [
     "FluxTrainPipeline",
-    "FluxDPOTrainPipeline",
     "FluxInferPipeline",
     "QwenImageTrainPipeline",
     "QwenImageInferPipeline",
