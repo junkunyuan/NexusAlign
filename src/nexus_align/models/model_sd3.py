@@ -8,6 +8,8 @@ import torch.nn.functional as F
 from diffusers import SD3Transformer2DModel, AutoencoderKL, StableDiffusion3Pipeline
 from diffusers.models.transformers.transformer_sd3 import SD3SingleTransformerBlock
 
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+
 from nexus_align.core.config import DTYPE_MAP
 from nexus_align.core.base_model import BaseModel
 from nexus_align.engine.distributed import all_reduce_tensor
@@ -18,10 +20,11 @@ class SD3Model(BaseModel):
     """
     Stable Diffusion 3 Model for image generation.
 
-    SD3 is an MMDiT-based transformer for text-to-image generation.
+    SD3 is an MMDiT-based text-to-image model using triple text encoders
+    (CLIP-L, CLIP-G, T5-XXL) and flow-matching diffusion.
 
     References:
-        - Paper: https://arxiv.org/pdf/2403.03206.
+        - Paper: https://arxiv.org/abs/2403.03206
         - Checkpoint: https://huggingface.co/stabilityai/stable-diffusion-3-medium
     """
 
@@ -49,6 +52,7 @@ class SD3Model(BaseModel):
 
         # Load all components from single safetensors file
         self._load_from_single_file()
+        self.ref_model = self.load_ref_model() if self.mode == "train" else None
 
     def _load_from_single_file(self) -> None:
         """Load all components from SD3 single safetensors file."""
@@ -82,6 +86,37 @@ class SD3Model(BaseModel):
     def get_trainable_params(self):
         """Return trainable parameters (for BaseModel interface)."""
         return self.params_train
+
+    def load_ref_model(self) -> FSDP:
+        """Load a frozen reference transformer from the single-file checkpoint."""
+        safetensors_path = os.path.join(self.pipe_path, self.safetensors_file)
+        print(f"⏳ Loading SD3 reference model from <{safetensors_path}>")
+        # SD3 single-file format requires loading the full pipeline;
+        # extract transformer and discard the rest.
+        pipe = StableDiffusion3Pipeline.from_single_file(
+            safetensors_path, torch_dtype=self.model_dtype,
+        )
+        ref_model = pipe.transformer
+        del pipe
+        torch.cuda.empty_cache()
+
+        ref_model.requires_grad_(False)
+        ref_model.eval()
+
+        wrap_modules = (SD3SingleTransformerBlock,)
+        ref_model = fsdp_wrap(
+            model=ref_model,
+            wrap_modules=wrap_modules,
+            param_dtype=self.model_dtype,
+            strategy=self.fsdp_strategy,
+            cpu_offload=True,
+            model_name="SD3_ref",
+        )
+
+        print("✅ Prepared reference model: SD3_ref (frozen, CPU offload)")
+        torch.cuda.empty_cache()
+
+        return ref_model
 
     def _prepare_transformer(
         self, transformer: SD3Transformer2DModel

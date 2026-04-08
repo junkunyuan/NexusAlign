@@ -9,6 +9,8 @@ from diffusers import ZImageTransformer2DModel, AutoencoderKL
 from diffusers.models.transformers.transformer_z_image import ZImageTransformerBlock
 from transformers import AutoModel, AutoTokenizer
 
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+
 from nexus_align.core.config import DTYPE_MAP
 from nexus_align.core.base_model import BaseModel
 from nexus_align.engine.distributed import all_reduce_tensor
@@ -19,11 +21,13 @@ class ZImageModel(BaseModel):
     """
     Z-Image Model for image generation.
 
-    Z-Image is a DiT-based transformer for text-to-image generation.
+    Z-Image is a DiT-based text-to-image model that uses Qwen3 as the text
+    encoder with chat-template prompt formatting, supporting multilingual
+    text rendering and precise image generation.
 
     References:
-        - Official repo: https://github.com/Tongyi-MAI/Z-Image.
-        - Checkpoint: https://huggingface.co/Tongyi-MAI/Z-Image-Turbo.
+        - Checkpoint: https://huggingface.co/Z-a-o/Z-Image-Turbo
+        - Pipeline docs: https://huggingface.co/docs/diffusers/api/pipelines/z_image
     """
 
     def __init__(
@@ -46,6 +50,7 @@ class ZImageModel(BaseModel):
         self.text_encoder_offload = kwargs["model"]["fsdp"]["text_encoder_offload"]
 
         self.model, self.wrap_modules, self.params_train = self.load_model()
+        self.ref_model = self.load_ref_model() if self.mode == "train" else None
         self.vae = self.load_vae()
         self.text_encoder, self.tokenizer = self.load_text_encoder()
 
@@ -114,6 +119,41 @@ class ZImageModel(BaseModel):
         torch.cuda.empty_cache()
 
         return model, wrap_modules, para_train
+
+    def load_ref_model(self) -> FSDP:
+        """Load a frozen reference model with FSDP + CPU offload for KL computation."""
+        subfolder = "transformer"
+        print(f"⏳ Loading ZImage reference model from <{self.pipe_path}>/{subfolder}")
+        ref_model = ZImageTransformer2DModel.from_pretrained(
+            pretrained_model_name_or_path=self.pipe_path,
+            subfolder=subfolder,
+            torch_dtype=self.model_dtype,
+        )
+
+        ref_model.requires_grad_(False)
+        ref_model.eval()
+
+        needs_pad_token_fix = any(
+            hasattr(ref_model, n) for n in ("x_pad_token", "cap_pad_token")
+        )
+
+        wrap_modules = (ZImageTransformerBlock,)
+        ref_model = fsdp_wrap(
+            model=ref_model,
+            wrap_modules=wrap_modules,
+            param_dtype=self.model_dtype,
+            strategy=self.fsdp_strategy,
+            cpu_offload=True,
+            model_name="ZImage_ref",
+        )
+
+        if needs_pad_token_fix:
+            self._patch_prepare_sequence(ref_model)
+
+        print("✅ Prepared reference model: ZImage_ref (frozen, CPU offload)")
+        torch.cuda.empty_cache()
+
+        return ref_model
 
     @staticmethod
     def _patch_prepare_sequence(model) -> None:

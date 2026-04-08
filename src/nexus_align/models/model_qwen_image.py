@@ -8,6 +8,8 @@ from diffusers import AutoencoderKLQwenImage, QwenImageTransformer2DModel
 from diffusers.models.transformers.transformer_qwenimage import QwenImageTransformerBlock
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoTokenizer
 
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+
 from nexus_align.core.config import DTYPE_MAP
 from nexus_align.core.base_model import BaseModel
 from nexus_align.engine.distributed import all_reduce_tensor
@@ -30,11 +32,13 @@ class QwenImageModel(BaseModel):
     """
     Qwen-Image Model for image generation.
 
-    Qwen-Image is a DiT-based text-to-image model for text-to-image generation.
+    Qwen-Image is a DiT-based text-to-image model that uses Qwen2.5-VL as
+    the text encoder, achieving strong multilingual text rendering and
+    precise image generation.
 
     References:
-        - Official repo: https://github.com/QwenLM/Qwen-Image.
         - Checkpoint: https://huggingface.co/Qwen/Qwen-Image.
+        - Pipeline docs: https://huggingface.co/docs/diffusers/api/pipelines/qwenimage.
     """
 
     def __init__(
@@ -57,6 +61,7 @@ class QwenImageModel(BaseModel):
         self.text_encoder_offload = kwargs["model"]["fsdp"]["text_encoder_offload"]
 
         self.model, self.wrap_modules, self.params_train = self.load_model()
+        self.ref_model = self.load_ref_model() if self.mode == "train" else None
         self.vae = self.load_vae()
         self.text_encoder, self.tokenizer = self.load_text_encoder()
 
@@ -116,6 +121,34 @@ class QwenImageModel(BaseModel):
         torch.cuda.empty_cache()
 
         return model, wrap_modules, para_train
+
+    def load_ref_model(self) -> FSDP:
+        """Load a frozen reference model with FSDP + CPU offload for KL computation."""
+        subfolder = "transformer"
+        print(f"⏳ Loading QwenImage reference model from <{self.pipe_path}>/{subfolder}")
+        ref_model = QwenImageTransformer2DModel.from_pretrained(
+            pretrained_model_name_or_path=self.pipe_path,
+            subfolder=subfolder,
+            torch_dtype=self.model_dtype,
+        )
+
+        ref_model.requires_grad_(False)
+        ref_model.eval()
+
+        wrap_modules = (QwenImageTransformerBlock,)
+        ref_model = fsdp_wrap(
+            model=ref_model,
+            wrap_modules=wrap_modules,
+            param_dtype=self.model_dtype,
+            strategy=self.fsdp_strategy,
+            cpu_offload=True,
+            model_name="QwenImage_ref",
+        )
+
+        print("✅ Prepared reference model: QwenImage_ref (frozen, CPU offload)")
+        torch.cuda.empty_cache()
+
+        return ref_model
 
     def load_vae(self) -> AutoencoderKLQwenImage:
         """Load VAE module."""

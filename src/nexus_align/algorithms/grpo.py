@@ -58,6 +58,7 @@ class GRPOAlgorithm(BaseAlgorithm):
         self.group_size = cfg_algo_run["group_size"]
         self.adv_clip_max = cfg_algo_run["adv_clip_max"]
         self.clip_range = cfg_algo_run["clip_range"]
+        self.kl_coeff = cfg_algo_run.get("kl_coeff", 0.0)
         
         # Meters (algorithm-specific metrics)
         meters = WindowMeter()
@@ -75,6 +76,7 @@ class GRPOAlgorithm(BaseAlgorithm):
         meters.add_new_meter("reward_std", window_size=100)
         meters.add_new_meter("advantage_mean", window_size=100)
         meters.add_new_meter("advantage_std", window_size=100)
+        meters.add_new_meter("kl", window_size=100)
         self.meters = meters
     
     def prepare_data(self, data: dict) -> dict:
@@ -115,14 +117,18 @@ class GRPOAlgorithm(BaseAlgorithm):
         dist.all_gather(gathered, rewards)
         gathered = torch.cat(gathered)
 
-        mean = gathered.mean().item()
-        std= gathered.std().item()
+        valid_mask = ~torch.isnan(gathered)
+        num_nan = (~valid_mask).sum().item()
+        valid_rewards = gathered[valid_mask]
+        mean = valid_rewards.mean().item() if len(valid_rewards) > 0 else 0.0
+        std = valid_rewards.std().item() if len(valid_rewards) > 1 else 0.0
         
         self.meters.update("reward_mean", mean)
         self.meters.update("reward_std", std)
         
         dec = 4 if mean > 1 else 6
-        print(f"{len(gathered)} rewards (mean +- std): {mean:.{dec}f} +- {std:.{dec}f}")
+        nan_info = f", {int(num_nan)} skipped" if num_nan > 0 else ""
+        print(f"{len(gathered)} rewards (mean +- std): {mean:.{dec}f} +- {std:.{dec}f}{nan_info}")
 
         return data
 
@@ -138,10 +144,19 @@ class GRPOAlgorithm(BaseAlgorithm):
             end_idx = (cond_idx + 1) * self.group_size
             group_rewards = rewards[start_idx:end_idx]
 
-            mean = group_rewards.mean()
-            std = group_rewards.std() + 1e-8
+            valid_mask = ~torch.isnan(group_rewards)
+            valid_rewards = group_rewards[valid_mask]
 
-            advantages[start_idx:end_idx] = (group_rewards - mean) / std
+            if len(valid_rewards) < 2:
+                advantages[start_idx:end_idx] = 0.0
+                continue
+
+            mean = valid_rewards.mean()
+            std = valid_rewards.std() + 1e-8
+
+            group_adv = (group_rewards - mean) / std
+            group_adv[~valid_mask] = 0.0
+            advantages[start_idx:end_idx] = group_adv
 
         data["advantages"] = advantages
         
@@ -170,6 +185,7 @@ class GRPOAlgorithm(BaseAlgorithm):
             "ratio_mean": 0.0,
             "ratio_std": 0.0,
             "clipped_ratio": 0.0,
+            "kl": 0.0,
         }
         num_log = 0
 
@@ -185,6 +201,7 @@ class GRPOAlgorithm(BaseAlgorithm):
         
         for item in self.pipeline.iterate_training_items(data):
             old_log_probs = item["old_log_probs"]
+            ref_log_probs = item["ref_log_probs"]
             advantages = torch.clamp(
                 input=item["advantages"], 
                 min=-self.adv_clip_max, 
@@ -219,13 +236,20 @@ class GRPOAlgorithm(BaseAlgorithm):
             is_clipped = (ratio < ratio_lower) | (ratio > ratio_upper)
             clipped_ratio = is_clipped.detach().float().mean()
 
-            # Compute loss
+            # PPO clipped surrogate loss
             unclipped_loss = advantages * ratio
             clipped_loss = advantages * torch.clamp(ratio, ratio_lower, ratio_upper)
-            loss = -torch.mean(torch.min(unclipped_loss, clipped_loss))
+            policy_loss = -torch.mean(torch.min(unclipped_loss, clipped_loss))
+
+            # KL divergence against reference model (Schulman estimator)
+            log_ratio_ref = ref_log_probs - new_log_probs  # log(π_ref / π_θ)
+            kl = torch.mean(torch.exp(log_ratio_ref) - log_ratio_ref - 1)
+
+            loss = policy_loss + self.kl_coeff * kl
             (loss * backward_scale).backward()
 
             loss = loss.detach()
+            kl_val = kl.detach()
             clipped_loss = -clipped_loss.detach().mean()
             unclipped_loss = -unclipped_loss.detach().mean()
             ratio_mean = ratio.detach().mean()
@@ -239,6 +263,7 @@ class GRPOAlgorithm(BaseAlgorithm):
             info += [f"ratio_mean: {ratio_mean.item():.6f}"]
             info += [f"ratio_std: {ratio_std.item():.6f}"]
             info += [f"clipped_ratio: {clipped_ratio:.6f}"]
+            info += [f"kl: {kl_val.item():.6f}"]
 
             metrics["loss"] += loss
             metrics["clipped_loss"] += clipped_loss
@@ -246,6 +271,7 @@ class GRPOAlgorithm(BaseAlgorithm):
             metrics["ratio_mean"] += ratio_mean
             metrics["ratio_std"] += ratio_std
             metrics["clipped_ratio"] += clipped_ratio
+            metrics["kl"] += kl_val
             num_log += 1
 
             if bar is not None:

@@ -130,6 +130,7 @@ class SD3TrainPipeline(BaseTrainPipeline):
 
         # Model
         self.model = model.model
+        self.ref_model = model.ref_model
         self.vae = model.vae
         self.encode_prompt = model.encode_prompt
 
@@ -138,6 +139,7 @@ class SD3TrainPipeline(BaseTrainPipeline):
         self.amp_dtype = amp_dtype
         self.device = device
         self.grad_accu_step = cfg_algo_train["grad_accu_step"]
+        self.train_batch_size = cfg_algo_train["train_batch_size"]
 
         # Algorithm-specific
         self.algo_name = kwargs["algorithm"]["name"]
@@ -150,9 +152,73 @@ class SD3TrainPipeline(BaseTrainPipeline):
             self.sample_width = cfg_model_algo["sample_width"]
             self.sample_shift = cfg_model_algo["sample_shift"]
             self.sample_steps = cfg_model_algo["sample_steps"]
+            self.sample_cfg = cfg_model_algo["sample_cfg"]
             self.timestep_fraction = cfg_model_algo["timestep_fraction"]
             sample_eta = cfg_model_algo["sample_eta"]
             self.scheduler = RLFlowMatchEulerDiscreteScheduler(sample_eta=sample_eta)
+
+    def _call_transformer(
+        self,
+        latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        prompt_embeds: torch.Tensor,
+        pooled_prompt_embeds: torch.Tensor,
+        model=None,
+    ) -> torch.Tensor:
+        """
+        Call an SD3 transformer, reusable for both main and ref model.
+
+        Args:
+            model: transformer to call. Defaults to self.model (trainable).
+        """
+        if model is None:
+            model = self.model
+
+        with torch.amp.autocast(
+            device_type=self.device.type, dtype=self.amp_dtype
+        ):
+            model_output = model(
+                hidden_states=latents,
+                timestep=timesteps,
+                encoder_hidden_states=prompt_embeds,
+                pooled_projections=pooled_prompt_embeds,
+            ).sample.to(dtype=self.model_dtype)
+
+        return model_output
+
+    def _apply_cfg(
+        self,
+        latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        prompt_embeds: torch.Tensor,
+        pooled_prompt_embeds: torch.Tensor,
+        negative_prompt_embeds: torch.Tensor,
+        negative_pooled_prompt_embeds: torch.Tensor,
+        model=None,
+    ) -> torch.Tensor:
+        """
+        Compute noise prediction with Classifier-Free Guidance.
+
+        When sample_cfg <= 1, falls back to a single conditional forward pass.
+        Otherwise concats uncond + cond into one batch for a single forward pass,
+        then splits and blends: output = uncond + sample_cfg * (cond - uncond).
+        Reference: DanceGRPO (https://arxiv.org/pdf/2505.07818)
+        """
+        if self.sample_cfg <= 1.0:
+            return self._call_transformer(
+                latents, timesteps, prompt_embeds, pooled_prompt_embeds, model=model,
+            )
+
+        cat_latents = torch.cat([latents, latents])
+        cat_timesteps = torch.cat([timesteps, timesteps])
+        cat_embeds = torch.cat([negative_prompt_embeds, prompt_embeds])
+        cat_pooled = torch.cat([negative_pooled_prompt_embeds, pooled_prompt_embeds])
+
+        cat_output = self._call_transformer(
+            cat_latents, cat_timesteps, cat_embeds, cat_pooled, model=model,
+        )
+        uncond_output, cond_output = cat_output.chunk(2)
+        return uncond_output + self.sample_cfg * (cond_output - uncond_output)
 
     def prepare_data(self, data: dict) -> dict:
         """Prepare data from dataloader batch."""
@@ -162,6 +228,13 @@ class SD3TrainPipeline(BaseTrainPipeline):
             text_embed = self.encode_prompt(prompts)
             data.update(text_embed)
 
+        if self.algo_name == "grpo":
+            neg_features = ["negative_prompt_embeds", "negative_pooled_prompt_embeds"]
+            if not all(t in data for t in neg_features):
+                neg_embed = self.encode_prompt([""] * len(prompts))
+                data["negative_prompt_embeds"] = neg_embed["prompt_embeds"]
+                data["negative_pooled_prompt_embeds"] = neg_embed["pooled_prompt_embeds"]
+
         sampled_prompts = random.sample(prompts, min(4, len(prompts)))
         print("\nSampled training prompts:\n" + "\n".join(sampled_prompts))
 
@@ -170,6 +243,8 @@ class SD3TrainPipeline(BaseTrainPipeline):
                 "text",
                 "prompt_embeds",
                 "pooled_prompt_embeds",
+                "negative_prompt_embeds",
+                "negative_pooled_prompt_embeds",
             }
 
         return data
@@ -204,6 +279,8 @@ class SD3TrainPipeline(BaseTrainPipeline):
             latents = torch.cat([shared_latents] * batch_size, dim=0).to(self.device)
             prompt_embeds = data["prompt_embeds"][b_idx]
             pooled_prompt_embeds = data["pooled_prompt_embeds"][b_idx]
+            negative_prompt_embeds = data["negative_prompt_embeds"][b_idx]
+            negative_pooled_prompt_embeds = data["negative_pooled_prompt_embeds"][b_idx]
 
             # ----------------------------------------
             # Run denoising
@@ -216,15 +293,10 @@ class SD3TrainPipeline(BaseTrainPipeline):
                     [batch_size], timestep, device=self.device, dtype=torch.long
                 )
 
-                with torch.amp.autocast(
-                    device_type=self.device.type, dtype=self.amp_dtype
-                ):
-                    model_output = self.model(
-                        hidden_states=latents,
-                        timestep=timesteps,
-                        encoder_hidden_states=prompt_embeds,
-                        pooled_projections=pooled_prompt_embeds,
-                    ).sample.to(dtype=self.model_dtype)
+                model_output = self._apply_cfg(
+                    latents, timesteps, prompt_embeds, pooled_prompt_embeds,
+                    negative_prompt_embeds, negative_pooled_prompt_embeds,
+                )
 
                 # SD3 uses spatial latents: flatten for step_fn, then reshape
                 B, C, H, W = latents.shape
@@ -291,20 +363,100 @@ class SD3TrainPipeline(BaseTrainPipeline):
         ]
         timesteps = torch.tensor([timestep_values] * batch, dtype=torch.int64)
 
+        latents_trimmed = all_latents[:, :-2]
+        next_latents_trimmed = all_latents[:, 1:-1]
+        timesteps_trimmed = timesteps[:, :-1]
+
+        ref_log_probs = self._compute_ref_log_probs(
+            latents=latents_trimmed,
+            next_latents=next_latents_trimmed,
+            timesteps=timesteps_trimmed,
+            sigma_schedule=sigma_schedule,
+            prompt_embeds=data["prompt_embeds"],
+            pooled_prompt_embeds=data["pooled_prompt_embeds"],
+            negative_prompt_embeds=data["negative_prompt_embeds"],
+            negative_pooled_prompt_embeds=data["negative_pooled_prompt_embeds"],
+        )
+
         data = {
             "reward_inputs": {"image": images, "image_pil": image_pils, "text": texts},
-            "latents": all_latents[:, :-2],
-            "next_latents": all_latents[:, 1:-1],
-            "timesteps": timesteps[:, :-1],
+            "latents": latents_trimmed,
+            "next_latents": next_latents_trimmed,
+            "timesteps": timesteps_trimmed,
             "log_probs": torch.cat(all_log_probs)[:, :-1],
+            "ref_log_probs": ref_log_probs,
             "prompt_embeds": data["prompt_embeds"],
             "pooled_prompt_embeds": data["pooled_prompt_embeds"],
+            "negative_prompt_embeds": data["negative_prompt_embeds"],
+            "negative_pooled_prompt_embeds": data["negative_pooled_prompt_embeds"],
             "sigma_schedule": sigma_schedule,
         }
 
         torch.cuda.empty_cache()
 
         return data
+
+    @torch.no_grad()
+    def _compute_ref_log_probs(
+        self,
+        latents: torch.Tensor,
+        next_latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        sigma_schedule: torch.Tensor,
+        prompt_embeds: torch.Tensor,
+        pooled_prompt_embeds: torch.Tensor,
+        negative_prompt_embeds: torch.Tensor,
+        negative_pooled_prompt_embeds: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute log probs from the frozen reference model for KL divergence."""
+        if self.ref_model is None:
+            return torch.zeros_like(latents[:, :, 0, 0, 0])
+
+        batch, num_steps = latents.shape[0], latents.shape[1]
+        batch_ind = torch.arange(batch).chunk(batch // self.sample_batch_size)
+
+        all_ref_log_probs = []
+        bar = TqdmBar(total=len(batch_ind), desc="🔒 Computing ref log probs", unit="batch")
+        self.ref_model.eval()
+
+        for b_idx in batch_ind:
+            ref_log_probs_steps = []
+            step_prompt_embeds = prompt_embeds[b_idx]
+            step_pooled = pooled_prompt_embeds[b_idx]
+            step_neg_embeds = negative_prompt_embeds[b_idx]
+            step_neg_pooled = negative_pooled_prompt_embeds[b_idx]
+
+            for i in range(num_steps):
+                step_latents = latents[b_idx, i].to(self.device)
+                step_next_latents = next_latents[b_idx, i].to(self.device)
+                step_timesteps = timesteps[b_idx, i].to(self.device)
+
+                model_output = self._apply_cfg(
+                    step_latents, step_timesteps,
+                    step_prompt_embeds, step_pooled,
+                    step_neg_embeds, step_neg_pooled,
+                    model=self.ref_model,
+                )
+
+                B, C, H, W = step_latents.shape
+                latents_flat = step_latents.view(B, -1).unsqueeze(1)
+                output_flat = model_output.view(B, -1).unsqueeze(1)
+                next_flat = step_next_latents.view(B, -1).unsqueeze(1)
+
+                _, _, ref_log_prob = self.scheduler.step_fn(
+                    model_output=output_flat,
+                    latents=latents_flat,
+                    sigmas=sigma_schedule,
+                    index=i,
+                    prev_sample=next_flat,
+                )
+                ref_log_probs_steps.append(ref_log_prob)
+
+            all_ref_log_probs.append(torch.stack(ref_log_probs_steps, dim=1))
+            bar.update(1)
+
+        bar.close()
+        return torch.cat(all_ref_log_probs, dim=0)
 
     def iterate_training_items(self, responses: dict):
         """
@@ -325,7 +477,7 @@ class SD3TrainPipeline(BaseTrainPipeline):
         batch = len(responses["timesteps"])
         step_len = len(responses["timesteps"][0])
         perms = torch.stack([torch.randperm(step_len) for _ in range(batch)])
-        for key in ["timesteps", "latents", "next_latents", "log_probs"]:
+        for key in ["timesteps", "latents", "next_latents", "log_probs", "ref_log_probs"]:
             ran = torch.arange(batch)
             responses[key] = responses[key][ran[:, None], perms]
         all_timesteps = len(responses["timesteps"][0])
@@ -361,17 +513,18 @@ class SD3TrainPipeline(BaseTrainPipeline):
                         pooled_prompt_embeds = responses["pooled_prompt_embeds"][
                             s_idx:e_idx
                         ]
+                        neg_embeds = responses["negative_prompt_embeds"][s_idx:e_idx]
+                        neg_pooled = responses["negative_pooled_prompt_embeds"][s_idx:e_idx]
                         latents = responses["latents"][s_idx:e_idx, step]
 
-                        with torch.amp.autocast(
-                            device_type=self.device.type, dtype=self.amp_dtype
-                        ):
-                            model_output = self.model(
-                                hidden_states=latents,
-                                timestep=responses["timesteps"][s_idx:e_idx, step],
-                                encoder_hidden_states=prompt_embeds,
-                                pooled_projections=pooled_prompt_embeds,
-                            ).sample.to(dtype=self.model_dtype)
+                        model_output = self._apply_cfg(
+                            latents,
+                            responses["timesteps"][s_idx:e_idx, step],
+                            prompt_embeds,
+                            pooled_prompt_embeds,
+                            neg_embeds,
+                            neg_pooled,
+                        )
 
                         # Flatten spatial dims for step_fn
                         B, C, H, W = latents.shape
@@ -391,8 +544,11 @@ class SD3TrainPipeline(BaseTrainPipeline):
 
                     return forward_fn
 
+                ref_log_probs = responses["ref_log_probs"][start_idx:end_idx, t]
+
                 yield {
                     "old_log_probs": old_log_probs,
+                    "ref_log_probs": ref_log_probs,
                     "advantages": advantages_slice,
                     "forward_fn": make_forward_fn(),
                     "backward_scale": 1.0 / (self.grad_accu_step * train_timesteps),

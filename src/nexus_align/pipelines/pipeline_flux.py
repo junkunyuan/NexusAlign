@@ -42,35 +42,60 @@ class FluxInferPipeline:
 
     def __init__(
         self,
-        model,
         dtype: torch.dtype = torch.bfloat16,
         device: torch.device = None,
         kwargs: dict = {},
     ) -> None:
         self.model_name = "FLUX"
-
+        
         pipeline_path = os.path.join(
-            kwargs["common"]["data_and_model_dir"],
-            kwargs["model"]["path"],
+            kwargs["common"]["data_and_model_dir"], 
+            kwargs["model"]["path"]
         )
-        print(
-            f"⏳ Loading {self.model_name} scheduler from <{pipeline_path}/scheduler>"
+        print(f"⏳ Loading {self.model_name} VAE from <{pipeline_path}/vae>")
+        vae = AutoencoderKL.from_pretrained(pipeline_path, subfolder="vae")
+
+        print(f"⏳ Loading {self.model_name} text_encoder from <{pipeline_path}/text_encoder>")
+        text_encoder = CLIPTextModel.from_pretrained(
+            pipeline_path, subfolder="text_encoder"
         )
-        scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
-            pipeline_path, subfolder="scheduler"
+        
+        print(f"⏳ Loading {self.model_name} text_encoder_2 from <{pipeline_path}/text_encoder_2>")
+        text_encoder_2 = T5EncoderModel.from_pretrained(
+            pipeline_path, subfolder="text_encoder_2"
         )
+        
+        print(f"⏳ Loading {self.model_name} tokenizer from <{pipeline_path}/tokenizer>")
+        tokenizer = CLIPTokenizer.from_pretrained(pipeline_path, subfolder="tokenizer")
+        
+        print(f"⏳ Loading {self.model_name} tokenizer 2 from <{pipeline_path}/tokenizer_2>")
+        tokenizer_2 = T5TokenizerFast.from_pretrained(pipeline_path, subfolder="tokenizer_2")
+
+        print(f"⏳ Loading {self.model_name} transformer from <{pipeline_path}/transformer>")
+        transformer = FluxTransformer2DModel.from_pretrained(pipeline_path, subfolder="transformer")
+        
+        print(f"⏳ Loading {self.model_name} scheduler from <{pipeline_path}/scheduler>")
+        scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(pipeline_path, subfolder="scheduler")
 
         pipe = FluxPipeline(
-            vae=model.vae,
-            text_encoder=model.text_encoder,
-            text_encoder_2=model.text_encoder_2,
-            tokenizer=model.tokenizer,
-            tokenizer_2=model.tokenizer_2,
-            transformer=model.model,
+            vae=vae,
+            text_encoder=text_encoder,
+            text_encoder_2=text_encoder_2,
+            tokenizer=tokenizer,
+            tokenizer_2=tokenizer_2,
+            transformer=transformer,
             scheduler=scheduler,
-            execution_device=device,
         )
-        self.pipe = pipe
+        print(f"✅ Loaded pipeline from <{pipeline_path}>")
+        
+        # Load checkpoint
+        ckpt_path = kwargs["model"]["eval"].get("ckpt_path", None)
+        if isinstance(ckpt_path, str) and os.path.exists(ckpt_path):
+            print(f"⏳ Loading {self.model_name} checkpoint from <{ckpt_path}>")
+            state_dict = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+            pipe.transformer.load_state_dict(state_dict)
+
+        self.pipe = pipe.to(dtype=dtype, device=device)
         self.height = kwargs["model"]["eval"]["height"]
         self.width = kwargs["model"]["eval"]["width"]
         self.num_infer_steps = kwargs["model"]["eval"]["num_infer_steps"]
@@ -112,6 +137,7 @@ class FluxTrainPipeline(BaseTrainPipeline):
 
         # Model
         self.model = model.model
+        self.ref_model = model.ref_model
         self.vae = model.vae
         self.encode_prompt = model.encode_prompt
 
@@ -279,12 +305,29 @@ class FluxTrainPipeline(BaseTrainPipeline):
         ]
         timesteps = torch.tensor([timestep_values] * batch, dtype=torch.int64)
 
+        latents_trimmed = all_latents[:, :-2]      # [b, sample_steps - 1, l, 64]
+        next_latents_trimmed = all_latents[:, 1:-1]  # [b, sample_steps - 1, l, 64]
+        timesteps_trimmed = timesteps[:, :-1]        # [b, sample_steps - 1]
+
+        # Compute reference model log probs for KL divergence
+        ref_log_probs = self._compute_ref_log_probs(
+            latents=latents_trimmed,
+            next_latents=next_latents_trimmed,
+            timesteps=timesteps_trimmed,
+            sigma_schedule=sigma_schedule,
+            prompt_embed_t5=data["prompt_embed_t5"],
+            prompt_embed_clip=data["prompt_embed_clip"],
+            text_id=data["text_id"],
+            image_id=shared_image_id,
+        )
+
         data = {
             "reward_inputs": {"image": images, "image_pil": image_pils, "text": texts},
-            "latents": all_latents[:, :-2],  # [b, sample_steps - 1, l, 64]
-            "next_latents": all_latents[:, 1:-1],  # [b, sample_steps - 1, l, 64]
-            "timesteps": timesteps[:, :-1],  # [b, sample_steps - 1]
+            "latents": latents_trimmed,
+            "next_latents": next_latents_trimmed,
+            "timesteps": timesteps_trimmed,
             "log_probs": torch.cat(all_log_probs)[:, :-1],  # [b, sample_steps - 1]
+            "ref_log_probs": ref_log_probs,                  # [b, sample_steps - 1]
             "image_id": shared_image_id,  # [l, 3]
             "text_id": data["text_id"],  # [512, 3]
             "prompt_embed_t5": data["prompt_embed_t5"],  # [b, 512, 4096]
@@ -296,6 +339,62 @@ class FluxTrainPipeline(BaseTrainPipeline):
 
         return data
     
+    @torch.no_grad()
+    def _compute_ref_log_probs(
+        self,
+        latents: torch.Tensor,
+        next_latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        sigma_schedule: torch.Tensor,
+        prompt_embed_t5: torch.Tensor,
+        prompt_embed_clip: torch.Tensor,
+        text_id: torch.Tensor,
+        image_id: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute log probs from the frozen reference model for KL divergence."""
+        if self.ref_model is None:
+            return torch.zeros_like(latents[:, :, 0, 0])
+
+        batch, num_steps = latents.shape[0], latents.shape[1]
+        batch_ind = torch.arange(batch).chunk(batch // self.sample_batch_size)
+
+        all_ref_log_probs = []
+        bar = TqdmBar(total=len(batch_ind), desc="🔒 Computing ref log probs", unit="batch")
+        self.ref_model.eval()
+
+        for b_idx in batch_ind:
+            ref_log_probs_steps = []
+            for i in range(num_steps):
+                step_latents = latents[b_idx, i].to(self.device)
+                step_next_latents = next_latents[b_idx, i].to(self.device)
+                step_timesteps = timesteps[b_idx, i].to(self.device)
+
+                with torch.amp.autocast(device_type=self.device.type, dtype=self.amp_dtype):
+                    model_output = self.ref_model(
+                        hidden_states=step_latents,
+                        timestep=step_timesteps / 1000,
+                        encoder_hidden_states=prompt_embed_t5[b_idx],
+                        pooled_projections=prompt_embed_clip[b_idx],
+                        txt_ids=text_id,
+                        img_ids=image_id,
+                        guidance=self.sample_cfg,
+                    ).sample.to(dtype=self.model_dtype)
+
+                _, _, ref_log_prob = self.scheduler.step_fn(
+                    model_output=model_output,
+                    latents=step_latents,
+                    sigmas=sigma_schedule,
+                    index=i,
+                    prev_sample=step_next_latents,
+                )
+                ref_log_probs_steps.append(ref_log_prob)
+
+            all_ref_log_probs.append(torch.stack(ref_log_probs_steps, dim=1))
+            bar.update(1)
+
+        bar.close()
+        return torch.cat(all_ref_log_probs, dim=0)  # [b, sample_steps - 1]
+
     def iterate_training_items(self, responses: dict):
         """
         Yield training items, called by train_one_step() in algorithms.
@@ -315,7 +414,7 @@ class FluxTrainPipeline(BaseTrainPipeline):
         batch = len(responses["timesteps"])
         step_len = len(responses["timesteps"][0])
         perms = torch.stack([torch.randperm(step_len) for _ in range(batch)])
-        for key in ["timesteps", "latents", "next_latents", "log_probs"]:
+        for key in ["timesteps", "latents", "next_latents", "log_probs", "ref_log_probs"]:
             ran = torch.arange(batch)
             responses[key] = responses[key][ran[:, None], perms]
         all_timesteps = len(responses["timesteps"][0])
@@ -372,8 +471,11 @@ class FluxTrainPipeline(BaseTrainPipeline):
 
                     return forward_fn
 
+                ref_log_probs = responses["ref_log_probs"][start_idx:end_idx, t]
+
                 yield {
                     "old_log_probs": old_log_probs,
+                    "ref_log_probs": ref_log_probs,
                     "advantages": advantages_slice,
                     "forward_fn": make_forward_fn(),
                     "backward_scale": 1.0 / (self.grad_accu_step * train_timesteps),
@@ -425,7 +527,6 @@ class FluxPipeline(
         transformer: FluxTransformer2DModel,
         image_encoder: CLIPVisionModelWithProjection = None,
         feature_extractor: CLIPImageProcessor = None,
-        execution_device: torch.device | None = None,
     ) -> None:
         super().__init__()
 
@@ -454,14 +555,6 @@ class FluxPipeline(
             else 77
         )
         self.default_sample_size = 128
-        self._override_execution_device = execution_device
-
-    @property
-    def _execution_device(self) -> torch.device:
-        override = getattr(self, "_override_execution_device", None)
-        if override is not None:
-            return override
-        return super()._execution_device
 
     def _get_t5_prompt_embeds(
         self,

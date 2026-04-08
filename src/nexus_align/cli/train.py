@@ -52,7 +52,6 @@ def main(cfg, env):
         device=device,
         model_dtype=cfg.model.model_dtype,
         kwargs=cfg_dict,
-        env=env,
     )
     reward_model = registry.get("reward_model", cfg.reward_model.name)(
         device=device,
