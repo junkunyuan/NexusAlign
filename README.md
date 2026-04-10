@@ -97,18 +97,30 @@ nexus-align eval \
 
 ## 🛠️ Utilities
 
-**Download pre-defined models/datasets:**
+### Download models/datasets
+
+We provide a simple script to download pre-defined models/datasets used for training/evaluation.
+
+Example usage:
 ```bash
-# Example
 nexus-align download --repo_id "black-forest-labs/FLUX.1-dev" --cache_dir /home/my_name/data_and_model
-nexus-align download --repo_id all # Download everything
 ```
 
-**Plot metrics from training logs:**
+### Plot results
+
+We provide a simple script to plot results from training logs.
+
+Example usage:
 ```bash
-# Example
-nexus-align draw -r results.jsonl -x total_step -y loss
+nexus-align draw --result logs/my_exp/results.jsonl
 ```
+
+After excuting, a plot will be saved to `logs/my_exp/results.png` looks like:
+<p align="center">
+    <br>
+    <img src="assets/example_results.png" width="500"/>
+    <br>
+<p>
 
 ## 📚 Citation
 

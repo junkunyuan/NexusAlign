@@ -116,7 +116,7 @@ def draw(
     if not all_metrics:
         raise ValueError(f"❌ No metrics found in <{result_path}>")
 
-    y_keys = y_data if y_data is not None else all_metrics
+    y_keys = y_data if y_data != "all" else all_metrics
     # Validate y_keys
     for k in y_keys:
         if k not in all_metrics:
@@ -147,7 +147,7 @@ def draw(
         # Filter out None
         valid_pairs = [(x, y) for x, y in zip(x_list, y_vals) if y is not None]
         if not valid_pairs:
-            ax.text(0.5, 0.5, f"No data for {metric}", ha="center", va="center")
+            ax.text(0.5, 0.5, f"❌ No data for {metric}", ha="center", va="center")
             ax.set_title(metric, fontname=fontname)
             continue
 
@@ -189,9 +189,9 @@ def run_draw(args: argparse.Namespace) -> int:
     if not result_path.exists():
         print(f"❌ Error: File not found: <{result_path}>")
         return 1
-
-    y_data = None
-    if args.y_data:
+    
+    y_data = "all"
+    if args.y_data.lower() != "all":
         y_data = [k.strip() for k in args.y_data.split(",") if k.strip()]
 
     color = DEFAULT_COLOR
@@ -204,7 +204,7 @@ def run_draw(args: argparse.Namespace) -> int:
 
     ema_alpha = getattr(args, "ema", None)
     if ema_alpha is not None and not (0 < ema_alpha < 1):
-        print("❌ Error: --ema must be between 0 and 1 (exclusive)")
+        print("❌ Error: --ema or -e must be between 0 and 1 (exclusive)")
         return 1
 
     try:
@@ -217,7 +217,7 @@ def run_draw(args: argparse.Namespace) -> int:
             dpi=args.dpi,
             fontsize=args.fontsize,
         )
-        print(f"💾 Saved: <{out_path}>")
+        print(f"💾 Saved drawing result to <{out_path}>")
         return 0
     except (ValueError, KeyError) as e:
         print(f"❌ Error: {e}")
@@ -246,7 +246,7 @@ def main() -> int:
         "-y",
         type=str,
         default=None,
-        help="Comma-separated metric keys for y-axis (default: all metrics), e.g., loss,lr",
+        help="Comma-separated metric keys for y-axis, or 'all' to draw all metrics (default: all), e.g., loss,lr",
     )
     parser.add_argument(
         "--color",
@@ -265,12 +265,14 @@ def main() -> int:
     )
     parser.add_argument(
         "--dpi",
+        "-d",
         type=int,
-        default=150,
+        default=200,
         help="Output image DPI (default: 150).",
     )
     parser.add_argument(
         "--fontsize",
+        "-f",
         type=int,
         default=15,
         help="Base font size (default: 15).",

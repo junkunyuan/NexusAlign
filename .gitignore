@@ -12,6 +12,7 @@ test/
 logs/
 wandb/
 test.sh
+/test*
 
 # Distribution / packaging
 *.egg-info/

@@ -164,8 +164,8 @@ def _parse_launcher_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]
         "--y_data",
         "-y",
         type=str,
-        default=None,
-        help="Comma-separated metric keys for y-axis (default: all metrics), e.g., loss,lr",
+        default="all",
+        help="Comma-separated metric keys for y-axis, or 'all' to draw all metrics (default: all), e.g., loss,lr",
     )
     draw_parser.add_argument(
         "--color",
@@ -184,12 +184,14 @@ def _parse_launcher_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]
     )
     draw_parser.add_argument(
         "--dpi",
+        "-d",
         type=int,
         default=150,
         help="Output image DPI (default: 150).",
     )
     draw_parser.add_argument(
         "--fontsize",
+        "-f",
         type=int,
         default=15,
         help="Base font size (default: 15).",
