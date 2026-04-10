@@ -7,8 +7,9 @@ import sys
 
 # Default env vars set before running the script
 _LAUNCH_ENV_DEFAULTS = {
-    "OMP_NUM_THREADS": "1",
-    "HYDRA_FULL_ERROR": "1"
+    "OMP_NUM_THREADS": "1",  # prevent thread contention and CPU oversubscription
+    "HYDRA_FULL_ERROR": "1",  # enable the full stack trace for Hydra errors
+    "NCCL_DEBUG": "WARN"  # set NCCL logging level to warning
 }
 
 
@@ -18,7 +19,7 @@ def _resolve_script_path(script: str) -> str:
         return script
     spec = importlib.util.find_spec(script)
     if spec is None or spec.origin is None:
-        raise ValueError(f"Cannot resolve script: {script}")
+        raise ValueError(f"❌ Cannot resolve script: {script}")
     return spec.origin
 
 
@@ -27,22 +28,22 @@ def launch(
     script_args: list[str] | None = None,
     *,
     nnodes: int = 1,
-    nproc_per_node: int = 1,
     node_rank: int = 0,
+    nproc_per_node: int = 1,
     master_addr: str = "127.0.0.1",
     master_port: int = 29500,
     rdzv_id: str = "nexus_align",
 ) -> int:
     """
-    Launch distributed training via `torch.distributed.run` (a.k.a. `torchrun`).
+    Launch distributed process via `torch.distributed.run` (a.k.a. `torchrun`).
 
     Args:
         script: Python module to run (e.g. "nexus_align.cli.train") or path to .py file.
         script_args: Additional arguments passed to the script.
-        nproc_per_node: Number of GPUs per node.
         nnodes: Total number of nodes.
         node_rank: Rank of the current node (0-indexed).
-        master_addr: Master node address (IP or hostname).
+        nproc_per_node: Number of GPUs per node.
+        master_addr: Master node address.
         master_port: Master port for rendezvous.
         rdzv_id: Unique job ID for rendezvous (isolates concurrent runs).
 

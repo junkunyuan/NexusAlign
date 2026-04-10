@@ -9,11 +9,12 @@ from omegaconf import OmegaConf
 
 from nexus_align.launcher import launch
 from nexus_align.cli.draw import run_draw
+from nexus_align.utils.download import run_download
 
 
 def _append_datetime_to_exp_info(script_args: list[str]) -> None:
     """If log.exp_info exists in overrides, append date and time to it."""
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     last_idx = -1
     for i, override in enumerate(script_args):
         if override.startswith("log.exp_info="):
@@ -27,8 +28,7 @@ def _config_to_hydra_overrides(config_path: str) -> list[str]:
     """Load YAML config file and convert to Hydra override strings."""
     path = Path(config_path)
     if not path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-
+        raise FileNotFoundError(f"❌ Config file not found: <{config_path}>")
     cfg = OmegaConf.load(path)
     overrides: list[str] = []
 
@@ -66,17 +66,17 @@ def _add_distributed_args(parser: argparse.ArgumentParser) -> None:
         help="Number of nodes (default: 1)",
     )
     parser.add_argument(
-        "--nproc_per_node",
-        type=int,
-        default=1,
-        help="Number of GPUs per node (default: 1)",
-    )
-    parser.add_argument(
         "--node_rank",
         type=int,
         default=0,
         dest="node_rank",
         help="Rank of this node (default: 0)",
+    )
+    parser.add_argument(
+        "--nproc_per_node",
+        type=int,
+        default=1,
+        help="Number of GPUs per node (default: 1)",
     )
     parser.add_argument(
         "--master_addr",
@@ -109,24 +109,40 @@ def _add_distributed_args(parser: argparse.ArgumentParser) -> None:
 
 def _parse_launcher_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     """Parse launcher-specific args, return (parsed, remaining for hydra)."""
-    description = "NexusAlign: a unified framework for aligning foundation models."
+    description = "NexusAlign: a unified and extensible framework for aligning foundation models."
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument(
-        "preset",
-        nargs="?",
-        default=None,
-        help="Optional config preset.",
-    )
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # Train: nexus-align train [preset] [options] [hydra overrides]
+    # Train: nexus-align train [options] [hydra overrides]
     train_parser = subparsers.add_parser("train", help="Launch training")
     _add_distributed_args(train_parser)
 
     # Evaluation: nexus-align eval [options] [hydra overrides]
-    eval_parser = subparsers.add_parser("eval", help="Launch distributed evaluation")
+    eval_parser = subparsers.add_parser("eval", help="Launch evaluation")
     _add_distributed_args(eval_parser)
+
+    # Download: nexus-align download <repo_id> [options]
+    download_parser = subparsers.add_parser("download", help="Launch downloading")
+    download_parser.add_argument(
+        "--repo_id",
+        type=str,
+        help="Repo ID to download, e.g. 'black-forest-labs/FLUX.1-dev'.",
+    )
+    download_parser.add_argument(
+        "--cache_dir",
+        "-c",
+        type=str,
+        default=None,
+        help="Optional cache directory for the downloaded repo.",
+    )
+    download_parser.add_argument(
+        "--token",
+        "-t",
+        type=str,
+        default=None,
+        help="Optional HuggingFace access token for downloading gated repo.",
+    )
 
     # Draw: nexus-align draw -r <results.jsonl> [options]
     draw_parser = subparsers.add_parser("draw", help="Plot results metrics")
@@ -185,7 +201,10 @@ def _parse_launcher_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Main CLI entry point."""
+    """
+    Main CLI entry point.
+    Enter this by `nexus-align <command>`, as set by pyproject.toml's entry_points.
+    """
     argv = argv or sys.argv[1:]
     if not argv:
         argv = ["--help"]
@@ -194,8 +213,6 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "train":
         script_args = []
-        if getattr(args, "preset", None):
-            script_args.append(args.preset)
         if getattr(args, "config", None):
             script_args.extend(_config_to_hydra_overrides(args.config))
         script_args.extend(remaining)
@@ -205,8 +222,8 @@ def main(argv: list[str] | None = None) -> int:
             script="nexus_align.cli.train",
             script_args=script_args,
             nnodes=args.nnodes,
-            nproc_per_node=args.nproc_per_node,
             node_rank=args.node_rank,
+            nproc_per_node=args.nproc_per_node,
             master_addr=args.master_addr,
             master_port=args.master_port,
             rdzv_id=args.rdzv_id,
@@ -223,8 +240,8 @@ def main(argv: list[str] | None = None) -> int:
             script="nexus_align.cli.evaluation",
             script_args=script_args,
             nnodes=args.nnodes,
-            nproc_per_node=args.nproc_per_node,
             node_rank=args.node_rank,
+            nproc_per_node=args.nproc_per_node,
             master_addr=args.master_addr,
             master_port=args.master_port,
             rdzv_id=args.rdzv_id,
@@ -232,6 +249,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "draw":
         return run_draw(args)
+
+    if args.command == "download":
+        return run_download(args)
 
     return 0
 

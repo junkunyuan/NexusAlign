@@ -1,16 +1,23 @@
 # Python
 __pycache__/
 
-# Configs
+# Temporary environment
+/nexus-align/
+
+# Temporary configs
 /*.yaml
 
 # Test and logs
 test/
 logs/
 wandb/
+test.sh
 
 # Distribution / packaging
 *.egg-info/
+
+# VSCode
+settings.json
 
 # Else
 .ruff_cache/

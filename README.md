@@ -17,6 +17,7 @@ NexusAlign is a unified and extensible framework for aligning foundation models.
 - [📦 Installation](#-installation)
 - [🚀 Training](#-training)
 - [📊 Evaluation](#-evaluation)
+- [🛠️ Utilities](#️-utilities)
 - [📚 Citation](#-citation)
 
 ## 📦 Installation
@@ -92,6 +93,21 @@ nexus-align eval \
   --master_addr=${MASTER_IP} \
   --master_port=29500 \
   -c my_eval_config.yaml
+```
+
+## 🛠️ Utilities
+
+**Download pre-defined models/datasets:**
+```bash
+# Example
+nexus-align download --repo_id "black-forest-labs/FLUX.1-dev" --cache_dir /home/my_name/data_and_model
+nexus-align download --repo_id all # Download everything
+```
+
+**Plot metrics from training logs:**
+```bash
+# Example
+nexus-align draw -r results.jsonl -x total_step -y loss
 ```
 
 ## 📚 Citation

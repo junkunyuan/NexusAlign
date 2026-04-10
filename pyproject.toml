@@ -20,9 +20,9 @@ keywords = [
     "foundation models",
     "large language models",
     "multimodal large language models",
+    "diffusion models",
     "image generation",
-    "video generation",
-    "diffusion models"
+    "video generation"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -60,6 +60,7 @@ dependencies = [
     "tqdm>=4.65.0",
     "matplotlib>=3.7",
     "pyinstrument>=4.0.0",
+    "pynvml>=13.0.1",
     "psutil>=5.9.0",
     "Pillow>=10.0.0",
     "wandb>=0.16.0",
