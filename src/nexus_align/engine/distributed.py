@@ -1,4 +1,4 @@
-"""Distributed environment: initialization and safe process exit."""
+"""Distributed environment and tools."""
 
 import os
 

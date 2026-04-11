@@ -22,6 +22,7 @@ from nexus_align.core.base_model import BaseModel
 from nexus_align.engine.distributed import all_reduce_tensor
 from nexus_align.engine.fsdp import fsdp_wrap, activation_wrap, convert_scalar_parameters
 
+
 _CONFIG_DTYPE_MAP = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
 _CONFIG_DTYPE_ALIASES = {"fp32": "float32", "fp16": "float16", "bf16": "bfloat16"}
 
@@ -310,9 +311,11 @@ class FluxModel(BaseModel):
         subfolder = "tokenizer"
         print(f"⏳ Loading FLUX {subfolder} from <{self.pipe_path}>/{subfolder}")
         tokenizer = CLIPTokenizer.from_pretrained(self.pipe_path, subfolder=subfolder)
+
         subfolder = "tokenizer_2"
         print(f"⏳ Loading FLUX {subfolder} from <{self.pipe_path}>/{subfolder}")
         tokenizer_2 = T5TokenizerFast.from_pretrained(self.pipe_path, subfolder=subfolder)
+        
         if self.use_sharded_text_encoder:
             clip_shard_dir = os.path.join(self.data_and_model_dir, self.clip_fsdp_shards_dir)
             t5_shard_dir = os.path.join(self.data_and_model_dir, self.t5_fsdp_shards_dir)
@@ -366,7 +369,7 @@ class FluxModel(BaseModel):
                 f"❌ use_sharded_text_encoder is true but {shard_prefix}_fsdp_shards_dir is empty"
             )
         if not os.path.isdir(shard_dir):
-            raise ValueError(f"❌ shard dir not found: {shard_dir}")
+            raise ValueError(f"❌ Shard dir not found: {shard_dir}")
         missing = []
         for i in range(self.world_size):
             p = os.path.join(

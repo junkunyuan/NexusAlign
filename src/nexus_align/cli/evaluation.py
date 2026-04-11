@@ -31,7 +31,7 @@ from nexus_align.engine.evaluator import (
 @with_env_setup(validator=validate_eval_config)
 def main(cfg, env):
     # --------------------------------------------------------------------------------
-    # 1. Prepare environment (done by decorator)
+    # 1. Prepare environment (with env from by with_env_setup decorator)
     # --------------------------------------------------------------------------------
     world_size, rank, device = env.world_size, env.rank, env.device
     cfg_dict = env.cfg_dict
