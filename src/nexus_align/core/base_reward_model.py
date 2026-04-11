@@ -31,7 +31,8 @@ class BaseRewardModel(ABC):
             "strategy": fsdp_kwargs.get("fsdp_strategy", None),
             "cpu_offload": fsdp_kwargs.get("fsdp_cpu_offload", False),
         }
-
+    
+    @abstractmethod
     def load_model(self) -> None:
         """Load model."""
         pass

@@ -34,6 +34,7 @@ class AestheticPredictorV1(BaseRewardModel):
         from transformers import CLIPProcessor
         from aesthetics_predictor import AestheticsPredictorV1
         
+        # Load components
         print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
         processor = CLIPProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
@@ -49,11 +50,12 @@ class AestheticPredictorV1(BaseRewardModel):
                 param_dtype=self.model_dtype,
                 strategy=self.fsdp_kwargs["strategy"],
                 cpu_offload=self.fsdp_kwargs["cpu_offload"],
-                model_name=self.model_name,
+                model_name=self.model_name
             )
         else:
             model = model.to(device=self.device, dtype=self.model_dtype)
 
+        # Set model mode
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -74,7 +76,7 @@ class AestheticPredictorV1(BaseRewardModel):
         Args:
             data (`dict`):
                 image_pil (`list`): List of PIL.Image objects.
-            return_tensor (`bool`): Whether to return a tensor.
+            return_tensor (`bool`): If true, return a tensor; else return a list.
 
         Returns:
             `list` | `torch.Tensor`: Scores of the images.

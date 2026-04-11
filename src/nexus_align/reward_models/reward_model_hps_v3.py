@@ -44,6 +44,7 @@ class HPSv3(BaseRewardModel):
             Qwen2MLP,
         )
 
+        # Load components
         model_path = os.path.join(self.model_path, "HPSv3.safetensors")
         print(f"⏳ Loading {self.model_name} model from <{model_path}>")
         model = HPSv3RewardInferencer(checkpoint_path=model_path, device=self.device)
@@ -67,6 +68,7 @@ class HPSv3(BaseRewardModel):
         else:
             model = model.to(device=self.device, dtype=self.model_dtype)
 
+        # Set model mode
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -88,7 +90,7 @@ class HPSv3(BaseRewardModel):
             data (`dict`):
                 image (`list`): List of paths to images.
                 text (`list`): List of text strings.
-            return_tensor (`bool`): Whether to return a tensor.
+            return_tensor (`bool`): If true, return a tensor; else return a list.
     
         Returns:
             `list` | `torch.Tensor`: Scores between each pair of images and texts.

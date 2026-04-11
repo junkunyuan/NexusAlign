@@ -20,8 +20,8 @@ NexusAlign is a unified and extensible framework for aligning foundation models.
   - [🚀 Training](#-training)
   - [⚖️ Evaluation](#️-evaluation)
 - [🛠️ Utilities](#️-utilities)
-  - [⬇️ Download models/datasets](#️-download-modelsdatasets)
-  - [📈 Plot results](#-plot-results)
+  - [⬇️ Download Models/Datasets](#️-download-modelsdatasets)
+  - [📈 Plot Results](#-plot-results)
 - [📚 Citation](#-citation)
 
 ## 📦 Installation
@@ -105,7 +105,18 @@ nexus-align eval \
 
 ## 🛠️ Utilities
 
-### ⬇️ Download models/datasets
+### ⬇️ Download Models/Datasets
+
+Following HuggingFace, we design the file structure of models/datasets as follows:
+
+```bash
+${MY_DATA_AND_MODEL_DIR}
+    ├── Qwen/Qwen3.5-27B
+    ├── black-forest-labs/FLUX.1-dev/
+    ├── zai-org/ImageReward/
+    ├── ymhao/HPDv2/
+    └── ...
+```
 
 We provide a script to download pre-defined models/datasets used for training/evaluation.
 
@@ -118,7 +129,7 @@ nexus-align download \
 
 After downloading, simply set `common.data_and_model_dir` to `${MY_DATA_AND_MODEL_DIR}` for training or evaluation, then the models/datasets will be loaded from local instead of downloading on-the-fly.
 
-### 📈 Plot results
+### 📈 Plot Results
 
 We provide a script to plot results from training logs.
 
@@ -130,7 +141,7 @@ nexus-align draw --result logs/my_exp/results.jsonl
 After drawing, a plot will be saved to `<logs/my_exp/results.png>` looks like:
 <p align="center">
     <br>
-    <img src="assets/example_results.png" width="500"/>
+    <img src="assets/example_results.png" width="600"/>
     <br>
 <p>
 
@@ -139,8 +150,17 @@ After drawing, a plot will be saved to `<logs/my_exp/results.png>` looks like:
 ```bibtex
 @misc{nexus-align-2026,
   title = {NexusAlign: A Unified and Extensible Framework for Aligning Foundation Models},
-  author = {Junkun Yuan, You Huang},
+  author = {Junkun Yuan, You Huang, Zijing Hu, Mingxuan Cui},
   year = {2026},
   url = {https://github.com/junkunyuan/NexusAlign}
+}
+```
+
+```bibtex
+@article{rl-in-multimodal-survey,
+  title={Reinforcement Learning in Generative Multimodal AI: A Survey},
+  author={Hu, Zijing and Yuan, Junkun and Han, Kairong and Tong, Yunze and Zhang, Shengyu and Wu, Fei and Kuang, Kun},
+  year={2026},
+  publisher={TechRxiv}
 }
 ```

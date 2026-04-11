@@ -38,6 +38,7 @@ class PickScore(BaseRewardModel):
         """
         from transformers import AutoProcessor, AutoModel
 
+        # Load components
         print(f"⏳ Loading {self.model_name} processor from <{self.processor_path}>")
         processor = AutoProcessor.from_pretrained(self.processor_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
@@ -47,9 +48,9 @@ class PickScore(BaseRewardModel):
         if self.fsdp_kwargs["strategy"] is not None:
             # TODO: some errors when wrapping PickScore, will be fixed later
             print("❌ Wrap PickScore with FSDP is not supported! Disable FSDP...")
-
         model = model.to(device=self.device, dtype=self.model_dtype)
 
+        # Set model mode
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -69,7 +70,7 @@ class PickScore(BaseRewardModel):
             data (`dict`):
                 image_pil (`list`): List of PIL.Image objects.
                 text (`list`): List of text strings.
-            return_tensor (`bool`): Whether to return a tensor.
+            return_tensor (`bool`): If true, return a tensor; else return a list.
 
         Returns:
             `list` | `torch.Tensor`: Scores between each pair of images and texts.
