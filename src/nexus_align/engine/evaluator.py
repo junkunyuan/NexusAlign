@@ -124,4 +124,4 @@ def get_statistics(eval_file: str, result_key: str = "result") -> None:
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(stats_str)
     print(stats_str)
-    print(f"💾 Statistics saved to: {output_path}")
+    print(f"💾 Statistics saved to: <{output_path}>")

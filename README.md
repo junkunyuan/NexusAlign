@@ -15,9 +15,13 @@
 NexusAlign is a unified and extensible framework for aligning foundation models.
 
 - [📦 Installation](#-installation)
-- [🚀 Training](#-training)
-- [📊 Evaluation](#-evaluation)
+- [🎯 Get Started](#-get-started)
+  - [⚙️ Config Options](#️-config-options)
+  - [🚀 Training](#-training)
+  - [⚖️ Evaluation](#️-evaluation)
 - [🛠️ Utilities](#️-utilities)
+  - [⬇️ Download models/datasets](#️-download-modelsdatasets)
+  - [📈 Plot results](#-plot-results)
 - [📚 Citation](#-citation)
 
 ## 📦 Installation
@@ -30,92 +34,100 @@ cd NexusAlign
 pip install -e .
 ```
 
-## 🚀 Training
+## 🎯 Get Started
 
-**Launch training:** use command `nexus-align train`. 
+### ⚙️ Config Options
 
-**Load huggingface datasets/models/pipelines from local:** set `common.data_and_model_dir`.
+Both training and evaluation share the same configuration injection mechanism.
 
-**Config options:**
-- ⌨️ **CLI overrides**: append `key=value`.
-- 📄 **Config file**: `--config` / `-c` with a YAML file path.
+Config options:
+- ⌨️ CLI overrides: append `arg_key=arg_value`.
+- 📄 Config file: `--config` / `-c` with a YAML file path.
+
+💡 *Priority: CLI overrides > Custom config file (`-c`) > Default configs.*
+
+To avoid downloading datasets and models on-the-fly, you can [pre-download them locally](#️-download-modelsdatasets) and load them by setting `common.data_and_model_dir`.
+
+### 🚀 Training
+
+We provide a unified command `nexus-align train` to run training.
+
+Example usage (single-node, 4 GPUs):
 
 ```bash
-# Example (single-node): 4 GPUs
 nexus-align train \
   --nproc_per_node=4 \
   model=flux \
-  log.exp_info=train-exp \
-  common.data_and_model_dir=my_hf_cache
+  log.exp_info=train-exp-flux \
+  common.data_and_model_dir=${MY_DATA_AND_MODEL_DIR}
 ```
 
+Example usage (multi-node, 2 nodes, 8 GPUs per node, run it on each node):
+
 ```bash
-# Example (multi-node): 2 nodes, 8 GPUs per node
 nexus-align train \
   --nnodes=2 \
   --nproc_per_node=8 \
   --node_rank=${NODE_RANK} \
-  --master_addr=$(hostname -I | awk '{print $1}') \
-  --master_port=29500 \
-  -c my_train_config.yaml
+  --master_addr=${MASTER_ADDR} \
+  --master_port=${MASTER_PORT} \
+  -c ${MY_TRAIN_CONFIG_YAML}
 ```
 
-## 📊 Evaluation
+### ⚖️ Evaluation
 
-**Launch evaluation:** use command `nexus-align eval`.
+We provide a unified command `nexus-align eval` to run evaluation.
 
-**Load huggingface datasets/models/pipelines from local:** set `common.data_and_model_dir`.
+**Use a trained checkpoint:** set `model.eval.ckpt_path` (e.g. `<checkpoints/model.pt>`).
 
-**Use a trained checkpoint:** set `model.eval.ckpt_path` (e.g. `checkpoints/model.pt`).
-
-**Config options:**
-- ⌨️ **CLI overrides**: append `key=value`.
-- 📄 **Config file**: `--config` / `-c` with a YAML file path.
-
+Example usage (single-node, 4 GPUs):
 ```bash
-# Example (single-node): 4 GPUs
 nexus-align eval \
   --nproc_per_node=4 \
   model=flux \
   data=hpd_v2_benchmark \
   reward_model=hps_v2 \
-  log.exp_info="eval-exp" \
-  common.data_and_model_dir=my_hf_cache \
-  model.eval.ckpt_path=checkpoints/exp_name/model.pt
+  log.exp_info="eval-exp-flux" \
+  common.data_and_model_dir=${MY_DATA_AND_MODEL_DIR} \
+  model.eval.ckpt_path=${MY_MODEL_CKPT_PATH}
 ```
 
+Example usage (multi-node, 2 nodes, 8 GPUs per node, run it on each node):
 ```bash
-# Example (multi-node): 2 nodes, 8 GPUs per node
 nexus-align eval \
   --nnodes=2 \
   --nproc_per_node=8 \
   --node_rank=${NODE_RANK} \
-  --master_addr=${MASTER_IP} \
-  --master_port=29500 \
-  -c my_eval_config.yaml
+  --master_addr=${MASTER_ADDR} \
+  --master_port=${MASTER_PORT} \
+  -c ${MY_EVAL_CONFIG_YAML}
 ```
 
 ## 🛠️ Utilities
 
-### Download models/datasets
+### ⬇️ Download models/datasets
 
-We provide a simple script to download pre-defined models/datasets used for training/evaluation.
+We provide a script to download pre-defined models/datasets used for training/evaluation.
 
 Example usage:
 ```bash
-nexus-align download --repo_id "black-forest-labs/FLUX.1-dev" --cache_dir /home/my_name/data_and_model
+nexus-align download \
+  --repo_id "black-forest-labs/FLUX.1-dev" \
+  --cache_dir ${MY_DATA_AND_MODEL_DIR}
 ```
 
-### Plot results
+After downloading, simply set `common.data_and_model_dir` to `${MY_DATA_AND_MODEL_DIR}` for training or evaluation, then the models/datasets will be loaded from local instead of downloading on-the-fly.
 
-We provide a simple script to plot results from training logs.
+### 📈 Plot results
+
+We provide a script to plot results from training logs.
 
 Example usage:
 ```bash
 nexus-align draw --result logs/my_exp/results.jsonl
 ```
 
-After excuting, a plot will be saved to `logs/my_exp/results.png` looks like:
+After drawing, a plot will be saved to `<logs/my_exp/results.png>` looks like:
 <p align="center">
     <br>
     <img src="assets/example_results.png" width="500"/>

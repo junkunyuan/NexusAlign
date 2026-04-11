@@ -121,12 +121,12 @@ def download_repo(repo_id: str, cache_dir: str | None = None, token: str | None 
         # Create directory structure matching Hugging Face repo ID (e.g., org_name/repo_name)
         target_dir = os.path.join(base_dir, hf_repo_id)
         
-        print(f"🔍 Checking and downloading '{repo_id}' to {target_dir}...")
+        print(f"🔍 Checking and downloading '{repo_id}' to <{target_dir}>...")
         try:
             # hf_download automatically handles integrity checks (ETag validation).
             # If files are complete, it skips downloading. If missing/corrupted, it resumes/overwrites.
             hf_download(repo_id=hf_repo_id, local_dir=target_dir, token=token)
-            print(f"✅ Repo '{repo_id}' is ready at {target_dir}")
+            print(f"✅ Repo '{repo_id}' is ready at <{target_dir}>")
         except Exception as e:
             print(f"❌ Error downloading from huggingface: {e}", file=sys.stderr)
             sys.exit(1)
@@ -138,7 +138,7 @@ def download_repo(repo_id: str, cache_dir: str | None = None, token: str | None 
         filename = url.split("/")[-1]
         target_path = os.path.join(target_dir, filename)
         
-        print(f"🔍 Downloading '{repo_id}' to {target_path}...")
+        print(f"⬇️ Downloading '{repo_id}' to <{target_path}>...")
         try:
             if not os.path.exists(target_path):
                 import urllib.request
@@ -148,7 +148,7 @@ def download_repo(repo_id: str, cache_dir: str | None = None, token: str | None 
                     req.add_header("Authorization", f"Bearer {token}")
                 with urllib.request.urlopen(req) as response, open(target_path, 'wb') as out_file:
                     shutil.copyfileobj(response, out_file)
-            print(f"✅ Repo '{repo_id}' is ready at {target_path}")
+            print(f"✅ Repo '{repo_id}' is ready at <{target_path}>")
         except Exception as e:
             print(f"❌ Error downloading from url: {e}", file=sys.stderr)
             sys.exit(1)
