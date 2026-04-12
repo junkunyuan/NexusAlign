@@ -11,6 +11,11 @@ fsdp:
   activation_ckpt: true
   text_encoder_offload: true
 
+ref:
+  enable: false
+  model_path: ""         # empty -> use model.path
+  ref_offload: true      # CPUOffload (FSDP managed)
+
 grpo:
   sample_height: 720
   sample_width: 720

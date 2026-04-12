@@ -61,6 +61,8 @@ class ZImageInferPipeline:
             pipeline_path, subfolder="scheduler"
         )
 
+        self._patch_prepare_sequence(transformer)
+
         pipe = ZImagePipeline(
             scheduler=scheduler,
             vae=vae,
@@ -85,6 +87,66 @@ class ZImageInferPipeline:
         self.generator = torch.Generator(device=device).manual_seed(
             kwargs["common"]["seed"]
         )
+
+    @staticmethod
+    def _patch_prepare_sequence(transformer) -> None:
+        """Replace ``_prepare_sequence`` with a variant that avoids the
+        CUDA advanced-indexing kernel bug triggered by
+        ``feats_cat[bool_mask] = pad_token``.
+
+        Uses ``torch.where`` for element-wise selection instead.
+        """
+        from torch.nn.utils.rnn import pad_sequence
+
+        model_cls = type(transformer)
+
+        def _prepare_sequence(
+            self,
+            feats: list[torch.Tensor],
+            pos_ids: list[torch.Tensor],
+            inner_pad_mask: list[torch.Tensor],
+            pad_token: torch.nn.Parameter,
+            noise_mask: list[list[int]] | None = None,
+            device: torch.device = None,
+        ):
+            item_seqlens = [len(f) for f in feats]
+            max_seqlen = max(item_seqlens)
+            bsz = len(feats)
+
+            feats_cat = torch.cat(feats, dim=0)
+            mask = torch.cat(inner_pad_mask)
+            if mask.any():
+                pad_val = pad_token.detach().expand_as(feats_cat)
+                feats_cat = torch.where(mask.unsqueeze(1), pad_val, feats_cat)
+            feats = list(feats_cat.split(item_seqlens, dim=0))
+
+            freqs_cis = list(
+                self.rope_embedder(torch.cat(pos_ids, dim=0)).split(
+                    [len(p) for p in pos_ids], dim=0,
+                )
+            )
+
+            feats = pad_sequence(feats, batch_first=True, padding_value=0.0)
+            freqs_cis = pad_sequence(
+                freqs_cis, batch_first=True, padding_value=0.0,
+            )[:, : feats.shape[1]]
+
+            attn_mask = torch.zeros(
+                (bsz, max_seqlen), dtype=torch.bool, device=device,
+            )
+            for i, seq_len in enumerate(item_seqlens):
+                attn_mask[i, :seq_len] = 1
+
+            noise_mask_tensor = None
+            if noise_mask is not None:
+                noise_mask_tensor = pad_sequence(
+                    [torch.tensor(m, dtype=torch.long, device=device) for m in noise_mask],
+                    batch_first=True, padding_value=0,
+                )[:, : feats.shape[1]]
+
+            return feats, freqs_cis, attn_mask, item_seqlens, noise_mask_tensor
+
+        model_cls._prepare_sequence = _prepare_sequence
 
     def __call__(self, data):
         texts = data["text"]
@@ -123,6 +185,7 @@ class ZImageTrainPipeline(BaseTrainPipeline):
 
         # Model
         self.model = model.model
+        self.ref_model = model.ref_model
         self.vae = model.vae
         self.encode_prompt = model.encode_prompt
 
@@ -131,6 +194,7 @@ class ZImageTrainPipeline(BaseTrainPipeline):
         self.amp_dtype = amp_dtype
         self.device = device
         self.grad_accu_step = cfg_algo_train["grad_accu_step"]
+        self.train_batch_size = cfg_algo_train["train_batch_size"]
 
         # Algorithm-specific
         self.algo_name = kwargs["algorithm"]["name"]
@@ -168,13 +232,20 @@ class ZImageTrainPipeline(BaseTrainPipeline):
         latents: torch.Tensor,
         timesteps: torch.Tensor,
         prompt_embeds: list[torch.Tensor],
+        model=None,
     ) -> torch.Tensor:
         """
-        Call the Z-Image transformer with its list-based interface.
+        Call a Z-Image transformer with its list-based interface.
 
         The Z-Image transformer expects per-sample lists for hidden_states
         and prompt_embeds, with a reversed-and-normalized timestep format.
+
+        Args:
+            model: transformer to call. Defaults to self.model (trainable).
         """
+        if model is None:
+            model = self.model
+
         # Z-Image timestep: (1000 - t) / 1000 → 0 at full noise, 1 at clean
         z_timestep = (1000.0 - timesteps.float()) / 1000.0
 
@@ -182,7 +253,7 @@ class ZImageTrainPipeline(BaseTrainPipeline):
         latent_5d = latents.unsqueeze(2)
         latent_list = list(latent_5d.unbind(dim=0))
 
-        model_out_list = self.model(
+        model_out_list = model(
             latent_list, z_timestep, prompt_embeds, return_dict=False
         )[0]
 
@@ -308,12 +379,25 @@ class ZImageTrainPipeline(BaseTrainPipeline):
         ]
         timesteps = torch.tensor([timestep_values] * batch, dtype=torch.int64)
 
+        latents_trimmed = all_latents[:, :-2]
+        next_latents_trimmed = all_latents[:, 1:-1]
+        timesteps_trimmed = timesteps[:, :-1]
+
+        ref_log_probs = self._compute_ref_log_probs(
+            latents=latents_trimmed,
+            next_latents=next_latents_trimmed,
+            timesteps=timesteps_trimmed,
+            sigma_schedule=sigma_schedule,
+            prompt_embeds=data["prompt_embeds"],
+        )
+
         data = {
             "reward_inputs": {"image": images, "image_pil": image_pils, "text": texts},
-            "latents": all_latents[:, :-2],
-            "next_latents": all_latents[:, 1:-1],
-            "timesteps": timesteps[:, :-1],
+            "latents": latents_trimmed,
+            "next_latents": next_latents_trimmed,
+            "timesteps": timesteps_trimmed,
             "log_probs": torch.cat(all_log_probs)[:, :-1],
+            "ref_log_probs": ref_log_probs,
             "prompt_embeds": data["prompt_embeds"],
             "sigma_schedule": sigma_schedule,
         }
@@ -321,6 +405,63 @@ class ZImageTrainPipeline(BaseTrainPipeline):
         torch.cuda.empty_cache()
 
         return data
+
+    @torch.no_grad()
+    def _compute_ref_log_probs(
+        self,
+        latents: torch.Tensor,
+        next_latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        sigma_schedule: torch.Tensor,
+        prompt_embeds: list[torch.Tensor],
+    ) -> torch.Tensor:
+        """Compute log probs from the frozen reference model for KL divergence."""
+        if self.ref_model is None:
+            return torch.zeros_like(latents[:, :, 0, 0])
+
+        batch, num_steps = latents.shape[0], latents.shape[1]
+        batch_ind = torch.arange(batch).chunk(batch // self.sample_batch_size)
+
+        all_ref_log_probs = []
+        bar = TqdmBar(total=len(batch_ind), desc="🔒 Computing ref log probs", unit="batch")
+        self.ref_model.eval()
+
+        for b_idx in batch_ind:
+            ref_log_probs_steps = []
+            step_prompt_embeds = [prompt_embeds[j] for j in b_idx]
+
+            for i in range(num_steps):
+                step_latents = latents[b_idx, i].to(self.device)
+                step_next_latents = next_latents[b_idx, i].to(self.device)
+                step_timesteps = timesteps[b_idx, i].to(self.device)
+
+                with torch.amp.autocast(
+                    device_type=self.device.type, dtype=self.amp_dtype
+                ):
+                    model_output = self._call_transformer(
+                        step_latents, step_timesteps, step_prompt_embeds,
+                        model=self.ref_model,
+                    )
+
+                B, C, H, W = step_latents.shape
+                latents_flat = step_latents.view(B, -1).unsqueeze(1)
+                output_flat = model_output.view(B, -1).unsqueeze(1)
+                next_flat = step_next_latents.view(B, -1).unsqueeze(1)
+
+                _, _, ref_log_prob = self.scheduler.step_fn(
+                    model_output=output_flat,
+                    latents=latents_flat,
+                    sigmas=sigma_schedule,
+                    index=i,
+                    prev_sample=next_flat,
+                )
+                ref_log_probs_steps.append(ref_log_prob)
+
+            all_ref_log_probs.append(torch.stack(ref_log_probs_steps, dim=1))
+            bar.update(1)
+
+        bar.close()
+        return torch.cat(all_ref_log_probs, dim=0)
 
     def iterate_training_items(self, responses: dict):
         """
@@ -341,7 +482,7 @@ class ZImageTrainPipeline(BaseTrainPipeline):
         batch = len(responses["timesteps"])
         step_len = len(responses["timesteps"][0])
         perms = torch.stack([torch.randperm(step_len) for _ in range(batch)])
-        for key in ["timesteps", "latents", "next_latents", "log_probs"]:
+        for key in ["timesteps", "latents", "next_latents", "log_probs", "ref_log_probs"]:
             ran = torch.arange(batch)
             responses[key] = responses[key][ran[:, None], perms]
         all_timesteps = len(responses["timesteps"][0])
@@ -402,8 +543,11 @@ class ZImageTrainPipeline(BaseTrainPipeline):
 
                     return forward_fn
 
+                ref_log_probs = responses["ref_log_probs"][start_idx:end_idx, t]
+
                 yield {
                     "old_log_probs": old_log_probs,
+                    "ref_log_probs": ref_log_probs,
                     "advantages": advantages_slice,
                     "forward_fn": make_forward_fn(),
                     "backward_scale": 1.0 / (self.grad_accu_step * train_timesteps),

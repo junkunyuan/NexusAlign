@@ -31,6 +31,8 @@ class ZImageModel(BaseModel):
         device: torch.device,
         model_dtype: str,
         kwargs: dict,
+        *,
+        env=None,
     ) -> None:
         self.model_name = "ZImage"
         self.data_and_model_dir = kwargs["common"]["data_and_model_dir"]
@@ -48,6 +50,11 @@ class ZImageModel(BaseModel):
         self.model, self.wrap_modules, self.params_train = self.load_model()
         self.vae = self.load_vae()
         self.text_encoder, self.tokenizer = self.load_text_encoder()
+
+        cfg_model_ref = kwargs["model"].get("ref", {})
+        self.ref_model = None
+        if cfg_model_ref.get("enable", False):
+            self.ref_model = self._load_ref_transformer(cfg_ref=cfg_model_ref)
 
     def get_trainable_module(self):
         """Return the main trainable module (for BaseModel interface)."""
@@ -194,6 +201,45 @@ class ZImageModel(BaseModel):
         print("✅ Prepared VAE: ZImage_VAE (eval mode)")
 
         return vae
+
+    def _load_ref_transformer(self, cfg_ref: dict):
+        """Load a frozen reference transformer with FSDP + CPU offload for KL computation."""
+        ref_path = cfg_ref["model_path"].strip()
+        pipe_path = (
+            os.path.join(self.data_and_model_dir, ref_path) if ref_path else self.pipe_path
+        )
+        ref_offload = cfg_ref["ref_offload"]
+
+        subfolder = "transformer"
+        print(f"⏳ Loading ZImage ref transformer from <{pipe_path}>/{subfolder}")
+        ref_model = ZImageTransformer2DModel.from_pretrained(
+            pretrained_model_name_or_path=pipe_path,
+            subfolder=subfolder,
+            torch_dtype=self.model_dtype,
+        )
+
+        needs_pad_token_fix = any(
+            hasattr(ref_model, n) for n in ("x_pad_token", "cap_pad_token")
+        )
+
+        wrap_modules = (ZImageTransformerBlock,)
+        ref_model = fsdp_wrap(
+            model=ref_model,
+            wrap_modules=wrap_modules,
+            param_dtype=self.model_dtype,
+            strategy=self.fsdp_strategy,
+            cpu_offload=ref_offload,
+            model_name="ZImage_ref",
+        )
+
+        if needs_pad_token_fix:
+            self._patch_prepare_sequence(ref_model)
+
+        ref_model.eval()
+        ref_model.requires_grad_(False)
+        print("✅ Prepared ref transformer: ZImage_ref (frozen, CPU offload)")
+        torch.cuda.empty_cache()
+        return ref_model
 
     def load_text_encoder(self) -> tuple:
         """Load Qwen3 text encoder and tokenizer."""

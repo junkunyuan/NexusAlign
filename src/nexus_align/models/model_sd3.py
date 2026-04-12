@@ -30,6 +30,8 @@ class SD3Model(BaseModel):
         device: torch.device,
         model_dtype: str,
         kwargs: dict,
+        *,
+        env=None,
     ) -> None:
         self.model_name = "SD3"
         self.data_and_model_dir = kwargs["common"]["data_and_model_dir"]
@@ -49,6 +51,11 @@ class SD3Model(BaseModel):
 
         # Load all components from single safetensors file
         self._load_from_single_file()
+
+        cfg_model_ref = kwargs["model"].get("ref", {})
+        self.ref_model = None
+        if cfg_model_ref.get("enable", False):
+            self.ref_model = self._load_ref_transformer(cfg_ref=cfg_model_ref)
 
     def _load_from_single_file(self) -> None:
         """Load all components from SD3 single safetensors file."""
@@ -82,6 +89,41 @@ class SD3Model(BaseModel):
     def get_trainable_params(self):
         """Return trainable parameters (for BaseModel interface)."""
         return self.params_train
+
+    def _load_ref_transformer(self, cfg_ref: dict):
+        """Load a frozen reference transformer for KL computation."""
+        ref_path = cfg_ref.get("model_path", "").strip()
+        if ref_path:
+            pipe_path = os.path.join(self.data_and_model_dir, ref_path)
+        else:
+            pipe_path = self.pipe_path
+        ref_offload = cfg_ref.get("ref_offload", True)
+
+        safetensors_path = os.path.join(pipe_path, self.safetensors_file)
+        print(f"⏳ Loading SD3 ref transformer from <{safetensors_path}>")
+        pipe = StableDiffusion3Pipeline.from_single_file(
+            safetensors_path, torch_dtype=self.model_dtype,
+        )
+        ref_model = pipe.transformer
+        del pipe
+        torch.cuda.empty_cache()
+
+        ref_model.requires_grad_(False)
+        ref_model.eval()
+
+        wrap_modules = (SD3SingleTransformerBlock,)
+        ref_model = fsdp_wrap(
+            model=ref_model,
+            wrap_modules=wrap_modules,
+            param_dtype=self.model_dtype,
+            strategy=self.fsdp_strategy,
+            cpu_offload=ref_offload,
+            model_name="SD3_ref",
+        )
+
+        print("✅ Prepared ref transformer: SD3_ref (frozen)")
+        torch.cuda.empty_cache()
+        return ref_model
 
     def _prepare_transformer(
         self, transformer: SD3Transformer2DModel
