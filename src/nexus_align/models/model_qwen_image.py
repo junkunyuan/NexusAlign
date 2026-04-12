@@ -42,6 +42,8 @@ class QwenImageModel(BaseModel):
         device: torch.device,
         model_dtype: str,
         kwargs: dict,
+        *,
+        env=None,
     ) -> None:
         self.model_name = "QwenImage"
         self.data_and_model_dir = kwargs["common"]["data_and_model_dir"]
@@ -59,6 +61,11 @@ class QwenImageModel(BaseModel):
         self.model, self.wrap_modules, self.params_train = self.load_model()
         self.vae = self.load_vae()
         self.text_encoder, self.tokenizer = self.load_text_encoder()
+
+        cfg_model_ref = kwargs["model"].get("ref", {})
+        self.ref_model = None
+        if cfg_model_ref.get("enable", False):
+            self.ref_model = self._load_ref_transformer(cfg_ref=cfg_model_ref)
 
     def get_trainable_module(self):
         """Return the main trainable module (for BaseModel interface)."""
@@ -116,6 +123,39 @@ class QwenImageModel(BaseModel):
         torch.cuda.empty_cache()
 
         return model, wrap_modules, para_train
+
+    def _load_ref_transformer(self, cfg_ref: dict):
+        """Load a frozen reference transformer for KL computation."""
+        ref_path = cfg_ref.get("model_path", "").strip()
+        pipe_path = (
+            os.path.join(self.data_and_model_dir, ref_path) if ref_path else self.pipe_path
+        )
+        ref_offload = cfg_ref.get("ref_offload", True)
+
+        subfolder = "transformer"
+        print(f"⏳ Loading QwenImage ref transformer from <{pipe_path}>/{subfolder}")
+        ref_model = QwenImageTransformer2DModel.from_pretrained(
+            pretrained_model_name_or_path=pipe_path,
+            subfolder=subfolder,
+            torch_dtype=self.model_dtype,
+        )
+
+        ref_model.requires_grad_(False)
+        ref_model.eval()
+
+        wrap_modules = (QwenImageTransformerBlock,)
+        ref_model = fsdp_wrap(
+            model=ref_model,
+            wrap_modules=wrap_modules,
+            param_dtype=self.model_dtype,
+            strategy=self.fsdp_strategy,
+            cpu_offload=ref_offload,
+            model_name="QwenImage_ref",
+        )
+
+        print("✅ Prepared ref transformer: QwenImage_ref (frozen)")
+        torch.cuda.empty_cache()
+        return ref_model
 
     def load_vae(self) -> AutoencoderKLQwenImage:
         """Load VAE module."""

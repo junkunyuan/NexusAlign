@@ -96,6 +96,7 @@ class QwenImageInferPipeline:
 
         result = self.pipe(
             prompt=texts,
+            negative_prompt=[""] * len(texts) if isinstance(texts, list) else "",
             height=self.height,
             width=self.width,
             true_cfg_scale=self.true_cfg_scale,
@@ -128,6 +129,7 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
 
         # Model
         self.model = model.model
+        self.ref_model = model.ref_model
         self.vae = model.vae
         self.encode_prompt = model.encode_prompt
 
@@ -136,6 +138,7 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
         self.amp_dtype = amp_dtype
         self.device = device
         self.grad_accu_step = cfg_algo_train["grad_accu_step"]
+        self.train_batch_size = cfg_algo_train["train_batch_size"]
 
         # Algorithm-specific
         self.algo_name = kwargs["algorithm"]["name"]
@@ -151,6 +154,37 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
             self.timestep_fraction = cfg_model_algo["timestep_fraction"]
             sample_eta = cfg_model_algo["sample_eta"]
             self.scheduler = RLFlowMatchEulerDiscreteScheduler(sample_eta=sample_eta)
+
+    def _call_transformer(
+        self,
+        latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        prompt_embeds: torch.Tensor,
+        prompt_embeds_mask: torch.Tensor | None,
+        img_shapes: list,
+        model=None,
+    ) -> torch.Tensor:
+        """
+        Call a Qwen-Image transformer, reusable for both main and ref model.
+
+        Args:
+            model: transformer to call. Defaults to self.model (trainable).
+        """
+        if model is None:
+            model = self.model
+
+        with torch.amp.autocast(
+            device_type=self.device.type, dtype=self.amp_dtype
+        ):
+            model_output = model(
+                hidden_states=latents,
+                timestep=timesteps / 1000,
+                encoder_hidden_states=prompt_embeds,
+                encoder_hidden_states_mask=prompt_embeds_mask,
+                img_shapes=img_shapes,
+            ).sample.to(dtype=self.model_dtype)
+
+        return model_output
 
     def prepare_data(self, data: dict) -> dict:
         """Prepare data from dataloader batch."""
@@ -222,16 +256,10 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
                     [batch_size], timestep, device=self.device, dtype=torch.long
                 )
 
-                with torch.amp.autocast(
-                    device_type=self.device.type, dtype=self.amp_dtype
-                ):
-                    model_output = self.model(
-                        hidden_states=latents,
-                        timestep=timesteps / 1000,
-                        encoder_hidden_states=prompt_embeds,
-                        encoder_hidden_states_mask=prompt_embeds_mask,
-                        img_shapes=batch_img_shapes,
-                    ).sample.to(dtype=self.model_dtype)
+                model_output = self._call_transformer(
+                    latents, timesteps, prompt_embeds,
+                    prompt_embeds_mask, batch_img_shapes,
+                )
 
                 latents, pred_original, log_prob = self.scheduler.step_fn(
                     model_output=model_output,
@@ -310,12 +338,27 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
 
         shared_img_shapes = img_shapes
 
+        latents_trimmed = all_latents[:, :-2]
+        next_latents_trimmed = all_latents[:, 1:-1]
+        timesteps_trimmed = timesteps[:, :-1]
+
+        ref_log_probs = self._compute_ref_log_probs(
+            latents=latents_trimmed,
+            next_latents=next_latents_trimmed,
+            timesteps=timesteps_trimmed,
+            sigma_schedule=sigma_schedule,
+            prompt_embeds=data["prompt_embeds"],
+            prompt_embeds_mask=data.get("prompt_embeds_mask"),
+            img_shapes=shared_img_shapes,
+        )
+
         data = {
             "reward_inputs": {"image": images, "image_pil": image_pils, "text": texts},
-            "latents": all_latents[:, :-2],
-            "next_latents": all_latents[:, 1:-1],
-            "timesteps": timesteps[:, :-1],
+            "latents": latents_trimmed,
+            "next_latents": next_latents_trimmed,
+            "timesteps": timesteps_trimmed,
             "log_probs": torch.cat(all_log_probs)[:, :-1],
+            "ref_log_probs": ref_log_probs,
             "img_shapes": shared_img_shapes,
             "prompt_embeds": data["prompt_embeds"],
             "prompt_embeds_mask": data.get("prompt_embeds_mask"),
@@ -325,6 +368,63 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
         torch.cuda.empty_cache()
 
         return data
+
+    @torch.no_grad()
+    def _compute_ref_log_probs(
+        self,
+        latents: torch.Tensor,
+        next_latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        sigma_schedule: torch.Tensor,
+        prompt_embeds: torch.Tensor,
+        prompt_embeds_mask: torch.Tensor | None,
+        img_shapes: list,
+    ) -> torch.Tensor:
+        """Compute log probs from the frozen reference model for KL divergence."""
+        if self.ref_model is None:
+            return torch.zeros_like(latents[:, :, 0, 0])
+
+        batch, num_steps = latents.shape[0], latents.shape[1]
+        batch_ind = torch.arange(batch).chunk(batch // self.sample_batch_size)
+
+        all_ref_log_probs = []
+        bar = TqdmBar(total=len(batch_ind), desc="🔒 Computing ref log probs", unit="batch")
+        self.ref_model.eval()
+
+        for b_idx in batch_ind:
+            ref_log_probs_steps = []
+            batch_size = len(b_idx)
+            step_prompt_embeds = prompt_embeds[b_idx]
+            step_prompt_embeds_mask = None
+            if prompt_embeds_mask is not None:
+                step_prompt_embeds_mask = prompt_embeds_mask[b_idx]
+            batch_img_shapes = img_shapes * batch_size
+
+            for i in range(num_steps):
+                step_latents = latents[b_idx, i].to(self.device)
+                step_next_latents = next_latents[b_idx, i].to(self.device)
+                step_timesteps = timesteps[b_idx, i].to(self.device)
+
+                model_output = self._call_transformer(
+                    step_latents, step_timesteps, step_prompt_embeds,
+                    step_prompt_embeds_mask, batch_img_shapes,
+                    model=self.ref_model,
+                )
+
+                _, _, ref_log_prob = self.scheduler.step_fn(
+                    model_output=model_output,
+                    latents=step_latents,
+                    sigmas=sigma_schedule,
+                    index=i,
+                    prev_sample=step_next_latents,
+                )
+                ref_log_probs_steps.append(ref_log_prob)
+
+            all_ref_log_probs.append(torch.stack(ref_log_probs_steps, dim=1))
+            bar.update(1)
+
+        bar.close()
+        return torch.cat(all_ref_log_probs, dim=0)
 
     def iterate_training_items(self, responses: dict):
         """
@@ -345,7 +445,7 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
         batch = len(responses["timesteps"])
         step_len = len(responses["timesteps"][0])
         perms = torch.stack([torch.randperm(step_len) for _ in range(batch)])
-        for key in ["timesteps", "latents", "next_latents", "log_probs"]:
+        for key in ["timesteps", "latents", "next_latents", "log_probs", "ref_log_probs"]:
             ran = torch.arange(batch)
             responses[key] = responses[key][ran[:, None], perms]
         all_timesteps = len(responses["timesteps"][0])
@@ -386,17 +486,13 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
                         slice_size = e_idx - s_idx
                         batch_img_shapes = responses["img_shapes"] * slice_size
 
-                        with torch.amp.autocast(
-                            device_type=self.device.type, dtype=self.amp_dtype
-                        ):
-                            model_output = self.model(
-                                hidden_states=latents,
-                                timestep=responses["timesteps"][s_idx:e_idx, step]
-                                / 1000,
-                                encoder_hidden_states=prompt_embeds,
-                                encoder_hidden_states_mask=prompt_embeds_mask,
-                                img_shapes=batch_img_shapes,
-                            ).sample.to(dtype=self.model_dtype)
+                        model_output = self._call_transformer(
+                            latents,
+                            responses["timesteps"][s_idx:e_idx, step],
+                            prompt_embeds,
+                            prompt_embeds_mask,
+                            batch_img_shapes,
+                        )
 
                         _, _, new_log_probs = self.scheduler.step_fn(
                             model_output=model_output,
@@ -409,8 +505,11 @@ class QwenImageTrainPipeline(BaseTrainPipeline):
 
                     return forward_fn
 
+                ref_log_probs = responses["ref_log_probs"][start_idx:end_idx, t]
+
                 yield {
                     "old_log_probs": old_log_probs,
+                    "ref_log_probs": ref_log_probs,
                     "advantages": advantages_slice,
                     "forward_fn": make_forward_fn(),
                     "backward_scale": 1.0 / (self.grad_accu_step * train_timesteps),
