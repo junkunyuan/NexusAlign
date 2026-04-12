@@ -20,3 +20,4 @@ run:
   group_size: 8
   adv_clip_max: 5.0
   clip_range: 1e-2
+  kl_coeff: 0.0

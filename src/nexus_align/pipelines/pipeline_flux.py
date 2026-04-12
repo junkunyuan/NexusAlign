@@ -112,6 +112,7 @@ class FluxTrainPipeline(BaseTrainPipeline):
 
         # Model
         self.model = model.model
+        self.ref_model = model.ref_model
         self.vae = model.vae
         self.encode_prompt = model.encode_prompt
 
@@ -279,12 +280,28 @@ class FluxTrainPipeline(BaseTrainPipeline):
         ]
         timesteps = torch.tensor([timestep_values] * batch, dtype=torch.int64)
 
+        latents_trimmed = all_latents[:, :-2]
+        next_latents_trimmed = all_latents[:, 1:-1]
+        timesteps_trimmed = timesteps[:, :-1]
+
+        ref_log_probs = self._compute_ref_log_probs(
+            latents=latents_trimmed,
+            next_latents=next_latents_trimmed,
+            timesteps=timesteps_trimmed,
+            sigma_schedule=sigma_schedule,
+            prompt_embed_t5=data["prompt_embed_t5"],
+            prompt_embed_clip=data["prompt_embed_clip"],
+            text_id=data["text_id"],
+            image_id=shared_image_id,
+        )
+
         data = {
             "reward_inputs": {"image": images, "image_pil": image_pils, "text": texts},
-            "latents": all_latents[:, :-2],  # [b, sample_steps - 1, l, 64]
-            "next_latents": all_latents[:, 1:-1],  # [b, sample_steps - 1, l, 64]
-            "timesteps": timesteps[:, :-1],  # [b, sample_steps - 1]
+            "latents": latents_trimmed,
+            "next_latents": next_latents_trimmed,
+            "timesteps": timesteps_trimmed,
             "log_probs": torch.cat(all_log_probs)[:, :-1],  # [b, sample_steps - 1]
+            "ref_log_probs": ref_log_probs,
             "image_id": shared_image_id,  # [l, 3]
             "text_id": data["text_id"],  # [512, 3]
             "prompt_embed_t5": data["prompt_embed_t5"],  # [b, 512, 4096]
@@ -296,6 +313,62 @@ class FluxTrainPipeline(BaseTrainPipeline):
 
         return data
     
+    @torch.no_grad()
+    def _compute_ref_log_probs(
+        self,
+        latents: torch.Tensor,
+        next_latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        sigma_schedule: torch.Tensor,
+        prompt_embed_t5: torch.Tensor,
+        prompt_embed_clip: torch.Tensor,
+        text_id: torch.Tensor,
+        image_id: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute log probs from the frozen reference model for KL divergence."""
+        if self.ref_model is None:
+            return torch.zeros_like(latents[:, :, 0, 0])
+
+        batch, num_steps = latents.shape[0], latents.shape[1]
+        batch_ind = torch.arange(batch).chunk(batch // self.sample_batch_size)
+
+        all_ref_log_probs = []
+        bar = TqdmBar(total=len(batch_ind), desc="Computing ref log probs", unit="batch")
+        self.ref_model.eval()
+
+        for b_idx in batch_ind:
+            ref_log_probs_steps = []
+            for i in range(num_steps):
+                step_latents = latents[b_idx, i].to(self.device)
+                step_next_latents = next_latents[b_idx, i].to(self.device)
+                step_timesteps = timesteps[b_idx, i].to(self.device)
+
+                with torch.amp.autocast(device_type=self.device.type, dtype=self.amp_dtype):
+                    model_output = self.ref_model(
+                        hidden_states=step_latents,
+                        timestep=step_timesteps / 1000,
+                        encoder_hidden_states=prompt_embed_t5[b_idx],
+                        pooled_projections=prompt_embed_clip[b_idx],
+                        txt_ids=text_id,
+                        img_ids=image_id,
+                        guidance=self.sample_cfg,
+                    ).sample.to(dtype=self.model_dtype)
+
+                _, _, ref_log_prob = self.scheduler.step_fn(
+                    model_output=model_output,
+                    latents=step_latents,
+                    sigmas=sigma_schedule,
+                    index=i,
+                    prev_sample=step_next_latents,
+                )
+                ref_log_probs_steps.append(ref_log_prob)
+
+            all_ref_log_probs.append(torch.stack(ref_log_probs_steps, dim=1))
+            bar.update(1)
+
+        bar.close()
+        return torch.cat(all_ref_log_probs, dim=0)
+
     def iterate_training_items(self, responses: dict):
         """
         Yield training items, called by train_one_step() in algorithms.
@@ -315,7 +388,7 @@ class FluxTrainPipeline(BaseTrainPipeline):
         batch = len(responses["timesteps"])
         step_len = len(responses["timesteps"][0])
         perms = torch.stack([torch.randperm(step_len) for _ in range(batch)])
-        for key in ["timesteps", "latents", "next_latents", "log_probs"]:
+        for key in ["timesteps", "latents", "next_latents", "log_probs", "ref_log_probs"]:
             ran = torch.arange(batch)
             responses[key] = responses[key][ran[:, None], perms]
         all_timesteps = len(responses["timesteps"][0])
@@ -372,8 +445,11 @@ class FluxTrainPipeline(BaseTrainPipeline):
 
                     return forward_fn
 
+                ref_log_probs = responses["ref_log_probs"][start_idx:end_idx, t]
+
                 yield {
                     "old_log_probs": old_log_probs,
+                    "ref_log_probs": ref_log_probs,
                     "advantages": advantages_slice,
                     "forward_fn": make_forward_fn(),
                     "backward_scale": 1.0 / (self.grad_accu_step * train_timesteps),
