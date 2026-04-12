@@ -3,6 +3,7 @@ path: Qwen/Qwen3-VL-32B-Instruct
 mode: eval
 model_dtype: fp32
 amp_dtype: bf16
+task: aesthetic
 
 fsdp:
   fsdp_strategy: full_shard

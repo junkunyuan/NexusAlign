@@ -1,4 +1,4 @@
-"""Qwen3-VL-32B reward model for evaluating image generation."""
+"""Qwen3.5-9B reward model for evaluating image generation."""
 
 import json
 import re
@@ -12,7 +12,7 @@ from nexus_align.reward_models.text_rendering_prompts import (
     PERFECT_SCORE,
 )
 
-EVAL_MAX_NEW_TOKENS = 32
+EVAL_MAX_NEW_TOKENS = 128
 EVAL_KEYS = ["aesthetic_quality_score", "semantic_alignment_score", "overall_score"]
 EVAL_INSTRUCTION = """
 You are a professional image generation evaluation expert. Evaluate the image using the following two criteria.
@@ -38,18 +38,20 @@ Return the evaluation result in JSON format:
 }
 """
 
-class Qwen3_VL_32B(BaseRewardModel):
+
+
+
+class Qwen3_5_9B(BaseRewardModel):
     """
-    Qwen3-VL-32B reward model for evaluating image generation.
+    Qwen3.5-9B reward model for evaluating image generation.
 
     References:
-        - Qwen3-VL paper: https://arxiv.org/pdf/2511.21631.
-        - Official repo: https://github.com/QwenLM/Qwen3-VL.
-        - Checkpoint: https://huggingface.co/Qwen/Qwen3-VL-32B-Instruct.
+        - Official repo: https://github.com/QwenLM/Qwen3.5.
+        - Checkpoint: https://huggingface.co/Qwen/Qwen3.5-9B.
     """
 
     def __init__(self, device: torch.device, kwargs: dict) -> None:
-        super().__init__("Qwen3-VL-32B", device, kwargs)
+        super().__init__("Qwen3.5-9B", device, kwargs)
 
         self.model, self.processor = self.load_model()
 
@@ -82,28 +84,26 @@ class Qwen3_VL_32B(BaseRewardModel):
         print(f"✅ Prepared reward model: {self.model_name} ({self.mode} mode, task: {self.task}, dims: {self.active_dimensions}, keys: {keys_info})")
 
     def load_model(self) -> tuple[torch.nn.Module, torch.nn.Module]:
-        """
-        Load model.
-
-        Follow the repo: https://huggingface.co/Qwen/Qwen3-VL-32B-Instruct.
-        """
-        from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
+        """Load model."""
+        from transformers import AutoProcessor, AutoModelForImageTextToText
 
         print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
-        processor = AutoProcessor.from_pretrained(self.model_path)
+        processor = AutoProcessor.from_pretrained(self.model_path, trust_remote_code=True)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
 
         self.cpu_offload = self.fsdp_kwargs.get("cpu_offload", False)
         if self.cpu_offload:
-            model = Qwen3VLForConditionalGeneration.from_pretrained(
+            model = AutoModelForImageTextToText.from_pretrained(
                 self.model_path,
                 dtype=self.model_dtype,
+                trust_remote_code=True,
             )
         else:
-            model = Qwen3VLForConditionalGeneration.from_pretrained(
+            model = AutoModelForImageTextToText.from_pretrained(
                 self.model_path,
                 dtype=self.model_dtype,
                 device_map=f"cuda:{self.device.index}",
+                trust_remote_code=True,
             )
 
         if self.mode == "train":
@@ -136,6 +136,7 @@ class Qwen3_VL_32B(BaseRewardModel):
             messages,
             tokenize=True,
             add_generation_prompt=True,
+            enable_thinking=False,
             return_dict=True,
             return_tensors="pt",
         )
@@ -171,6 +172,7 @@ class Qwen3_VL_32B(BaseRewardModel):
             messages,
             tokenize=True,
             add_generation_prompt=True,
+            enable_thinking=False,
             return_dict=True,
             return_tensors="pt",
         )
