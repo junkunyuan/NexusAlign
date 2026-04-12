@@ -96,6 +96,7 @@ class QwenImageInferPipeline:
 
         result = self.pipe(
             prompt=texts,
+            negative_prompt=[""] * len(texts) if isinstance(texts, list) else "",
             height=self.height,
             width=self.width,
             true_cfg_scale=self.true_cfg_scale,

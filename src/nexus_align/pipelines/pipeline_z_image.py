@@ -590,7 +590,7 @@ class ZImagePipeline(
     A simplified Z-Image pipeline for text-to-image generation.
 
     Reference:
-        Z-Image: https://huggingface.co/Z-a-o/Z-Image-Turbo
+        Z-Image: https://huggingface.co/Tongyi-MAI/Z-Image-Turbo
         Diffusers: https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/z_image/pipeline_z_image.py
     """
 
