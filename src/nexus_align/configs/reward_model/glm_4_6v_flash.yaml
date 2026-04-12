@@ -3,7 +3,7 @@ path: zai-org/GLM-4.6V-Flash
 mode: eval
 model_dtype: fp32
 amp_dtype: bf16
-task: aesthetic
+task: aesthetic  # "aesthetic" or "text_rendering"
 
 fsdp:
   fsdp_strategy: full_shard

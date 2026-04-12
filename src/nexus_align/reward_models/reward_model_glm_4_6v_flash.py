@@ -9,7 +9,8 @@ from nexus_align.reward_models.text_rendering_prompts import (
     TEXT_RENDERING_PROMPTS,
     TEXT_RENDERING_MAX_NEW_TOKENS,
     DIMENSIONS,
-    PERFECT_SCORE,
+    SCORE_PER_INDICATOR,
+    TOTAL_INDICATORS,
 )
 
 EVAL_MAX_NEW_TOKENS = 128
@@ -38,6 +39,9 @@ Return the evaluation result in JSON format:
 }
 """
 
+MAX_RETRIES = 3
+
+
 class GLM_4_6V_Flash(BaseRewardModel):
     """
     GLM-4.6V-Flash reward model for evaluating image generation.
@@ -55,31 +59,7 @@ class GLM_4_6V_Flash(BaseRewardModel):
 
         self.dataset_kwargs = {}
 
-        prompts_config = TEXT_RENDERING_PROMPTS.get(self.model_name, {})
-        self._key_to_dim = {}
-        for dim_name, dim_cfg in prompts_config.items():
-            for key in dim_cfg["keys"]:
-                self._key_to_dim[key] = dim_name
-
-        if self.eval_keys is not None:
-            all_valid_keys = set(self._key_to_dim.keys())
-            invalid = set(self.eval_keys) - all_valid_keys
-            if invalid:
-                raise ValueError(f"❌ Invalid eval_keys: {invalid}. Valid: {sorted(all_valid_keys)}")
-            self.active_keys = tuple(self.eval_keys)
-            self.active_dimensions = tuple(dict.fromkeys(self._key_to_dim[k] for k in self.active_keys))
-        else:
-            self.active_keys = None
-            if self.eval_dimensions is not None:
-                invalid = set(self.eval_dimensions) - set(DIMENSIONS)
-                if invalid:
-                    raise ValueError(f"❌ Invalid eval_dimensions: {invalid}. Valid: {DIMENSIONS}")
-                self.active_dimensions = tuple(self.eval_dimensions)
-            else:
-                self.active_dimensions = DIMENSIONS
-
-        keys_info = list(self.active_keys) if self.active_keys else "all"
-        print(f"✅ Prepared reward model: {self.model_name} ({self.mode} mode, task: {self.task}, dims: {self.active_dimensions}, keys: {keys_info})")
+        print(f"✅ Prepared reward model: {self.model_name} ({self.mode} mode, task: {self.task})")
 
     def load_model(self) -> tuple[torch.nn.Module, torch.nn.Module]:
         """
@@ -252,22 +232,13 @@ class GLM_4_6V_Flash(BaseRewardModel):
         return None
 
     @torch.no_grad()
-    def evaluate(self, data: dict, return_tensor: bool = False, return_detail: bool = False) -> list | torch.Tensor:
-        if self.cpu_offload:
-            self.model.to(self.device)
-
+    def evaluate(self, data: dict, return_tensor: bool = False) -> list | torch.Tensor:
         if self.task == "aesthetic":
-            result = self._evaluate_aesthetic(data, return_tensor)
+            return self._evaluate_aesthetic(data, return_tensor)
         elif self.task == "text_rendering":
-            result = self._evaluate_text_rendering(data, return_tensor, return_detail)
+            return self._evaluate_text_rendering(data, return_tensor)
         else:
             raise ValueError(f"❌ Unknown task: {self.task}")
-
-        if self.cpu_offload:
-            self.model.to("cpu")
-            torch.cuda.empty_cache()
-
-        return result
 
     def _evaluate_aesthetic(self, data: dict, return_tensor: bool = False) -> list | torch.Tensor:
         """Original aesthetic + semantic alignment evaluation."""
@@ -309,78 +280,48 @@ class GLM_4_6V_Flash(BaseRewardModel):
         else:
             return overall_scores
 
-    def _evaluate_text_rendering(
-        self, data: dict, return_tensor: bool = False, return_detail: bool = False,
-    ) -> list | torch.Tensor:
-        """Three-stage text rendering quality evaluation (no retry, discard on parse failure).
-
-        When *return_detail* is True (evaluation mode), returns a
-        ``list[dict | None]`` where each dict contains the aggregate
-        ``"score"`` plus per-question 0/100 entries.
-        """
+    def _evaluate_text_rendering(self, data: dict, return_tensor: bool = False) -> list | torch.Tensor:
+        """Three-stage text rendering quality evaluation."""
         prompts_config = TEXT_RENDERING_PROMPTS[self.model_name]
         images = data["image"]
         ground_truths = data["text"]
 
-        deter_status = torch.are_deterministic_algorithms_enabled()
-        torch.use_deterministic_algorithms(False)
-
         overall_scores = []
-        detailed_results: list[dict | None] = []
-        total_calls = 0
-        discard_count = 0
-        num_evaluated_dims = 0
-
         for image, gt in zip(images, ground_truths):
-            per_question: dict[str, int] = {}
             total_problems = 0
-            valid_indicators = 0
-            image_discarded = False
 
-            for dim in self.active_dimensions:
+            for dim in DIMENSIONS:
                 dim_cfg = prompts_config[dim]
-                prompt_text = dim_cfg["prompt"].replace("{ground_truth}", gt)
-                total_calls += 1
+                prompt_text = dim_cfg["prompt"].format(ground_truth=gt)
 
-                raw = self._call_model_text_rendering(
-                    image,
-                    prompt_text=prompt_text,
-                    max_new_tokens=TEXT_RENDERING_MAX_NEW_TOKENS,
-                )
-                result = self._parse_text_rendering_response(raw, dim_cfg["keys"])
+                result = None
+                for attempt in range(1, MAX_RETRIES + 1):
+                    raw = self._call_model_text_rendering(
+                        image,
+                        prompt_text=prompt_text,
+                        max_new_tokens=TEXT_RENDERING_MAX_NEW_TOKENS,
+                    )
+                    result = self._parse_text_rendering_response(raw, dim_cfg["keys"])
+                    if result is not None:
+                        break
+                    print(
+                        f"⚠️ Warning [{dim}] attempt {attempt}/{MAX_RETRIES}: "
+                        f"parse failed, raw output: {raw[:200]}"
+                    )
 
                 if result is None:
-                    discard_count += 1
-                    image_discarded = True
-                    print(
-                        f"⚠️ Discard [{dim}]: parse failed, raw output: {raw[:200]}"
-                    )
+                    print(f"⚠️ Warning [{dim}]: All {MAX_RETRIES} attempts failed, treating all indicators as 1")
+                    total_problems += len(dim_cfg["keys"])
                     continue
 
-                num_evaluated_dims += 1
-                scoring_keys = [k for k in dim_cfg["keys"] if k in self.active_keys] if self.active_keys else dim_cfg["keys"]
-                for key in scoring_keys:
+                for key in dim_cfg["keys"]:
                     val = result.get(key, 0)
-                    problem = int(val) if val in (0, 1) else 1
-                    per_question[key] = 0 if problem else 100
-                    total_problems += problem
-                    valid_indicators += 1
+                    total_problems += int(val) if val in (0, 1) else 1
 
-            if image_discarded or valid_indicators == 0:
-                overall_scores.append(float("nan"))
-                detailed_results.append(None)
-            else:
-                score = (valid_indicators - total_problems) / valid_indicators * PERFECT_SCORE
-                overall_scores.append(score)
-                detailed_results.append({"score": score, **per_question})
+            score = (TOTAL_INDICATORS - total_problems) * SCORE_PER_INDICATOR
+            overall_scores.append(score)
 
-        if discard_count > 0:
-            print(f"⚠️ Parse discard summary: {discard_count}/{total_calls}")
-
-        torch.use_deterministic_algorithms(deter_status)
-
-        if return_detail:
-            return detailed_results
         if return_tensor:
             return torch.tensor(overall_scores, dtype=torch.float32, device=self.device).contiguous()
-        return overall_scores
+        else:
+            return overall_scores

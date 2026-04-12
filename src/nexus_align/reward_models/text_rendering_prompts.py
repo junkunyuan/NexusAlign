@@ -4,7 +4,8 @@ Each model has three dimension-specific prompts (word / glyph / text).
 Prompts contain a {ground_truth} placeholder that must be filled at runtime.
 """
 
-PERFECT_SCORE = 100
+SCORE_PER_INDICATOR = 12.5
+TOTAL_INDICATORS = 8
 DIMENSIONS = ("word", "glyph", "text")
 TEXT_RENDERING_MAX_NEW_TOKENS = 2048
 
@@ -70,63 +71,70 @@ TEXT_RENDERING_PROMPTS = {
         },
     },
     # -------------------------------------------------------------------------
-    # Qwen3.5-9B  (best prompts from 9B evaluation: word#5, glyph#16, text#13)
+    # Qwen3.5-27B
     # -------------------------------------------------------------------------
-    "Qwen3.5-9B": {
+    "Qwen3.5-27B": {
         "word": {
             "prompt": (
-                "Perform a structured diff analysis between the text in this image and the ground truth.\n"
+                "Role: Senior OCR Verification Specialist.\n"
                 "\n"
-                'Ground truth: "{ground_truth}"\n'
+                "Your task is to read the text rendered in the provided image and compare it word-by-word against the reference string.\n"
                 "\n"
-                "Analysis method:\n"
-                "1. OCR the image to extract rendered text.\n"
-                "2. Normalize both texts: lowercase, remove all punctuation.\n"
-                "3. Split into word tokens.\n"
-                "4. Compute the word-level diff and evaluate each dimension independently:\n"
-                "   - **drop_word**: Words in ground truth but not in rendered text = dropped words. Report 1 if any, 0 if none.\n"
-                "   - **add_word**: Words in rendered text but not in ground truth = added words. Report 1 if any, 0 if none.\n"
-                "   - **replace_word**: Words present in both but with Levenshtein distance >= 2 at character level = replaced words. Report 1 if any, 0 if none.\n"
+                'Reference string: "{ground_truth}"\n'
                 "\n"
-                'Respond with ONLY: {"replace_word": <0 or 1>, "add_word": <0 or 1>, "drop_word": <0 or 1>}'
+                "Perform a strict word-level alignment and evaluate each dimension independently:\n"
+                "\n"
+                "1. **replace_word**: Check if any word has 2+ character-level mutations (substitutions, transpositions, or scrambling) making it unrecognizable as the original word. Report 1 if found, 0 otherwise.\n"
+                "2. **add_word**: Check if any non-reference word appears in the rendered text that has no counterpart in the reference. Report 1 if found, 0 otherwise.\n"
+                "3. **drop_word**: Check if any reference word is completely absent from the rendered text. Report 1 if found, 0 otherwise.\n"
+                "\n"
+                "Case and punctuation are irrelevant—only alphabetic/numeric word content matters.\n"
+                "\n"
+                'Output ONLY: {"replace_word": <0 or 1>, "add_word": <0 or 1>, "drop_word": <0 or 1>}'
             ),
             "keys": ["replace_word", "add_word", "drop_word"],
         },
         "glyph": {
             "prompt": (
-                "Read the text in this image carefully, then compare each word's characters against the reference text below.\n"
+                "You are a precise glyph-level text error classifier. Your task has two phases.\n"
                 "\n"
-                'Reference: "{ground_truth}"\n'
+                "**PHASE 1 — Read the image carefully.**\n"
+                "List every word you can see in the image, exactly as rendered (preserve spelling). Write them in order.\n"
                 "\n"
-                "As you compare character by character within each word, evaluate three aspects independently:\n"
+                "**PHASE 2 — Compare against ground truth.**\n"
+                'Ground truth: "{ground_truth}"\n'
                 "\n"
-                "1. **drop_glyph**: For each word pair, does the rendered version have fewer characters, with the remaining characters being a subsequence of the reference word? (0 = no drops, 1 = at least one character dropped)\n"
-                "2. **add_glyph**: For each word pair, does the rendered version have more characters, with the reference word being a subsequence of the rendered word? (0 = no additions, 1 = at least one character added)\n"
-                "3. **replace_glyph**: For each word pair with the same character count, is exactly one character different? (0 = no replacements, 1 = at least one single-character substitution)\n"
+                "For each rendered word, find its matching ground-truth word (by position). Align characters one-by-one and classify using this taxonomy:\n"
                 "\n"
-                "Disregard upper/lowercase differences, punctuation, and whole-word errors.\n"
+                '• **replace_glyph** — The rendered word has the SAME length as the expected word, but EXACTLY ONE character position differs. Example: "hallo" vs "hello" (position 2: \'a\'→\'e\'). If 2+ characters differ, it is a word-level error — do NOT flag replace_glyph.\n'
+                '• **add_glyph** — The rendered word is LONGER than expected. The expected word\'s characters appear as an in-order subsequence of the rendered word. Example: "appple" vs "apple" — \'a\',\'p\',\'p\',\'l\',\'e\' all appear in order with an extra \'p\'. If the order is disrupted, do NOT flag.\n'
+                '• **drop_glyph** — The rendered word is SHORTER than expected. The rendered word\'s characters appear as an in-order subsequence of the expected word. Example: "aple" vs "apple" — \'a\',\'p\',\'l\',\'e\' appear in the same order. If the order is disrupted, do NOT flag.\n'
                 "\n"
-                'Respond with ONLY: {"replace_glyph": <0 or 1>, "add_glyph": <0 or 1>, "drop_glyph": <0 or 1>}'
+                "Exclusions: Ignore case differences, punctuation, and whole-word errors (entire words missing, added, or unrecognizable). When in doubt, report 0.\n"
+                "\n"
+                'Output ONLY: {"replace_glyph": <0 or 1>, "add_glyph": <0 or 1>, "drop_glyph": <0 or 1>}'
             ),
             "keys": ["replace_glyph", "add_glyph", "drop_glyph"],
         },
         "text": {
             "prompt": (
-                "Analyze this image for two independent text rendering problems.\n"
+                "Perform a structured visual shape analysis of each word rendered in this image compared to the ground truth.\n"
                 "\n"
-                'Expected content: "{ground_truth}"\n'
+                'Ground truth: "{ground_truth}"\n'
                 "\n"
-                "PROBLEM 1 — NO TEXT (evaluate carefully):\n"
-                "Some images fail to render any text at all. Check whether this image contains at least one word you can actually read. Be strict: only count clearly formed, identifiable words. Faint smudges, visual artifacts, background textures, and purely decorative elements are NOT text.\n"
-                "- no_text = 1 if you cannot identify any readable word\n"
-                "- no_text = 0 if you can identify at least one readable word\n"
+                "Analysis method:\n"
+                "1. Verify text presence: Is there any text in the image? If not → no_text = 1.\n"
+                "2. For each rendered word, examine the VISUAL QUALITY of its characters:\n"
+                "   - Does each character have clean, well-defined strokes?\n"
+                "   - Are the curves smooth and proportional?\n"
+                "   - Are the character outlines consistent and free of distortion?\n"
+                "   - Does the character geometry match what you'd expect for that letter?\n"
+                "3. If a character has the correct identity but poor visual form (warped, broken, distorted), that word has a misshape.\n"
+                "4. If any word is affected → misshape = 1. If no words are affected → misshape = 0.\n"
                 "\n"
-                "PROBLEM 2 — MISSHAPE (set to 0 if no_text = 1):\n"
-                "If text IS present, check whether any character shows visual deformation: the letter is correct but drawn with warped curves, broken strokes, irregular proportions, or distorted geometry. Wrong letters, missing letters, extra letters, and font style choices are NOT misshape.\n"
-                "- misshape = 1 if at least one word has deformed characters\n"
-                "- misshape = 0 if all characters have clean shapes (or if no_text = 1)\n"
+                "Not misshape: wrong letter, missing letter, extra letter, merged letters, font style differences, case changes, punctuation.\n"
                 "\n"
-                'Respond with ONLY: {"misshape": <0 or 1>, "no_text": <0 or 1>}'
+                'Report ONLY: {"misshape": <0 or 1>, "no_text": <0 or 1>}'
             ),
             "keys": ["misshape", "no_text"],
         },
