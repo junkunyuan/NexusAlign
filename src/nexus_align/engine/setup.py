@@ -1,16 +1,16 @@
 """Common environment setup for train and evaluation entry points."""
 
 import os
+import pyinstrument
 from dataclasses import dataclass
 from typing import Callable, Optional
-
-import pyinstrument
-import torch
 from omegaconf import OmegaConf, open_dict
 
-from nexus_align.engine.distributed import init_dist_env, dist_safe_exit
+import torch
+
 from nexus_align.engine.logger import init_log, init_wandb
-from nexus_align.utils.random import set_seed, set_deterministic
+from nexus_align.engine.random import set_seed, set_deterministic
+from nexus_align.engine.distributed import init_dist_env, dist_safe_exit
 
 
 @dataclass
@@ -31,7 +31,7 @@ def prepare_env(
     validator: Optional[Callable[[dict], list]] = None,
 ) -> EnvContext:
     """
-    Prepare common environment for train/evaluation: dist init, logging, seed, config.
+    Prepare common environment for train/evaluation: distributed init, logging, seed, config.
 
     Args:
         cfg: OmegaConf config object.
@@ -53,7 +53,7 @@ def prepare_env(
     with open_dict(cfg):
         log_dir = cfg.log.log_dir
         cfg.common.project_path = os.getcwd().split(log_dir)[0]
-        cfg.log.log_dir = os.path.join(cfg.common.project_path, log_dir)
+        cfg.log.log_dir = os.path.join(cfg.common.project_path, log_dir)  # use abs path
 
     # Initialize logger and wandb
     init_log(
@@ -112,10 +112,7 @@ def with_env_setup(
 
     def decorator(main_fn):
         def wrapper(cfg):
-            env = prepare_env(
-                cfg,
-                validator=validator,
-            )
+            env = prepare_env(cfg, validator=validator)
             return main_fn(cfg, env)
 
         return wrapper

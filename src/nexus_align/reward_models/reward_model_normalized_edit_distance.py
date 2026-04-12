@@ -15,13 +15,13 @@ class NormalizedEditDistance(BaseRewardModel):
 
     Uses PP-OCRv5 to extract text from generated images and
     computes the normalized Levenshtein edit distance against target text
-    extracted from the prompt. Returns ``1 - NED`` as the reward so that higher
+    extracted from the prompt. Returns '1 - NED' as the reward so that higher
     means better.
 
     Target text is extracted from quoted substrings in the prompt (e.g.
-    ``'hello'`` or ``"world"``). If no quotes are found the full prompt is used.
+    'hello' or "world"). If no quotes are found the full prompt is used.
 
-    Expected model directory layout (pointed to by ``model_path``)::
+    Expected model directory layout (pointed to by `model_path`)::
         PPOCRv5/
         ├── PP-OCRv5_server_det/   (inference.json + inference.pdiparams)
         └── PP-OCRv5_server_rec/   (inference.json + inference.pdiparams)
@@ -65,10 +65,13 @@ class NormalizedEditDistance(BaseRewardModel):
     def _extract_target_text(prompt: str) -> str:
         """Return quoted substrings joined by space, or the full prompt."""
         matches = re.findall(
-            r'["\u201c\u201d\']+([^"\u201c\u201d\']+)["\u201c\u201d\']+', prompt
+            r'"([^"]+)"|'
+            r"'([^']+)'|"
+            r'\u201c([^\u201d]+)\u201d',
+            prompt,
         )
         if matches:
-            return " ".join(matches)
+            return " ".join(m for group in matches for m in group if m)
         return prompt
 
     @staticmethod

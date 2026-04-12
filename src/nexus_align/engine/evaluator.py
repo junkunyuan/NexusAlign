@@ -38,9 +38,10 @@ def cache_check(
         if not os.path.exists(infer_file):
             raise ValueError(f"❌ No appropriate inference files found in {cache_log_dir}")
         
-        eval_file_name = eval_file.rsplit("/", 1)[-1]
-        if os.path.exists(os.path.join(cache_log_dir, eval_file_name)):
-           raise ValueError(f"❌ Evaluation file already exists in {eval_file}")
+        if eval_file is not None:
+            eval_file_name = eval_file.rsplit("/", 1)[-1]
+            if os.path.exists(os.path.join(cache_log_dir, eval_file_name)):
+                raise ValueError(f"❌ Evaluation file already exists in {eval_file}")
 
         is_infer_file_exists = True
     
@@ -78,24 +79,12 @@ def synchronize_and_save_results(
         return
 
 
-def get_statistics(eval_file: str, result_key: str = "result") -> None:
-    """Compute and print statistics for the evaluation result file; write a summary to a .stat.txt file in the same directory."""
-    print("📊 Statistics analysis:")
-
-    results = []
-    invalid = []
-    with open(eval_file, "r", encoding="utf-8") as f:
-        for line in f:
-            try:
-                data = json.loads(line)
-                if result_key in data:
-                    result = data[result_key]
-                    if result is None:
-                        invalid.append(result)
-                    else:
-                        results.append(float(result))
-            except json.JSONDecodeError:
-                continue
+def _format_scalar_stats(
+    results: list[float],
+    invalid_count: int,
+    eval_file: str,
+) -> str:
+    """Format statistics for a list of scalar results."""
     stat_mean = sum(results) / len(results) if results else None
     stat_max = max(results) if results else None
     stat_min = min(results) if results else None
@@ -103,7 +92,7 @@ def get_statistics(eval_file: str, result_key: str = "result") -> None:
     lines = [
         "\n" + "-" * 80 + f"\nStatistics: {eval_file}\n" + "-" * 80,
         f"Valid Sample Count: {len(results):,}",
-        f"Invalid Sample Count: {len(invalid):,}",
+        f"Invalid Sample Count: {invalid_count:,}",
     ]
     if len(results) > 0:
         lines.extend(
@@ -116,7 +105,70 @@ def get_statistics(eval_file: str, result_key: str = "result") -> None:
         )
     else:
         lines.append("❌ Warning: No valid result data found in file")
-    stats_str = "\n".join(lines)
+    return "\n".join(lines)
+
+
+def _format_detailed_stats(
+    results: list[dict],
+    invalid_count: int,
+    eval_file: str,
+) -> str:
+    """Format per-key statistics for a list of dict results."""
+    ordered_keys = ["score"] + [k for k in results[0] if k != "score"]
+
+    lines = [
+        "\n" + "=" * 80 + f"\nStatistics: {eval_file}\n" + "=" * 80,
+        f"Valid Sample Count: {len(results):,}",
+        f"Invalid Sample Count: {invalid_count:,}",
+        "",
+    ]
+    for i, key in enumerate(ordered_keys):
+        values = [r[key] for r in results if r is not None and key in r]
+        if not values:
+            continue
+        v_mean = sum(values) / len(values)
+        v_max = max(values)
+        v_min = min(values)
+        label = f"{key} (overall)" if key == "score" else key
+        connector = "└─" if i == len(ordered_keys) - 1 else "├─"
+        lines.append(f"   {connector} {label:<24s} Mean: {v_mean:10.6f}    Max: {v_max:9.6f}    Min: {v_min:9.6f}")
+
+    return "\n".join(lines)
+
+
+def get_statistics(eval_file: str, result_key: str = "result") -> None:
+    """Compute and print statistics for the evaluation result file.
+
+    Automatically detects whether results are scalars (float) or dicts
+    (per-question detail) and formats accordingly.
+    """
+    print("📊 Statistics analysis:")
+
+    raw_results: list = []
+    invalid_count = 0
+    with open(eval_file, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                data = json.loads(line)
+                if result_key in data:
+                    result = data[result_key]
+                    if result is None:
+                        invalid_count += 1
+                    else:
+                        raw_results.append(result)
+            except json.JSONDecodeError:
+                continue
+
+    if raw_results and isinstance(raw_results[0], dict):
+        stats_str = _format_detailed_stats(raw_results, invalid_count, eval_file)
+    else:
+        scalar_results = []
+        for r in raw_results:
+            try:
+                scalar_results.append(float(r))
+            except (TypeError, ValueError):
+                invalid_count += 1
+        stats_str = _format_scalar_stats(scalar_results, invalid_count, eval_file)
 
     eval_dir = os.path.dirname(eval_file)
     stat_basename = os.path.splitext(os.path.basename(eval_file))[0] + ".stat.txt"

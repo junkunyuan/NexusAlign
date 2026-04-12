@@ -1,4 +1,4 @@
-"""Abstract base for reward models."""
+"""Abstract base class for reward models."""
 
 import os
 from abc import ABC, abstractmethod

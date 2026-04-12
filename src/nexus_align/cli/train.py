@@ -19,7 +19,7 @@ from nexus_align.core import validate_train_config
 @with_env_setup(validator=validate_train_config)
 def main(cfg, env):
     # --------------------------------------------------------------------------------
-    # 1. Prepare environment (done by decorator)
+    # 1. Prepare environment (with env from by with_env_setup decorator)
     # --------------------------------------------------------------------------------
     world_size, rank, device = env.world_size, env.rank, env.device
     cfg_dict = env.cfg_dict
@@ -52,6 +52,7 @@ def main(cfg, env):
         device=device,
         model_dtype=cfg.model.model_dtype,
         kwargs=cfg_dict,
+        env=env
     )
     reward_model = registry.get("reward_model", cfg.reward_model.name)(
         device=device,

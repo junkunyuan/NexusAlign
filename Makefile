@@ -7,6 +7,8 @@ check_dirs := src
 # Test the local checkout rather than the installed
 export PYTHONPATH = src
 
+.PHONY: format-check format-fixup
+
 # ------------------------------------------------------------
 # Format code
 # ------------------------------------------------------------

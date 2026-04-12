@@ -26,6 +26,17 @@ SHARDING_STRATEGY_MAP = {
 }
 
 
+def _meta_to_cpu_init_fn(m: torch.nn.Module, dtype: torch.dtype) -> None:
+    """Initialize meta tensors to CPU empty tensors for FSDP wrapping with init_empty_weights."""
+    for n, p in m.named_parameters(recurse=False):
+        if hasattr(p, "is_meta") and p.is_meta:
+            t = torch.empty(p.shape, dtype=dtype, device="cpu")
+            setattr(m, n, torch.nn.Parameter(t, requires_grad=p.requires_grad))
+    for n, b in m.named_buffers(recurse=False):
+        if hasattr(b, "is_meta") and b.is_meta:
+            setattr(m, n, torch.empty(b.shape, dtype=dtype, device="cpu"))
+
+
 def convert_scalar_parameters(model: torch.nn.Module) -> None:
     """
     Convert scalar parameters to tensors for FSDP wrapping.
@@ -69,6 +80,10 @@ def fsdp_wrap(
     param_dtype: torch.dtype,
     strategy: str,
     cpu_offload: bool,
+    # True when loading pre-converted FSDP shards.
+    # Model is meta first, then state_dict is loaded.
+    from_empty_weights: bool = False,
+    init_dtype: torch.dtype | None = None,
     model_name: str = "model",
 ) -> FSDP:
     """Wrap model with torch FSDP (Fully Sharded Data Parallel)."""
@@ -98,8 +113,13 @@ def fsdp_wrap(
     # Device id
     fsdp_kwargs["device_id"] = torch.cuda.current_device()
 
-    # Convert scalar parameters to tensors for FSDP wrapping
-    convert_scalar_parameters(model)
+    # from_empty_weights: param_init_fn materializes meta tensors, then state_dict is loaded.
+    # else: convert_scalar (meta tensors cannot .detach().cpu()).
+    if from_empty_weights:
+        _dtype = init_dtype if init_dtype is not None else param_dtype
+        fsdp_kwargs["param_init_fn"] = partial(_meta_to_cpu_init_fn, dtype=_dtype)
+    else:
+        convert_scalar_parameters(model)
 
     # Wrap model
     model = FSDP(model, **fsdp_kwargs)

@@ -72,11 +72,19 @@ class GLM_4_6V_Flash(BaseRewardModel):
         print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
         processor = AutoProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
-        model = Glm4vForConditionalGeneration.from_pretrained(
-            pretrained_model_name_or_path=self.model_path,
-            torch_dtype=self.model_dtype,
-            device_map=f"cuda:{self.device.index}",
-        )
+
+        self.cpu_offload = self.fsdp_kwargs.get("cpu_offload", False)
+        if self.cpu_offload:
+            model = Glm4vForConditionalGeneration.from_pretrained(
+                pretrained_model_name_or_path=self.model_path,
+                torch_dtype=self.model_dtype,
+            )
+        else:
+            model = Glm4vForConditionalGeneration.from_pretrained(
+                pretrained_model_name_or_path=self.model_path,
+                torch_dtype=self.model_dtype,
+                device_map=f"cuda:{self.device.index}",
+            )
 
         if self.mode == "train":
             model.train()
@@ -237,6 +245,9 @@ class GLM_4_6V_Flash(BaseRewardModel):
         images = data["image"]
         prompts = data["text"]
 
+        deter_status = torch.are_deterministic_algorithms_enabled()
+        torch.use_deterministic_algorithms(False)
+
         overall_scores = []
         for image, prompt in zip(images, prompts):
             res = self._call_model_aesthetic(
@@ -260,7 +271,9 @@ class GLM_4_6V_Flash(BaseRewardModel):
                     f"⚠️ Warning: JSON parsing error, the format of the model's output is incorrect:\n {e}"
                 )
                 print(f"Model's output: {res}")
-                overall_scores.append(None)
+                overall_scores.append(0.0)
+
+        torch.use_deterministic_algorithms(deter_status)
 
         if return_tensor:
             return torch.tensor(overall_scores, device=self.device).contiguous()

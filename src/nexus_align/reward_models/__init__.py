@@ -4,6 +4,8 @@ from nexus_align.reward_models.reward_model_hps_v3 import HPSv3
 from nexus_align.reward_models.reward_model_clip_score import CLIPScore
 from nexus_align.reward_models.reward_model_pick_score import PickScore
 from nexus_align.reward_models.reward_model_qwen3_5_27b import Qwen3_5_27B
+from nexus_align.reward_models.reward_model_qwen3_5_9b import Qwen3_5_9B
+from nexus_align.reward_models.reward_model_ocr_metrics import OCRMetrics
 from nexus_align.reward_models.reward_model_qwen3_vl_8b import Qwen3_VL_8B
 from nexus_align.reward_models.reward_model_qwen3_vl_32b import Qwen3_VL_32B
 from nexus_align.reward_models.reward_model_image_reward import ImageReward
@@ -19,6 +21,8 @@ for _name, _cls in [
     ("clip_score", CLIPScore),
     ("pick_score", PickScore),
     ("qwen3_5_27b", Qwen3_5_27B),
+    ("qwen3_5_9b", Qwen3_5_9B),
+    ("ocr_metrics", OCRMetrics),
     ("qwen3_vl_8b", Qwen3_VL_8B),
     ("qwen3_vl_32b", Qwen3_VL_32B),
     ("image_reward", ImageReward),

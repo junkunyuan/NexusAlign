@@ -1,0 +1,23 @@
+name: dpo
+
+train:
+  num_epochs: 1
+  max_train_total_steps: 1000
+  train_batch_size: 8
+  grad_accu_step: 1
+  max_grad_norm: 1.
+
+optimizer:
+  lr: 1e-5
+  optimizer: adamw
+  weight_decay: 0.
+  warmup_steps: 0
+  lr_schedule: constant_with_warmup
+
+run:
+  sample_batch_size: 8
+  sample_save_dir: dpo_sampling
+  group_size: 8
+  beta_dpo: 5000.0
+  pair_strategy: best_vs_worst
+  num_train_timesteps_per_pair: 1

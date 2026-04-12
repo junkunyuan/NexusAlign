@@ -11,7 +11,9 @@ license = { file = "LICENSE" }
 requires-python = ">=3.10"
 authors = [
   { name = "Junkun Yuan" },
-  { name = "You Huang" }
+  { name = "You Huang" },
+  { name = "Zijing Hu" },
+  { name = "Mingxuan Cui" }
 ]
 keywords = [
     "alignment",
@@ -20,9 +22,9 @@ keywords = [
     "foundation models",
     "large language models",
     "multimodal large language models",
+    "diffusion models",
     "image generation",
-    "video generation",
-    "diffusion models"
+    "video generation"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -53,13 +55,14 @@ dependencies = [
     "transformers>=4.57.0",
 
     "numpy>=1.24.0",
-    "diffusers>=0.30.0",
+    "diffusers>=0.37.0",
     "accelerate>=1.0.1",
     "hydra-core>=1.3.0",
     "omegaconf>=2.3.0",
     "tqdm>=4.65.0",
     "matplotlib>=3.7",
     "pyinstrument>=4.0.0",
+    "pynvml>=13.0.1",
     "psutil>=5.9.0",
     "Pillow>=10.0.0",
     "wandb>=0.16.0",

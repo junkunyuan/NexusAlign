@@ -1,7 +1,17 @@
-"""Evaluation entry point."""
+"""Evaluation entry point.
 
+Supports multiple reward-model evaluators in a single run: inference
+runs once, then each evaluator scores the generated images sequentially.
+
+Config accepts either ``reward_model`` (single, legacy) or
+``reward_models`` (list).
+"""
+
+import copy
+import inspect
 import os
 import sys
+
 import hydra
 
 import torch
@@ -23,6 +33,21 @@ from nexus_align.engine.evaluator import (
 )
 
 
+def _resolve_reward_model_configs(cfg, cfg_dict: dict) -> list[dict]:
+    """Return a list of plain-dict reward-model configs.
+
+    Supports both ``cfg.reward_models`` (list, preferred) and the legacy
+    ``cfg.reward_model`` (single).
+    """
+    from omegaconf import OmegaConf
+
+    if hasattr(cfg, "reward_models") and cfg.reward_models is not None:
+        return [OmegaConf.to_container(rm, resolve=True) for rm in cfg.reward_models]
+    if hasattr(cfg, "reward_model") and cfg.reward_model is not None:
+        return [cfg_dict["reward_model"]]
+    raise ValueError("❌ Config must contain either 'reward_model' or 'reward_models'")
+
+
 @hydra.main(
     config_path=os.path.abspath(os.path.join(os.path.dirname(__file__), "../configs")),
     config_name="evaluation",
@@ -31,7 +56,7 @@ from nexus_align.engine.evaluator import (
 @with_env_setup(validator=validate_eval_config)
 def main(cfg, env):
     # --------------------------------------------------------------------------------
-    # 1. Prepare environment (done by decorator)
+    # 1. Prepare environment (with env from by with_env_setup decorator)
     # --------------------------------------------------------------------------------
     world_size, rank, device = env.world_size, env.rank, env.device
     cfg_dict = env.cfg_dict
@@ -40,7 +65,6 @@ def main(cfg, env):
     seed = env.seed
     data_name = cfg.data.name
     model_name = cfg.model.name
-    evaluator_name = cfg.reward_model.name
     result_base_name = f"{model_name}--{data_name}--{seed}"
     meta_data = {
         "data_name": data_name,
@@ -48,11 +72,13 @@ def main(cfg, env):
         "seed": seed,
         "model_ckpt_path": cfg.model.eval.ckpt_path,
     }
-    
+
+    eval_rm_configs = _resolve_reward_model_configs(cfg, cfg_dict)
+    evaluator_names = [rm["name"] for rm in eval_rm_configs]
+    print(f"📋 Evaluators to run: {evaluator_names}")
+
     infer_file = f"infer_results--{result_base_name}.jsonl"
     infer_file = os.path.join(cfg.common.cache_log_dir, infer_file)
-    eval_file = f"eval_results--{result_base_name}--{evaluator_name}.jsonl"
-    eval_file = os.path.join(cfg.log.log_dir, eval_file)
 
     # --------------------------------------------------------------------------------
     # 2. Prepare Dataset
@@ -61,7 +87,7 @@ def main(cfg, env):
         cache_log_dir=cfg.common.cache_log_dir, 
         meta_data=meta_data,
         infer_file=infer_file,
-        eval_file=eval_file
+        eval_file=None,
     )
 
     if if_infer_file_exists:
@@ -104,10 +130,18 @@ def main(cfg, env):
     # 3. Build Inference Pipeline
     # --------------------------------------------------------------------------------
     if bench_dataset is not None:
+        model = registry.get("model", model_name)(
+            device=device,
+            model_dtype=cfg.model.model_dtype,
+            kwargs=cfg_dict,
+            env=env,
+        )
+
         pipeline = registry.get("pipeline", f"{model_name}_infer")(
-            dtype=DTYPE_MAP[cfg.model.amp_dtype], 
-            device=device, 
-            kwargs=cfg_dict
+            model=model,
+            dtype=DTYPE_MAP[cfg.model.amp_dtype],
+            device=device,
+            kwargs=cfg_dict,
         )
         print(f"✅ Built inference pipeline: {model_name}")
     # --------------------------------------------------------------------------------
@@ -125,7 +159,8 @@ def main(cfg, env):
             print(f"🚀 Inference on batch: {i} / {infer_batch_count}")
             infer_meters.start("step")
 
-            result = pipeline(data)  # inference
+            with torch.inference_mode():
+                result = pipeline(data)  # inference
 
             # Save results
             for idx, md5 in enumerate(data["md5"]):
@@ -150,82 +185,102 @@ def main(cfg, env):
         save_meta_data(meta_data, cfg.log.log_dir)
 
     # --------------------------------------------------------------------------------
-    # 5. Prepare Evaluators
+    # 5-8. Evaluate with each reward model
     # --------------------------------------------------------------------------------
-    evaluator = registry.get("reward_model", cfg.reward_model.name)(device=device, kwargs=cfg_dict)
-
-    # --------------------------------------------------------------------------------
-    # 6. Prepare Evaluation Dataset
-    # --------------------------------------------------------------------------------
-    if cfg.common.task == "image_gen":
-        eval_dataset = BaseTextImageDataset(
-            data_file_path=infer_file, 
-            dedup=True,
-            kwargs=evaluator.dataset_kwargs
-        )
-    eval_sampler = DistributedSampler(
-        eval_dataset, 
-        rank=rank, 
-        num_replicas=world_size, 
-        shuffle=False
-    )
-    eval_dataloader = DataLoader(
-        eval_dataset,
-        sampler=eval_sampler,
-        collate_fn=eval_dataset.collate_fn,
-        pin_memory=cfg.data.load.pin_memory,
-        batch_size=cfg.reward_model.eval.eval_batch_size,
-        num_workers=cfg.data.load.num_workers,
-    )
-    eval_batch_count = len(eval_dataloader)
-    
-    total_eval_batch_size = cfg.reward_model.eval.eval_batch_size * world_size
-    info = ["\n📚 Evaluation dataset:"]
-    info += [f"    dataset: {cfg.data.name}"]
-    info += [f"    sample count: {len(eval_dataset)}"]
-    info += [f"    batchsize: {cfg.reward_model.eval.eval_batch_size}"]
-    info += [f"    total batchsize: {total_eval_batch_size}"]
-    print("\n".join(info))
-    print("✅ Prepared evaluation dataset")
-
-    # --------------------------------------------------------------------------------
-    # 7. Evaluation
-    # --------------------------------------------------------------------------------
-    eval_meters = WindowMeter()
-    eval_meters.add_epoch_step(epoch_window=5, step_window=100)
-
-    eval_results = []
     result_key = "result"
-    for i, data in enumerate(eval_dataloader, start=1):
-        batch_info = f"batch: {i} / {eval_batch_count}"
-        print(f"🚀 Evaluating {model_name} on {data_name} by {evaluator_name}: {batch_info}")
-        eval_meters.start("step")
 
-        results = evaluator.evaluate(data)  # evaluation
+    for rm_cfg in eval_rm_configs:
+        evaluator_name = rm_cfg["name"]
+        eval_file = f"eval_results--{result_base_name}--{evaluator_name}.jsonl"
+        eval_file = os.path.join(cfg.log.log_dir, eval_file)
 
-        # Save results
-        for idx in range(len(data["md5"])):
-            item = {}
-            for k, v in data.items():
-                if isinstance(v, list) and isinstance(v[idx], str):
-                    item[k] = v[idx]
-                elif k == "md5":
-                    item[k] = v[idx]
-            item[result_key] = results[idx]
+        print("\n" + "=" * 80)
+        print(f"🔍 Evaluator: {evaluator_name}")
+        print("=" * 80)
 
-            eval_results.append(item)
+        # -- 5. Prepare Evaluator ------------------------------------------------
+        eval_cfg_dict = copy.copy(cfg_dict)
+        eval_cfg_dict["reward_model"] = rm_cfg
 
-        eval_meters.end("step")
-        print(eval_meters.info(exp_info=False))
+        evaluator = registry.get("reward_model", evaluator_name)(
+            device=device, kwargs=eval_cfg_dict
+        )
 
-    dist.barrier()
+        # -- 6. Prepare Evaluation Dataset ----------------------------------------
+        if cfg.common.task in ("image_gen", "text_rendering"):
+            eval_dataset = BaseTextImageDataset(
+                data_file_path=infer_file,
+                dedup=True,
+                kwargs=evaluator.dataset_kwargs
+            )
+        else:
+            raise ValueError(f"❌ Unsupported task for evaluation: {cfg.common.task}")
 
-    synchronize_and_save_results(eval_results, eval_file, world_size)
+        eval_sampler = DistributedSampler(
+            eval_dataset,
+            rank=rank,
+            num_replicas=world_size,
+            shuffle=False
+        )
+        eval_batch_size = rm_cfg.get("eval", {}).get("eval_batch_size", 4)
+        eval_dataloader = DataLoader(
+            eval_dataset,
+            sampler=eval_sampler,
+            collate_fn=eval_dataset.collate_fn,
+            pin_memory=cfg.data.load.pin_memory,
+            batch_size=eval_batch_size,
+            num_workers=cfg.data.load.num_workers,
+        )
+        eval_batch_count = len(eval_dataloader)
 
-    # --------------------------------------------------------------------------------
-    # 8. Get Statistics
-    # --------------------------------------------------------------------------------
-    get_statistics(eval_file=eval_file, result_key=result_key)
+        total_eval_batch_size = eval_batch_size * world_size
+        info = [f"\n📚 Evaluation dataset ({evaluator_name}):"]
+        info += [f"    sample count: {len(eval_dataset)}"]
+        info += [f"    batchsize: {eval_batch_size}"]
+        info += [f"    total batchsize: {total_eval_batch_size}"]
+        print("\n".join(info))
+
+        # -- 7. Evaluation --------------------------------------------------------
+        has_detail = "return_detail" in inspect.signature(evaluator.evaluate).parameters
+
+        eval_meters = WindowMeter()
+        eval_meters.add_epoch_step(epoch_window=5, step_window=100)
+
+        eval_results = []
+        for i, data in enumerate(eval_dataloader, start=1):
+            batch_info = f"batch: {i} / {eval_batch_count}"
+            print(f"🚀 Evaluating {model_name} on {data_name} by {evaluator_name}: {batch_info}")
+            eval_meters.start("step")
+
+            if has_detail:
+                results = evaluator.evaluate(data, return_detail=True)
+            else:
+                results = evaluator.evaluate(data)
+
+            for idx in range(len(data["md5"])):
+                item = {}
+                for k, v in data.items():
+                    if isinstance(v, list) and isinstance(v[idx], str):
+                        item[k] = v[idx]
+                    elif k == "md5":
+                        item[k] = v[idx]
+                item[result_key] = results[idx]
+                eval_results.append(item)
+
+            eval_meters.end("step")
+            print(eval_meters.info(exp_info=False))
+
+        dist.barrier()
+
+        synchronize_and_save_results(eval_results, eval_file, world_size)
+
+        # -- 8. Statistics --------------------------------------------------------
+        get_statistics(eval_file=eval_file, result_key=result_key)
+
+        del evaluator
+        torch.cuda.empty_cache()
+        print(f"✅ Completed evaluation with {evaluator_name}")
+
     # --------------------------------------------------------------------------------
 
     if env.profiler is not None:

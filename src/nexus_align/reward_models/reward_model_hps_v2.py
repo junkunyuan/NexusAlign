@@ -13,6 +13,7 @@ class HPSv2(BaseRewardModel):
 
     References:
         - HPSv2 paper: https://arxiv.org/pdf/2306.09341.
+        - Official repo: https://github.com/tgxs002/HPSv2.
         - Checkpoint: https://huggingface.co/xswu/HPSv2.
     """
 
@@ -32,10 +33,11 @@ class HPSv2(BaseRewardModel):
         """
         Load model.
 
-        Follow the repo: https://github.com/tgxs002/HPSv2/blob/master/hpsv2/evaluation.py#L259
+        Follow the repo: https://github.com/tgxs002/HPSv2/blob/master/hpsv2/evaluation.py#L259.
         """
         from hpsv2.src.open_clip import create_model_and_transforms, get_tokenizer
 
+        # Load components
         hpsv2_path = os.path.join(self.model_path, "HPS_v2.1_compressed.pt")
         print(f"⏳ Loading {self.model_name} model from <{hpsv2_path}>")
         model, _, preprocess_val = create_model_and_transforms(
@@ -61,6 +63,7 @@ class HPSv2(BaseRewardModel):
         else:
             model = model.to(device=self.device, dtype=self.model_dtype)
 
+        # Set model mode
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -90,7 +93,7 @@ class HPSv2(BaseRewardModel):
                 image_feature (`Tensor`): Preprocessed images of shape [B, 3, 224, 224].
                 or text (`list`): List of text strings.
                 or image_pil (`list`): List of PIL.Image objects.
-            return_tensor (`bool`): Whether to return a tensor.
+            return_tensor (`bool`): If true, return a tensor; else return a list.
 
         Returns:
             `list` | `torch.Tensor`: Scores between each pair of images and texts.

@@ -17,7 +17,8 @@ class TextRenderingDataset(BaseTextDataset):
     def __init__(self, kwargs: dict) -> None:
         data_and_model_dir = kwargs["common"]["data_and_model_dir"]
         data_path = kwargs["data"]["path"]
-        data_path = os.path.join(data_and_model_dir, data_path, "train_set.csv")
+        train_file = kwargs["data"]["load"].get("train_file", "train_set.csv")
+        data_path = os.path.join(data_and_model_dir, data_path, train_file)
         print(f"⏳ Loading TextRendering dataset from <{data_path}>")
 
         texts = []
@@ -49,7 +50,8 @@ class TextRenderingBenchmark(BaseTextDataset):
     def __init__(self, kwargs: dict) -> None:
         data_and_model_dir = kwargs["common"]["data_and_model_dir"]
         data_path = kwargs["data"]["path"]
-        data_path = os.path.join(data_and_model_dir, data_path, "test_set.csv")
+        test_file = kwargs["data"]["load"].get("test_file", "test_set.csv")
+        data_path = os.path.join(data_and_model_dir, data_path, test_file)
         print(f"⏳ Loading TextRendering benchmark from <{data_path}>")
 
         texts = []

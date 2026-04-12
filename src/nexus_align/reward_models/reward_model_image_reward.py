@@ -34,6 +34,7 @@ class ImageReward(BaseRewardModel):
         """
         import ImageReward as reward
 
+        # Load components
         model_path = os.path.join(self.model_path, "ImageReward.pt")
         print(f"⏳ Loading {self.model_name} model from <{model_path}>")
         model = reward.load(model_path)
@@ -51,6 +52,7 @@ class ImageReward(BaseRewardModel):
         else:
             model = model.to(device=self.device, dtype=self.model_dtype)
 
+        # Set model mode
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -72,7 +74,7 @@ class ImageReward(BaseRewardModel):
             data (`dict`):
                 image (`list`): List of paths to images.
                 text (`list`): List of text strings.
-            return_tensor (`bool`): Whether to return a tensor.
+            return_tensor (`bool`): If true, return a tensor; else return a list.
         """
         images = data["image"]
         prompts = data["text"]

@@ -12,7 +12,7 @@ class AestheticPredictorV2(BaseRewardModel):
  
     References:
         - Official repo: https://github.com/christophschuhmann/improved-aesthetic-predictor.
-        - Used repo: https://github.com/shunk031/simple-aesthetics-predictor
+        - Used repo: https://github.com/shunk031/simple-aesthetics-predictor.
         - Checkpoint: https://huggingface.co/shunk031/aesthetics-predictor-v2-sac-logos-ava1-l14-linearMSE.
     """
 
@@ -29,11 +29,12 @@ class AestheticPredictorV2(BaseRewardModel):
         """
         Load model.
 
-        Follow the repo: https://github.com/shunk031/simple-aesthetics-predictor
+        Follow the repo: https://github.com/shunk031/simple-aesthetics-predictor.
         """
         from transformers import CLIPProcessor
         from aesthetics_predictor import AestheticsPredictorV2Linear
 
+        # Load components
         print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
         processor = CLIPProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
@@ -54,6 +55,7 @@ class AestheticPredictorV2(BaseRewardModel):
         else:
             model = model.to(device=self.device, dtype=self.model_dtype)
 
+        # Set model mode
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -74,7 +76,7 @@ class AestheticPredictorV2(BaseRewardModel):
         Args:
             data (`dict`):
                 image_pil (`list`): List of PIL.Image objects.
-            return_tensor (`bool`): Whether to return a tensor.
+            return_tensor (`bool`): If true, return a tensor; else return a list.
 
         Returns:
             `list` | `torch.Tensor`: Scores of the images.

@@ -1,0 +1,32 @@
+name: qwen_image
+path: Qwen/Qwen-Image
+model_dtype: fp32
+amp_dtype: bf16
+mode: train
+
+fsdp:
+  fsdp_strategy: full_shard
+  fsdp_cpu_offload: false
+  activation_ckpt: true
+  text_encoder_offload: true
+
+ref:
+  enable: false
+  model_path: ""         # empty -> use model.path
+  ref_offload: true      # CPUOffload (FSDP managed)
+
+grpo:
+  sample_height: 720
+  sample_width: 720
+  sample_shift: 3
+  sample_eta: 0.5
+  sample_steps: 20
+  timestep_fraction: 0.5
+
+eval:
+  ckpt_path: ""
+  true_cfg_scale: 1.0
+  height: 720
+  width: 720
+  num_infer_steps: 50
+  eval_batch_size: 4

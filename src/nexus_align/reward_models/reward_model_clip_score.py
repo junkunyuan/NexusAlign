@@ -12,6 +12,7 @@ class CLIPScore(BaseRewardModel):
 
     References:
         - CLIPScore paper: https://arxiv.org/pdf/2104.08718.
+        - Official repo: https://github.com/openai/CLIP.
         - Checkpoint: https://huggingface.co/openai/clip-vit-large-patch14.
     """
 
@@ -32,6 +33,7 @@ class CLIPScore(BaseRewardModel):
         """
         from transformers import CLIPModel, CLIPProcessor
 
+        # Load components
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
         model = CLIPModel.from_pretrained(self.model_path)
 
@@ -50,6 +52,7 @@ class CLIPScore(BaseRewardModel):
         else:
             model = model.to(device=self.device, dtype=self.model_dtype)
 
+        # Set model mode
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -73,7 +76,7 @@ class CLIPScore(BaseRewardModel):
             data (`dict`):
                 image_pil (`list`): List of PIL.Image objects.
                 text (`list`): List of text strings.
-            return_tensor (`bool`): Whether to return a tensor.
+            return_tensor (`bool`): If true, return a tensor; else return a list.
 
         Another implementation yields similar results but does not support batch inference:
             from torchmetrics.multimodal import CLIPScore

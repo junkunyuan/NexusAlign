@@ -59,7 +59,7 @@ We use `ruff` for formatting. Before committing, please run:
 
 ```bash
 make format-check  # get format issue feedback
-mkke format-fixup  # directly fix format issues
+make format-fixup  # directly fix format issues
 ```
 
 ### ✅ Testing

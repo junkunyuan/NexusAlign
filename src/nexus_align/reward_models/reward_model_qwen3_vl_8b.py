@@ -60,6 +60,7 @@ class Qwen3_VL_8B(BaseRewardModel):
         """
         from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
 
+        # Load components
         print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
         processor = AutoProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
@@ -69,6 +70,7 @@ class Qwen3_VL_8B(BaseRewardModel):
             device_map=f"cuda:{self.device.index}"
         )
 
+        # Set model mode
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
@@ -162,9 +164,19 @@ class Qwen3_VL_8B(BaseRewardModel):
                     f"⚠️ Warning: JSON parsing error, the format of the model's output is incorrect:\n {e}"
                 )
                 print(f"Model's output: {res}")
-                overall_scores.append(None)
+                # Fallback: try regex extraction, otherwise mark as None for later imputation
+                match = re.search(r'"overall_score"\s*:\s*(\d+)', res)
+                if match:
+                    overall_scores.append(float(match.group(1)))
+                else:
+                    overall_scores.append(None)
 
         torch.use_deterministic_algorithms(deter_status)
+
+        # Impute missing scores with the batch average (or 50.0 if all failed)
+        valid_scores = [s for s in overall_scores if s is not None]
+        batch_avg = sum(valid_scores) / len(valid_scores) if valid_scores else 50.0
+        overall_scores = [s if s is not None else batch_avg for s in overall_scores]
 
         if return_tensor:
             return torch.tensor(overall_scores, device=self.device).contiguous()  

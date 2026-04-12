@@ -8,11 +8,15 @@ abstract: >-
   models, image generation models, and video generation models.
 authors: 
   - given-names: Junkun
-  - family-names: Yuan
+    family-names: Yuan
   - given-names: You
-  - family-names: Huang
-version: 0.1.0-dev
-# date-released: "2026-03-08"
+    family-names: Huang
+  - given-names: Zijing
+    family-names: Hu
+  - given-names: Mingxuan
+    family-names: Cui
+version: 0.1.0-a1
+date-released: "2026-04-09"
 license: Apache-2.0
 repository-code: https://github.com/junkunyuan/NexusAlign
 url: https://github.com/junkunyuan/NexusAlign
@@ -23,7 +27,7 @@ keywords:
   - post-training
   - foundation models
   - large language models
-  - multimodal models
+  - multimodal large language models
+  - diffusion models
   - image generation
   - video generation
-  - diffusion models

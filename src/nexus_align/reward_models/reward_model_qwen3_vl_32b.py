@@ -72,11 +72,19 @@ class Qwen3_VL_32B(BaseRewardModel):
         print(f"⏳ Loading {self.model_name} processor from <{self.model_path}>")
         processor = AutoProcessor.from_pretrained(self.model_path)
         print(f"⏳ Loading {self.model_name} model from <{self.model_path}>")
-        model = Qwen3VLForConditionalGeneration.from_pretrained(
-            self.model_path,
-            dtype=self.model_dtype,
-            device_map=f"cuda:{self.device.index}",
-        )
+
+        self.cpu_offload = self.fsdp_kwargs.get("cpu_offload", False)
+        if self.cpu_offload:
+            model = Qwen3VLForConditionalGeneration.from_pretrained(
+                self.model_path,
+                dtype=self.model_dtype,
+            )
+        else:
+            model = Qwen3VLForConditionalGeneration.from_pretrained(
+                self.model_path,
+                dtype=self.model_dtype,
+                device_map=f"cuda:{self.device.index}",
+            )
 
         if self.mode == "train":
             model.train()
@@ -262,7 +270,7 @@ class Qwen3_VL_32B(BaseRewardModel):
                     f"⚠️ Warning: JSON parsing error, the format of the model's output is incorrect:\n {e}"
                 )
                 print(f"Model's output: {res}")
-                overall_scores.append(None)
+                overall_scores.append(0.0)
 
         torch.use_deterministic_algorithms(deter_status)
 
