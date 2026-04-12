@@ -17,44 +17,70 @@ def _append_datetime_to_exp_info(script_args: list[str]) -> None:
     timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     last_idx = -1
     for i, override in enumerate(script_args):
-        if override.startswith("log.exp_info="):
+        if "log.exp_info=" in override:
             last_idx = i
     if last_idx >= 0:
-        val = script_args[last_idx].split("=", 1)[1]
-        script_args[last_idx] = f"log.exp_info={val}--{timestamp}"
+        prefix, val = script_args[last_idx].split("log.exp_info=", 1)
+        script_args[last_idx] = f"{prefix}log.exp_info={val}--{timestamp}"
+
+
+_HYDRA_CONFIG_GROUPS = {"data", "model", "algorithm", "reward_model"}
 
 
 def _config_to_hydra_overrides(config_path: str) -> list[str]:
-    """Load YAML config file and convert to Hydra override strings."""
+    """Load YAML config file and convert to Hydra override strings.
+
+    Config group sections (data, model, reward_model, algorithm) with a ``name``
+    field produce a Hydra *config-group override* (e.g. ``data=text_rendering``)
+    so the correct sub-config is loaded.  All other keys use the ``++`` prefix
+    to safely create-or-override.
+    """
     path = Path(config_path)
     if not path.exists():
         raise FileNotFoundError(f"❌ Config file not found: <{config_path}>")
+
     cfg = OmegaConf.load(path)
+    cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+
+    group_overrides: list[str] = []
     overrides: list[str] = []
+
+    for group in _HYDRA_CONFIG_GROUPS:
+        if group in cfg_dict and isinstance(cfg_dict[group], dict):
+            name = cfg_dict[group].pop("name", None)
+            if name is not None:
+                group_overrides.append(f"{group}={name}")
+
+    if "reward_models" in cfg_dict and "reward_model" not in cfg_dict:
+        group_overrides.append("~reward_model")
 
     def _format_value(v) -> str:
         if isinstance(v, bool):
             return "true" if v else "false"
+        if v is None:
+            return "null"
+        if isinstance(v, dict):
+            pairs = ", ".join(f"{k}: {_format_value(val)}" for k, val in v.items())
+            return "{" + pairs + "}"
         if isinstance(v, (list, tuple)):
-            return ",".join(str(x) for x in v)
+            return "[" + ", ".join(_format_value(item) for item in v) + "]"
         return str(v)
 
     def _flatten(d: dict, prefix: str = "") -> None:
         for k, v in d.items():
             key = f"{prefix}.{k}" if prefix else k
-            v_plain = OmegaConf.to_container(v, resolve=True) if OmegaConf.is_config(v) else v
-            if isinstance(v_plain, dict):
-                _flatten(v_plain, key)
+            if isinstance(v, dict):
+                _flatten(v, key)
             else:
-                overrides.append(f"{key}={_format_value(v_plain)}")
+                overrides.append(f"++{key}={_format_value(v)}")
 
-    for k, v in OmegaConf.to_container(cfg, resolve=True).items():
+    for k, v in cfg_dict.items():
         if isinstance(v, dict):
             _flatten(v, k)
         else:
-            overrides.append(f"{k}={_format_value(v)}")
+            overrides.append(f"++{k}={_format_value(v)}")
 
-    return overrides
+    return group_overrides + overrides
 
 
 def _add_distributed_args(parser: argparse.ArgumentParser) -> None:

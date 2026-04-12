@@ -43,5 +43,11 @@ def validate_train_config(cfg: dict[str, Any]) -> list[str]:
 
 
 def validate_eval_config(cfg: dict[str, Any]) -> list[str]:
-    """Return list of missing top-level keys for evaluation config."""
-    return get_required_keys(cfg, *EVAL_REQUIRED_TOP_LEVEL)
+    """Return list of missing top-level keys for evaluation config.
+
+    Accepts either ``reward_model`` (single) or ``reward_models`` (list).
+    """
+    missing = get_required_keys(cfg, *EVAL_REQUIRED_TOP_LEVEL)
+    if "reward_model" in missing and "reward_models" in cfg:
+        missing.remove("reward_model")
+    return missing
