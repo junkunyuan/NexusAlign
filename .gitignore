@@ -9,6 +9,7 @@ __pycache__/
 
 # Temporary files
 *.zip
+occupy*
 
 # Test and logs
 test/

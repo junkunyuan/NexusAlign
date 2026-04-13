@@ -10,6 +10,7 @@ from huggingface_hub import snapshot_download as hf_download
 class RepoInfo(TypedDict, total=False):
     platform: str
     repo_id: str
+    repo_type: str
     url: str
 
 
@@ -36,6 +37,12 @@ PREDEFINED_REPOS: Dict[str, RepoInfo] = {
     "ymhao/HPDv2": {
         "platform": "url",
         "url": "https://huggingface.co/datasets/ymhao/HPDv2/resolve/main/train.json",
+    },
+
+    "Neo-2004/NexusBench": {
+        "platform": "huggingface",
+        "repo_id": "Neo-2004/NexusBench",
+        "repo_type": "dataset",
     },
     
     # Reward Models & Processors
@@ -120,6 +127,7 @@ def download_repo(repo_id: str, cache_dir: str | None = None, token: str | None 
 
     if platform == "huggingface":
         hf_repo_id = info["repo_id"]
+        repo_type = info.get("repo_type", "model")
         # Determine the target directory for HF
         base_dir = cache_dir or os.getenv("HF_HOME") or os.path.expanduser("~/.cache/huggingface/hub")
         # Create directory structure matching Hugging Face repo ID (e.g., org_name/repo_name)
@@ -129,7 +137,7 @@ def download_repo(repo_id: str, cache_dir: str | None = None, token: str | None 
         try:
             # hf_download automatically handles integrity checks (ETag validation).
             # If files are complete, it skips downloading. If missing/corrupted, it resumes/overwrites.
-            hf_download(repo_id=hf_repo_id, local_dir=target_dir, token=token)
+            hf_download(repo_id=hf_repo_id, repo_type=repo_type, local_dir=target_dir, token=token)
             print(f"✅ Repo '{repo_id}' is ready at <{target_dir}>")
         except Exception as e:
             print(f"❌ Error downloading from huggingface: {e}", file=sys.stderr)
