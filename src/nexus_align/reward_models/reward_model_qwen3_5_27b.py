@@ -64,6 +64,8 @@ class Qwen3_5_27B(BaseRewardModel):
             device_map=f"cuda:{self.device.index}",
         )
 
+        model.generation_config.pad_token_id = model.generation_config.eos_token_id
+
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
