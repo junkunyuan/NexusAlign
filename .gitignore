@@ -2,10 +2,13 @@
 __pycache__/
 
 # Temporary environment
-/nexus-align/
+/nexus-align*/
 
 # Temporary configs
 /*.yaml
+
+# Temporary files
+*.zip
 
 # Test and logs
 test/

@@ -55,6 +55,10 @@ PREDEFINED_REPOS: Dict[str, RepoInfo] = {
         "platform": "huggingface",
         "repo_id": "Qwen/Qwen3-VL-32B-Instruct",
     },
+    "Qwen/Qwen3.5-9B": {
+        "platform": "huggingface",
+        "repo_id": "Qwen/Qwen3.5-9B",
+    },
     "Qwen/Qwen3.5-27B": {
         "platform": "huggingface",
         "repo_id": "Qwen/Qwen3.5-27B",

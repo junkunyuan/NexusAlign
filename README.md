@@ -14,6 +14,7 @@
 
 NexusAlign is a unified and extensible framework for aligning foundation models.
 
+- [✨ Features](#-features)
 - [📦 Installation](#-installation)
 - [🎯 Get Started](#-get-started)
   - [⚙️ Config Options](#️-config-options)
@@ -23,6 +24,12 @@ NexusAlign is a unified and extensible framework for aligning foundation models.
   - [⬇️ Download Models/Datasets](#️-download-modelsdatasets)
   - [📈 Plot Results](#-plot-results)
 - [📚 Citation](#-citation)
+
+## ✨ Features
+
+- **Alignment Algorithms**: GRPO and DPO.
+- **Foundation Models**: Z-Image, Qwen-Image, FLUX, and SD3.
+- **Reward Models**: various VLMs, HPS v2, ImageReward, CLIP Score, and more.
 
 ## 📦 Installation
 
