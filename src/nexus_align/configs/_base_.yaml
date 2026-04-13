@@ -9,7 +9,7 @@ common:
 
 log:
   exp_info: temp
-  log_dir: logs/${log.exp_info}
+  log_dir: logs/
   wandb:
     entity: my_entity
     project: my_project
@@ -18,6 +18,6 @@ log:
 
 hydra:
   run:
-    dir: ${log.log_dir}
+    dir: ${log.log_dir}/${log.exp_info}
   job:
     chdir: true

@@ -51,7 +51,8 @@ def prepare_env(
     
     # Update configs
     with open_dict(cfg):
-        log_dir = cfg.log.log_dir
+        base_log_dir = cfg.log.log_dir
+        log_dir = os.path.join(base_log_dir, cfg.log.exp_info)
         cfg.common.project_path = os.getcwd().split(log_dir)[0]
         cfg.log.log_dir = os.path.join(cfg.common.project_path, log_dir)  # use abs path
 
