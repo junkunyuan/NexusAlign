@@ -1,0 +1,38 @@
+common:
+  task: text_rendering
+  data_and_model_dir: /HOME/neuq_mxcui/neuq_mxcui_1/HDD_POOL/
+  batch_eval_root: /HOME/neuq_mxcui/neuq_mxcui_1/HDD_POOL/NexusAlign_v1/logs/checkpoints_result/flux/text_render_v1_540_all_kl0.1_grad2/checkpoints
+
+log:
+  exp_info: eval_ocr_metrics_v1
+
+data:
+  name: text_rendering_benchmark
+  path: data
+  load:
+    test_file: test_set.csv
+
+model:
+  path: MODELS/FLUX.1-dev
+  eval:
+    ckpt_path: ""
+    eval_batch_size: 4
+
+reward_models:
+  - name: normalized_edit_distance
+    path: MODELS/PPOCRv5/PP-OCRv5_server_rec
+    path2: MODELS/PPOCRv5/PP-OCRv5_server_det
+    mode: eval
+    model_dtype: fp32
+    amp_dtype: bf16
+    eval:
+      eval_batch_size: 16
+
+  - name: ocr_metrics
+    path: MODELS/PPOCRv5/PP-OCRv5_server_rec
+    path2: MODELS/PPOCRv5/PP-OCRv5_server_det
+    mode: eval
+    model_dtype: fp32
+    amp_dtype: bf16
+    eval:
+      eval_batch_size: 16

@@ -7,6 +7,7 @@ defaults:
 
 common:
   cache_log_dir: ""  # resume evaluation
+  batch_eval_root: ""  # root directory to scan for model.pt (batch eval mode)
 
 log:
   result_dir: inference_results  # dir to save inference results
