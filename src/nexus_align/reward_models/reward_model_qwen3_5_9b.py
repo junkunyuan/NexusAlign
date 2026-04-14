@@ -106,6 +106,8 @@ class Qwen3_5_9B(BaseRewardModel):
                 trust_remote_code=True,
             )
 
+        model.generation_config.pad_token_id = model.generation_config.eos_token_id
+
         if self.mode == "train":
             model.train()
         elif self.mode == "eval":
