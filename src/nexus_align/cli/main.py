@@ -147,6 +147,12 @@ def _parse_launcher_args(argv: list[str]) -> tuple[argparse.Namespace, list[str]
     # Evaluation: nexus-align eval [options] [hydra overrides]
     eval_parser = subparsers.add_parser("eval", help="Launch evaluation")
     _add_distributed_args(eval_parser)
+    eval_parser.add_argument(
+        "--root_dir",
+        type=str,
+        default=None,
+        help="Root directory to recursively scan for model.pt checkpoints (batch eval mode)",
+    )
 
     # Download: nexus-align download <repo_id> [options]
     download_parser = subparsers.add_parser("download", help="Launch downloading")
@@ -259,6 +265,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "eval":
         script_args = []
+        if getattr(args, "root_dir", None):
+            script_args.append(f"++common.batch_eval_root={args.root_dir}")
         if getattr(args, "config", None):
             script_args.extend(_config_to_hydra_overrides(args.config))
         script_args.extend(remaining)
