@@ -22,15 +22,15 @@ reward_models:
   - name: normalized_edit_distance
     path: MODELS/PaddleOCR-VL-1.5
     mode: eval
-    model_dtype: bf16
+    model_dtype: fp32
     amp_dtype: bf16
     eval:
-      eval_batch_size: 4
+      eval_batch_size: 16
 
   - name: ocr_metrics
     path: MODELS/PaddleOCR-VL-1.5
     mode: eval
-    model_dtype: bf16
+    model_dtype: fp32
     amp_dtype: bf16
     eval:
-      eval_batch_size: 4
+      eval_batch_size: 16
