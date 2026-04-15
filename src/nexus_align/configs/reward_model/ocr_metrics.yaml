@@ -1,0 +1,9 @@
+name: ocr_metrics
+path: PaddlePaddle/PaddleOCR-VL-1.5
+mode: eval
+model_dtype: fp32
+amp_dtype: bf16
+reward_key: word_f1
+
+eval:
+  eval_batch_size: 16

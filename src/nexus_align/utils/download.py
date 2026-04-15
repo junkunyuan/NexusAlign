@@ -95,13 +95,9 @@ PREDEFINED_REPOS: Dict[str, RepoInfo] = {
         "platform": "huggingface",
         "repo_id": "OpenGVLab/InternVL3_5-8B-HF",
     },
-    "PaddlePaddle/PP-OCRv5_server_rec": {
+    "PaddlePaddle/PaddleOCR-VL-1.5": {
         "platform": "huggingface",
-        "repo_id": "PaddlePaddle/PP-OCRv5_server_rec",
-    },
-    "PaddlePaddle/PP-OCRv5_server_det": {
-        "platform": "huggingface",
-        "repo_id": "PaddlePaddle/PP-OCRv5_server_det",
+        "repo_id": "PaddlePaddle/PaddleOCR-VL-1.5",
     },
 }
 
