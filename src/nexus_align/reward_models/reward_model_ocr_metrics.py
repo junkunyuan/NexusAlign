@@ -1,21 +1,14 @@
 """OCR-based text rendering metrics reward model.
 
-Uses PP-OCRv5 to extract text from generated images and computes
-word-level precision, recall, F1, and accuracy metrics inspired by
-TextDiffuser (https://arxiv.org/abs/2305.10855).
+Uses PaddleOCR-VL-1.5 (via transformers) to extract text from generated
+images and computes word-level precision, recall, F1, and accuracy metrics
+inspired by TextDiffuser (https://arxiv.org/abs/2305.10855).
 
 Target text is extracted from quoted substrings in the prompt (e.g.
-``'hello'`` or ``"world"``). If no quotes are found the full prompt is used.
-
-Expected model directory layout (pointed to by ``model_path``)::
-    PPOCRv5/
-    ├── PP-OCRv5_server_det/   (inference.json + inference.pdiparams)
-    └── PP-OCRv5_server_rec/   (inference.json + inference.pdiparams)
+``'hello'`` or ``"world"``).  If no quotes are found the full prompt is used.
 """
 
-import os
 import re
-import tempfile
 
 import torch
 
@@ -23,7 +16,10 @@ from nexus_align.core.base_reward_model import BaseRewardModel
 
 
 class OCRMetrics(BaseRewardModel):
-    """Word-level OCR metrics reward model for evaluating text rendering quality.
+    """Word-level OCR metrics reward model using PaddleOCR-VL-1.5.
+
+    Loads the VLM via ``transformers`` (AutoModelForImageTextToText) and
+    uses the ``"OCR:"`` prompt to extract text from each generated image.
 
     Computes word-level precision, recall, F1, and accuracy by comparing
     OCR-detected words from the generated image against ground-truth words
@@ -39,12 +35,8 @@ class OCRMetrics(BaseRewardModel):
 
     def __init__(self, device: torch.device, kwargs: dict) -> None:
         super().__init__("OCRMetrics", device, kwargs)
-        self.model_path_2 = os.path.join(
-            kwargs["common"]["data_and_model_dir"],
-            kwargs["reward_model"]["path2"]
-        )
 
-        self.ocr_engine = self.load_model()
+        self.model, self.processor = self.load_model()
 
         valid_keys = ("word_precision", "word_recall", "word_f1", "word_acc")
         if self.reward_key is None:
@@ -59,25 +51,18 @@ class OCRMetrics(BaseRewardModel):
         print(f"✅ Prepared reward model: {self.model_name} ({self.mode} mode, reward_key: {self.reward_key})")
 
     def load_model(self):
-        """Load PP-OCRv5 pipeline from local model directory."""
-        from paddleocr import PaddleOCR
+        """Load PaddleOCR-VL-1.5 via transformers."""
+        from transformers import AutoModelForImageTextToText, AutoProcessor
 
-        print(f"⏳ Loading PP-OCRv5_server_rec from <{self.model_path}>")
-        print(f"⏳ Loading PP-OCRv5_server_det from <{self.model_path_2}>")
+        print(f"⏳ Loading PaddleOCR-VL-1.5 from <{self.model_path}>")
 
-        device_str = f"gpu:{self.device.index}"
+        model = AutoModelForImageTextToText.from_pretrained(
+            self.model_path, torch_dtype=self.model_dtype,
+        ).to(self.device).eval()
 
-        ocr = PaddleOCR(
-            text_detection_model_name="PP-OCRv5_server_det",
-            text_detection_model_dir=self.model_path_2,
-            text_recognition_model_name="PP-OCRv5_server_rec",
-            text_recognition_model_dir=self.model_path,
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=False,
-            device=device_str,
-        )
-        return ocr
+        processor = AutoProcessor.from_pretrained(self.model_path)
+
+        return model, processor
 
     @staticmethod
     def _extract_target_text(prompt: str) -> str:
@@ -92,46 +77,32 @@ class OCRMetrics(BaseRewardModel):
             return " ".join(m for group in matches for m in group if m)
         return prompt
 
-    @staticmethod
-    def _extract_rec_texts(res) -> list[str]:
-        """Extract ``rec_texts`` from a PaddleOCR 3.x ``OCRResult``."""
-        try:
-            return list(res["rec_texts"])
-        except (KeyError, TypeError):
-            pass
-
-        texts = getattr(res, "rec_texts", None)
-        if texts is not None:
-            return list(texts)
-
-        return []
-
     def _ocr_image(self, image) -> list[str]:
-        """Extract all detected text lines from a PIL image via PP-OCRv5.
+        """Extract all detected text lines from a PIL image via PaddleOCR-VL-1.5.
 
-        Returns a list of recognized text strings, one per detected text
-        region (``rec_texts``). The raw list is returned rather than a joined
-        string so callers can apply their own tokenization.
+        Sends the image with an ``"OCR:"`` prompt to the VLM and splits the
+        decoded output by newlines.  Returns a list of recognized text strings
+        so callers can apply their own tokenization.
         """
-        tmp_path = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                suffix=".png", delete=False
-            ) as tmp:
-                image.save(tmp, format="PNG")
-                tmp_path = tmp.name
+        messages = [{"role": "user", "content": [
+            {"type": "image", "image": image},
+            {"type": "text", "text": "OCR:"},
+        ]}]
+        inputs = self.processor.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            tokenize=True,
+            return_dict=True,
+            return_tensors="pt",
+        ).to(self.device)
 
-            results = self.ocr_engine.predict(input=tmp_path)
+        outputs = self.model.generate(**inputs, max_new_tokens=512)
+        text = self.processor.decode(
+            outputs[0][inputs["input_ids"].shape[-1]:-1],
+            skip_special_tokens=True,
+        ).strip()
 
-            all_texts: list[str] = []
-            for res in results:
-                rec_texts = self._extract_rec_texts(res)
-                if rec_texts:
-                    all_texts.extend(rec_texts)
-            return all_texts
-        finally:
-            if tmp_path is not None and os.path.exists(tmp_path):
-                os.unlink(tmp_path)
+        return text.split("\n") if text else []
 
     @staticmethod
     def _compute_word_metrics(
@@ -173,6 +144,8 @@ class OCRMetrics(BaseRewardModel):
 
         return precision, recall, f1, acc
 
+    _METRIC_KEYS = ("word_precision", "word_recall", "word_f1", "word_acc")
+
     @torch.no_grad()
     def evaluate(self, data: dict, return_tensor: bool = False) -> list | torch.Tensor:
         """Evaluate word-level text rendering quality for a batch.
@@ -195,25 +168,54 @@ class OCRMetrics(BaseRewardModel):
         images = data["image_pil"]
         prompts = data["text"]
 
-        results = []
-        for img, prompt in zip(images, prompts):
-            target = self._extract_target_text(prompt).lower()
-            gt_words = target.split()
+        results: list[dict | None] = []
+        failed_indices: list[int] = []
 
-            ocr_lines = self._ocr_image(img)
-            ocr_text = " ".join(ocr_lines).lower()
-            pred_words = ocr_text.split()
+        for i, (img, prompt) in enumerate(zip(images, prompts)):
+            try:
+                target = self._extract_target_text(prompt).lower()
+                gt_words = target.split()
 
-            word_p, word_r, word_f1, word_acc = self._compute_word_metrics(
-                pred_words, gt_words
-            )
+                ocr_lines = self._ocr_image(img)
+                ocr_text = " ".join(ocr_lines).lower()
+                pred_words = ocr_text.split()
 
-            results.append({
-                "word_precision": word_p,
-                "word_recall": word_r,
-                "word_f1": word_f1,
-                "word_acc": word_acc,
-            })
+                word_p, word_r, word_f1, word_acc = self._compute_word_metrics(
+                    pred_words, gt_words
+                )
+
+                results.append({
+                    "word_precision": word_p,
+                    "word_recall": word_r,
+                    "word_f1": word_f1,
+                    "word_acc": word_acc,
+                })
+            except Exception as e:
+                print(f"⚠️ OCR failed for image {i}: {e}")
+                results.append(None)
+                failed_indices.append(i)
+
+        if failed_indices:
+            successful_results = [r for r in results if r is not None]
+            if not successful_results:
+                raise RuntimeError(
+                    "All images in batch failed OCR, cannot compute fallback average."
+                )
+            avg_result = {
+                key: sum(r[key] for r in successful_results) / len(successful_results)
+                for key in self._METRIC_KEYS
+            }
+            if avg_result[self.reward_key] == 0.0:
+                raise RuntimeError(
+                    f"Average {self.reward_key} of successful images is 0, "
+                    "cannot use as fallback."
+                )
+            for idx in failed_indices:
+                print(
+                    f"⚠️ Replacing failed image {idx} metrics with batch average: "
+                    f"{', '.join(f'{k}={v:.4f}' for k, v in avg_result.items())}"
+                )
+                results[idx] = avg_result.copy()
 
         if return_tensor:
             return torch.tensor(

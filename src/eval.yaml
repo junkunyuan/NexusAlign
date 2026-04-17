@@ -20,8 +20,7 @@ model:
 
 reward_models:
   - name: normalized_edit_distance
-    path: MODELS/PPOCRv5/PP-OCRv5_server_rec
-    path2: MODELS/PPOCRv5/PP-OCRv5_server_det
+    path: MODELS/PaddleOCR-VL-1.5
     mode: eval
     model_dtype: fp32
     amp_dtype: bf16
@@ -29,8 +28,7 @@ reward_models:
       eval_batch_size: 16
 
   - name: ocr_metrics
-    path: MODELS/PPOCRv5/PP-OCRv5_server_rec
-    path2: MODELS/PPOCRv5/PP-OCRv5_server_det
+    path: MODELS/PaddleOCR-VL-1.5
     mode: eval
     model_dtype: fp32
     amp_dtype: bf16
