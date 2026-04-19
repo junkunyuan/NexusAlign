@@ -86,16 +86,19 @@ class QwenImageInferPipeline:
         self.height = kwargs["model"]["eval"]["height"]
         self.width = kwargs["model"]["eval"]["width"]
         self.num_infer_steps = kwargs["model"]["eval"]["num_infer_steps"]
-        self.true_cfg_scale = kwargs["model"]["eval"].get("true_cfg_scale", 1.0)
+        self.true_cfg_scale = kwargs["model"]["eval"].get("true_cfg_scale", 4.0)
+        self.negative_prompt = kwargs["model"]["eval"].get("negative_prompt", " ")
         self.generator = torch.Generator(device=device).manual_seed(
             kwargs["common"]["seed"]
         )
 
     def __call__(self, data):
         texts = data["text"]
+        negative_prompts = [self.negative_prompt] * len(texts)
 
         result = self.pipe(
             prompt=texts,
+            negative_prompt=negative_prompts,
             height=self.height,
             width=self.width,
             true_cfg_scale=self.true_cfg_scale,
