@@ -1,0 +1,21 @@
+name: reward
+# Rewards to score with are selected as +reward@rewards.<name>=<name>, one per reward.
+
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+global_seed: 0  # base seed; runtime RNG uses {global_seed + rank}
+num_steps: 40  # number of sampling steps
+guidance_scale: 4.5  # classifier-free guidance scale; 1.0 means no CFG
+model_key: ema  # weights to sample with and to load from each checkpoint: "model" or "ema"
+per_proc_batch_size: 16  # per-GPU sampling batch size
+num_workers: 4  # per-rank threads used to write and read the PNG files of the images
+ckpts: null  # explicit checkpoint paths; null globs ${log_dir}/checkpoints
+dry_run: false  # if True, print the plan without sampling
+new_run: false  # if True, evaluate in a new dir instead of reusing the latest one
+
+# --------------------------------------------------------------------------------
+# Data paths.
+# --------------------------------------------------------------------------------
+data: ${data}  # prompt dataset, single source of truth in data config
+split: test  # evaluate on the test prompts

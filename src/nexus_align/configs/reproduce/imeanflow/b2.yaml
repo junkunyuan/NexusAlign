@@ -1,0 +1,22 @@
+# @package _global_
+# Reproduce iMF-B/2 from the paper.
+# Launch with: +reproduce=imeanflow/b2
+# Evaluate with: CFG_SCALE=8.0 CFG_MIN_T=0.4 CFG_MAX_T=0.65 (official checkpoint setting)
+exp_info: imeanflow_b2_reproduce
+
+model:
+  name: imeanflowdit_b_2
+
+algorithm:
+  cfg_beta: 1.0
+
+trainer:
+  epochs: 640
+  train_batch_size: 1024
+  learning_rate: 1.0e-4
+  warmup_epochs: 10
+  ema_decay: 0.9999
+  max_grad_norm: .inf  # paper uses no gradient clipping
+  save_ckpt_every_n_epochs: 64
+  save_ckpt_keep_last_n_epochs: 100
+  log_every_n_steps: 200

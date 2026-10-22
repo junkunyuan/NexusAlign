@@ -1,0 +1,31 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: flow_grpo
+
+# --------------------------------------------------------------------------------
+# Sampling configs.
+# --------------------------------------------------------------------------------
+resolution: 512  # image resolution
+num_steps: 10  # denoising steps to collect samples (denoising reduction)
+guidance_scale: 4.5  # CFG scale for sampling and training; 1.0 disables CFG
+noise_level: 0.7  # SDE noise level a; see paper Eq. (9)
+sde_window_size: 0  # if > 0, SDE and training only on a random window of this many steps (Flow-GRPO-Fast)
+sde_window_range: [0, 5]  # steps the window lies in
+max_sequence_length: 128  # T5 prompt tokens
+autocast_dtype: fp16  # transformer compute dtype
+
+# --------------------------------------------------------------------------------
+# Advantage configs.
+# --------------------------------------------------------------------------------
+group_size: 24  # images per prompt, G
+per_prompt_stat_tracking: true  # normalize rewards within each prompt group
+global_std: true  # divide by the std of all rewards instead of the group's
+
+# --------------------------------------------------------------------------------
+# Policy loss configs.
+# --------------------------------------------------------------------------------
+timestep_fraction: 0.99  # train on the first int(num_steps * fraction) steps
+clip_range: 1.0e-4  # PPO ratio clip range, epsilon
+adv_clip_max: 5.0  # clip advantages to [-max, max]
+beta: 0.04  # KL coefficient; see paper Eq. (5)

@@ -1,0 +1,65 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 21.718800397589803
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_10-step_0-total_step_20",
+    "pickscore": 21.562175325118005
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_20-step_0-total_step_40",
+    "pickscore": 21.292175778653473
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 60,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_30-step_0-total_step_60",
+    "pickscore": 21.21836405713111
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 80,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_40-step_0-total_step_80",
+    "pickscore": 21.12868038099259
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_50-step_0-total_step_100",
+    "pickscore": 21.053422168362886
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 120,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_60-step_0-total_step_120",
+    "pickscore": 21.084741315804422
+  },
+  {
+    "epoch": 70,
+    "step": 0,
+    "total_step": 140,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_70-step_0-total_step_140",
+    "pickscore": 21.019560326822102
+  },
+  {
+    "epoch": 75,
+    "step": 0,
+    "total_step": 150,
+    "ckpt": "logs/diffusion_nft_ocr_reproduce-20261020_024519/checkpoints/epoch_75-step_0-total_step_150",
+    "pickscore": 21.008703737985343
+  }
+]

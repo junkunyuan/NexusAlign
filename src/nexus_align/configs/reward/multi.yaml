@@ -1,0 +1,3 @@
+name: multi
+# Rewards to sum are selected as /reward@reward.rewards.<name>: <name>, one per reward.
+rewards: {}

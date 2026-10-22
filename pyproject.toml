@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-align"
+version = "0.1.0-a1"
+description = "NexusAlign: A Unified Research Framework for Tracking, Reproducing, and Extending Foundation Model Algorithms."
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [
+  { name = "Junkun Yuan" }
+]
+keywords = [
+    "foundation models",
+    "diffusion models",
+    "image generation",
+    "flow matching"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+    # Core dependencies
+    "torch==2.12.0+cu126",
+    "torchvision==0.27.0+cu126",
+    "diffusers>=0.40",
+    "accelerate>=1.13",
+    # For configs
+    "hydra-core>=1.3.0",
+    "omegaconf>=2.3",
+    "PyYAML>=6.0",
+    # For data
+    "numpy>=2.4",
+    "pyarrow>=24.0",
+    "Pillow>=12.0",
+    "safetensors>=0.7",
+    "torch-fidelity>=0.4",
+    # For logs
+    "tensorboard>=2.20",
+    "wandb>=0.26",
+    # For display
+    "matplotlib>=3.10",
+    "tqdm>=4.67",
+    "psutil>=7.2",
+    "nvidia-ml-py>=13.0",
+    "transformers>=5.19.0",
+    "peft>=0.21.2",
+    # FlashAttention-3 kernels for Hopper GPUs
+    "flash-attn-3==3.0.1",
+]
+
+[tool.uv]
+environments = [
+  "sys_platform == 'linux'",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+]
+flash-attn-3 = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
+]
+[project.urls]
+Homepage = "https://github.com/junkunyuan/NexusAlign"
+Repository = "https://github.com/junkunyuan/NexusAlign"
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "ipdb"
+]
+
+[project.scripts]
+nexus-align = "nexus_align.cli.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88

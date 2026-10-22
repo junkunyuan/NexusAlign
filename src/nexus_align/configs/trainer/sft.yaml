@@ -1,0 +1,33 @@
+name: sft  # trainer registry key
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+debug: false  # if True, enable all-rank console print
+seed: 42  # base seed; runtime RNG uses {seed + rank} in train mode
+deterministic: true
+train_batch_size: 2048
+num_workers: 8  # num workers for data loading
+grad_accu_step: 1
+log_every_n_steps: 100
+log_window_size: 100
+log_hardware: true
+log_tensorboard: false  # if True, also write scalars to log_dir/tensorboard
+plot_every_n_seconds: 60  # redraw the metric figures at most once every N seconds
+shuffle: true
+drop_last: true
+epochs: 100
+learning_rate: 2.8e-4
+warmup_epochs: 0  # linear LR warmup from 0 over N epochs, then constant; 0 disables it
+adam_beta1: 0.9
+adam_beta2: 0.95
+adam_weight_decay: 0.0
+adam_epsilon: 1.0e-8
+max_grad_norm: 1.0
+ema_decay: 0.9999
+save_ckpt_every_n_steps: null  # save every N total steps; null disables step checkpoints
+save_ckpt_keep_last_n_steps: 10
+save_ckpt_every_n_epochs: null  # save every N epochs; null disables epoch checkpoints
+save_ckpt_keep_last_n_epochs: 10
+resume_path: null  # e.g. ${log_dir}/checkpoints/epoch_0-step_10000-total_step_10000
+load_ckpt_only_model: false  # If true, only load state, model, and ema; else will load optimizer and lr_scheduler
+save_ckpt_only_model: false  # If true, only save state, model, and ema; else will save optimizer and lr_scheduler

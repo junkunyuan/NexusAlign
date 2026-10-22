@@ -1,0 +1,29 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: meanflow
+
+# --------------------------------------------------------------------------------
+# Timestep configs.
+# --------------------------------------------------------------------------------
+path_type: linear  # timestep interpolant; "linear" or "cosine"
+time_sampler: logit_normal  # time sampler distribution; "uniform" or "logit_normal"
+time_mu: -0.4  # logit_normal mean, only used when time_sampler is logit_normal
+time_sigma: 1.0  # logit_normal std, only used when time_sampler is logit_normal
+ratio_r_not_equal_t: 0.25  # fraction of samples with r != t
+
+# --------------------------------------------------------------------------------
+# CFG configs.
+# --------------------------------------------------------------------------------
+cfg_prob: 0.1  # CFG label dropout prob
+cfg_omega: 0.2  # instantaous velocity CFG weight
+cfg_kappa: 0.92  # mean velocity cfg weight
+cfg_min_t: 0.0  # min timestep to apply CFG
+cfg_max_t: 0.8  # max timestep to apply CFG
+
+# --------------------------------------------------------------------------------
+# Loss weighting configs.
+# --------------------------------------------------------------------------------
+weighting: adaptive  # "uniform" (squared L2) or "adaptive"
+adaptive_p: 1.0  # power p of the adaptive weight
+adaptive_eps: 0.01  # constant c added to the loss inside the adaptive weight

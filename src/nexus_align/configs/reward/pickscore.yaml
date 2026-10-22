@@ -1,0 +1,4 @@
+name: pickscore
+model_path: ${data_and_model_dir}/yuvalkirstain/PickScore_v1  # PickScore CLIP weights
+processor_path: ${data_and_model_dir}/laion/CLIP-ViT-H-14-laion2B-s32B-b79K  # CLIP-H processor
+normalize: true  # divide by 26 for training; evaluation reports the raw score

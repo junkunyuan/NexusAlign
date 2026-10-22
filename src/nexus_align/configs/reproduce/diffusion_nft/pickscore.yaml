@@ -1,0 +1,8 @@
+# @package _global_
+# Reproduce DiffusionNFT on human preference alignment with SD3.5-M, CFG-free.
+# Launch with: EXP=pickscore bash scripts/reproduce/diffusion_nft_train.sh
+exp_info: diffusion_nft_pickscore_reproduce
+
+trainer:
+  epochs: 2000  # 2k steps, as reported in the paper
+  save_ckpt_every_n_epochs: 200

@@ -1,0 +1,6 @@
+name: geneval
+url: http://127.0.0.1:18085  # GenEval server on this node; see scripts/tools/reward_server.sh
+batch_size: 64  # images per request
+jpeg: true  # send JPEG as Flow-GRPO does; false sends lossless PNG, as DiffusionNFT
+timeout: 120  # seconds per request
+max_retries: 10  # retries on server errors before failing the job

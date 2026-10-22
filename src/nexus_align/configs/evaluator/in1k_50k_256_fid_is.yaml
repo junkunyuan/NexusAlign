@@ -1,0 +1,29 @@
+name: in1k_50k_256_fid_is
+
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+global_seed: 0  # base seed; runtime RNG uses {global_seed * world_size + rank}
+resolution: 256  # generated image resolution
+cfg_scale: 1.0  # classifier-free guidance scale; 1.0 means no CFG
+cfg_min_t: 0.0  # guidance interval start; only used by algorithms conditioned on it
+cfg_max_t: 1.0  # guidance interval end; only used by algorithms conditioned on it
+num_steps: 1  # number of sampling steps
+model_key: ema  # weights to sample with and to load from each checkpoint: "model" or "ema"
+num_fid_samples: 50000  # number of images to generate per checkpoint
+per_proc_batch_size: 128  # per-GPU sampling batch size
+save_images: false  # if True, save generated images as PNG files; if False, score them in memory
+num_workers: 4  # per-rank threads used to write and read the PNG files
+compile: true  # if True, compile the sampling model and the VAE decoder
+ckpts: null  # explicit checkpoint paths; null globs ${log_dir}/checkpoints
+dry_run: false  # if True, print the plan without sampling
+new_run: false  # if True, evaluate in a new dir instead of reusing the latest one
+
+# --------------------------------------------------------------------------------
+# Data and model paths.
+# --------------------------------------------------------------------------------
+vae_path: ${data.vae}  # vae model path, single source of truth in data config
+vae_scale: ${data.vae_scale}  # VAE latent scale, single source of truth in data config
+vae_bias: ${data.vae_bias}  # VAE latent bias, single source of truth in data config
+fid_stats: ${data_and_model_dir}/fid_stats/adm_in256_stats.npz  # reference FID statistics
+inception_weights: ${data_and_model_dir}/torch_fidelity/weights-inception-2015-12-05-6726825d.pth

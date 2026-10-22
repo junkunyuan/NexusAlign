@@ -1,0 +1,131 @@
+algorithm:
+  adaptive_eps: 0.01
+  adaptive_p: 1.0
+  cfg_beta: 1.0
+  cfg_max_t_range:
+  - 0.5
+  - 1.0
+  cfg_min_t_range:
+  - 0.0
+  - 0.5
+  cfg_omega_max: 8.0
+  cfg_prob: 0.1
+  name: imeanflow
+  ratio_r_not_equal_t: 0.5
+  time_mu: -0.4
+  time_sigma: 1.0
+data:
+  cache_dir: data_and_model/ILSVRC/imagenet-1k/latents
+  flip_prob: 0.0
+  img_size: 256
+  name: imagenet_1k
+  path: data_and_model/ILSVRC/imagenet-1k
+  preprocess_workers: 8
+  read_batch: 256
+  sample_ratio: 1.0
+  seed: 42
+  shard_size: 8192
+  shared_cache: false
+  split: train
+  vae: data_and_model/stabilityai/sd-vae-ft-mse
+  vae_batch: 256
+  vae_bias: 0.0
+  vae_scale: 0.18215
+data_and_model_dir: data_and_model
+evaluator:
+  cfg_max_t: 0.65
+  cfg_min_t: 0.4
+  cfg_scale: 8.0
+  ckpts: null
+  compile: true
+  dry_run: false
+  eval_dir: logs/imeanflow_b2_reproduce-20261013_232426/eval/in1k_50k_256_fid_is-20261019_153208
+  fid_stats: data_and_model/fid_stats/adm_in256_stats.npz
+  global_seed: 0
+  inception_weights: data_and_model/torch_fidelity/weights-inception-2015-12-05-6726825d.pth
+  model_key: ema
+  name: in1k_50k_256_fid_is
+  new_run: false
+  num_fid_samples: 50000
+  num_steps: 1
+  num_workers: 4
+  per_proc_batch_size: 128
+  resolution: 256
+  save_images: false
+  vae_bias: 0.0
+  vae_path: data_and_model/stabilityai/sd-vae-ft-mse
+  vae_scale: 0.18215
+exp_info: imeanflow_b2_reproduce-20261013_232426
+job_type: eval
+log_dir: logs/imeanflow_b2_reproduce-20261013_232426
+model:
+  dtype: fp32
+  ema_enabled: true
+  fsdp:
+    activation_ckpt: true
+    cpu_offload: false
+    param_dtype: fp32
+    reduce_dtype: fp32
+    replicate: -1
+    shard: 1
+    strategy: full_shard
+  input_size: 32
+  name: imeanflowdit_b_2
+  num_classes: 1000
+notes: ''
+project_path: .
+provenance:
+  hardware:
+    cpu_count: 224
+    cpu_model: Intel(R) Xeon(R) Platinum 8480+
+    gpu_capability: '9.0'
+    gpu_count: 8
+    gpu_memory_gb: 79.1
+    gpu_name: NVIDIA H100 80GB HBM3
+    os: Linux-5.15.152
+  software:
+    cuda: '12.6'
+    cudnn: 91002
+    nccl: 2.29.3
+    python: 3.11.2
+    torch: 2.12.0+cu126
+  start_time: '2026-10-19 15:32:08'
+rank: 0
+timestamp: true
+trainer:
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 1.0e-08
+  adam_weight_decay: 0.0
+  debug: false
+  deterministic: true
+  drop_last: true
+  ema_decay: 0.9999
+  epochs: 100
+  grad_accu_step: 1
+  learning_rate: 0.00028
+  load_ckpt_only_model: false
+  log_every_n_steps: 100
+  log_hardware: true
+  log_tensorboard: false
+  log_window_size: 100
+  max_grad_norm: 1.0
+  name: sft
+  num_workers: 8
+  plot_every_n_seconds: 60
+  resume_path: null
+  save_ckpt_every_n_epochs: null
+  save_ckpt_every_n_steps: null
+  save_ckpt_keep_last_n_epochs: 10
+  save_ckpt_keep_last_n_steps: 10
+  save_ckpt_only_model: false
+  seed: 42
+  shuffle: true
+  train_batch_size: 2048
+  warmup_epochs: 0
+wandb:
+  entity: null
+  mode: disabled
+  name: null
+  project: nexus_align
+world_size: 8

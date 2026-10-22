@@ -1,0 +1,6 @@
+name: unifiedreward
+url: http://127.0.0.1:17140  # sglang server on this node; see scripts/tools/reward_server.sh
+api_key: flowgrpo  # API key of the sglang server
+model: UnifiedReward-7b-v1.5  # served model name
+timeout: 300  # seconds per request
+normalize: true  # divide by 5 for training; evaluation reports the raw score

@@ -1,0 +1,10 @@
+# @package _global_
+# Reproduce DiffusionNFT on GenEval with SD3.5-M, CFG-free.
+# Launch with: EXP=geneval bash scripts/reproduce/diffusion_nft_train.sh
+exp_info: diffusion_nft_geneval_reproduce
+
+reward:
+  jpeg: false  # the official GenEval reward scores raw pixels in-process
+
+trainer:
+  epochs: 1000  # 1k steps, as reported in the paper

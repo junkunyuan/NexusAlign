@@ -1,0 +1,11 @@
+# @package _global_
+# Reproduce Flow-GRPO (w/ KL) on human preference alignment with SD3.5-M.
+# Launch with: EXP=pickscore bash scripts/reproduce/flow_grpo_train.sh
+exp_info: flow_grpo_pickscore_reproduce
+
+algorithm:
+  beta: 0.01  # KL coefficient for PickScore
+
+trainer:
+  epochs: 1500  # 3000 steps, the length of the paper's learning curve
+  save_ckpt_every_n_epochs: 150

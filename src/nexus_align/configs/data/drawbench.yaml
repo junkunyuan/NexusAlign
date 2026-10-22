@@ -1,0 +1,7 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: drawbench  # dataset name
+path: ${data_and_model_dir}/NVlabs/DiffusionNFT/dataset/drawbench  # DiffusionNFT prompt dir
+split: test  # DrawBench has only test prompts
+file: "{split}.txt"  # file of a split under path; .txt or .jsonl

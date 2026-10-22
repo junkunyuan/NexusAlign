@@ -1,0 +1,4 @@
+name: imagereward
+url: http://127.0.0.1:18091  # ImageReward server on this node; see scripts/tools/reward_server.sh
+timeout: 120  # seconds per request
+max_retries: 10  # retries on server errors before failing the job

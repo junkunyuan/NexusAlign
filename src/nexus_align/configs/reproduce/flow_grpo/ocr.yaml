@@ -1,0 +1,8 @@
+# @package _global_
+# Reproduce Flow-GRPO (w/ KL) on visual text rendering with SD3.5-M.
+# Launch with: EXP=ocr bash scripts/reproduce/flow_grpo_train.sh
+exp_info: flow_grpo_ocr_reproduce
+
+trainer:
+  epochs: 600  # 1200 steps, the length of the paper's learning curve
+  save_ckpt_every_n_epochs: 60

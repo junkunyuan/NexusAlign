@@ -1,0 +1,124 @@
+algorithm:
+  adv_clip_max: 5.0
+  autocast_dtype: fp16
+  beta: 0.04
+  clip_range: 0.0001
+  global_std: true
+  group_size: 24
+  guidance_scale: 4.5
+  max_sequence_length: 128
+  name: flow_grpo
+  noise_level: 0.7
+  num_steps: 10
+  per_prompt_stat_tracking: true
+  resolution: 512
+  sde_window_range:
+  - 0
+  - 5
+  sde_window_size: 0
+  timestep_fraction: 0.99
+data:
+  file: '{split}_metadata.jsonl'
+  name: geneval
+  path: data_and_model/yifan123/flow_grpo/dataset/geneval
+  seed: 42
+  split: train
+  text_key: prompt
+data_and_model_dir: data_and_model
+exp_info: flow_grpo_geneval_reproduce-20261021_063947
+job_type: train
+log_dir: logs/flow_grpo_geneval_reproduce-20261021_063947
+model:
+  attn_backend: fa3
+  compile: true
+  dtype: fp32
+  ema_enabled: true
+  frozen_dtype: fp16
+  fsdp:
+    activation_ckpt: false
+    cpu_offload: false
+    param_dtype: fp32
+    reduce_dtype: fp32
+    replicate: -1
+    shard: -1
+    strategy: full_shard
+  lora:
+    alpha: 64
+    init: gaussian
+    rank: 32
+    target_modules:
+    - attn.add_k_proj
+    - attn.add_q_proj
+    - attn.add_v_proj
+    - attn.to_add_out
+    - attn.to_k
+    - attn.to_out.0
+    - attn.to_q
+    - attn.to_v
+  name: sd3_5_medium
+  path: data_and_model/stabilityai/stable-diffusion-3.5-medium
+  text_encoder_dtype: fp16
+  vae_dtype: fp32
+notes: ''
+project_path: .
+provenance:
+  hardware:
+    cpu_count: 224
+    cpu_model: Intel(R) Xeon(R) Platinum 8480+
+    gpu_capability: '9.0'
+    gpu_count: 8
+    gpu_memory_gb: 79.1
+    gpu_name: NVIDIA H100 80GB HBM3
+    os: Linux-5.15.152
+  software:
+    cuda: '12.6'
+    cudnn: 91002
+    nccl: 2.29.3
+    python: 3.11.2
+    torch: 2.12.0+cu126
+  start_time: '2026-10-21 06:39:47'
+rank: 0
+reward:
+  batch_size: 64
+  jpeg: true
+  max_retries: 10
+  name: geneval
+  timeout: 120
+  url: http://127.0.0.1:18085
+timestamp: true
+trainer:
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1.0e-08
+  adam_weight_decay: 0.0001
+  debug: false
+  deterministic: true
+  ema_decay: 0.9
+  ema_update_interval: 8
+  epochs: 2500
+  groups_per_epoch: 48
+  learning_rate: 0.0003
+  load_ckpt_only_model: false
+  log_every_n_steps: 2
+  log_hardware: true
+  log_tensorboard: false
+  log_window_size: 2
+  max_grad_norm: 1.0
+  name: grpo
+  plot_every_n_seconds: 60
+  resume_path: null
+  sample_batch_size: 9
+  save_ckpt_every_n_epochs: 250
+  save_ckpt_every_n_steps: null
+  save_ckpt_keep_last_n_epochs: 100
+  save_ckpt_keep_last_n_steps: 10
+  save_ckpt_only_model: false
+  seed: 42
+  shuffle: true
+  updates_per_epoch: 2
+wandb:
+  entity: null
+  mode: disabled
+  name: null
+  project: nexus_align
+world_size: 64

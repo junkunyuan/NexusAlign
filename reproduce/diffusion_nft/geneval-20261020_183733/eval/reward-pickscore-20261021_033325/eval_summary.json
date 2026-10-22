@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 19.818079790566117
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_100-step_0-total_step_100",
+    "pickscore": 21.0056161750108
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_200-step_0-total_step_200",
+    "pickscore": 20.864920983090997
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_300-step_0-total_step_300",
+    "pickscore": 20.49422291154042
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_400-step_0-total_step_400",
+    "pickscore": 20.750783988274634
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_500-step_0-total_step_500",
+    "pickscore": 20.782549067400396
+  },
+  {
+    "epoch": 600,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_600-step_0-total_step_600",
+    "pickscore": 20.763424383476377
+  },
+  {
+    "epoch": 700,
+    "step": 0,
+    "total_step": 700,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_700-step_0-total_step_700",
+    "pickscore": 20.776051270775497
+  },
+  {
+    "epoch": 800,
+    "step": 0,
+    "total_step": 800,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_800-step_0-total_step_800",
+    "pickscore": 20.71267953235656
+  },
+  {
+    "epoch": 900,
+    "step": 0,
+    "total_step": 900,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_900-step_0-total_step_900",
+    "pickscore": 20.715511227957904
+  },
+  {
+    "epoch": 1000,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/diffusion_nft_geneval_reproduce-20261020_183733/checkpoints/epoch_1000-step_0-total_step_1000",
+    "pickscore": 20.710255227982998
+  }
+]

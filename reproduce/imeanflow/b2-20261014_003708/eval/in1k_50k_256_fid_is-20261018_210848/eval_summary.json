@@ -1,0 +1,146 @@
+[
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 12480,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_40-step_0-total_step_12480",
+    "fid": 63.082398856711166,
+    "is_mean": 24.267582841321946,
+    "is_std": 0.39822113421544075
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 24960,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_80-step_0-total_step_24960",
+    "fid": 16.528490775406453,
+    "is_mean": 98.33772199474996,
+    "is_std": 1.6324371466371554
+  },
+  {
+    "epoch": 120,
+    "step": 0,
+    "total_step": 37440,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_120-step_0-total_step_37440",
+    "fid": 9.272902767848507,
+    "is_mean": 148.6076630590145,
+    "is_std": 1.7998256868388691
+  },
+  {
+    "epoch": 160,
+    "step": 0,
+    "total_step": 49920,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_160-step_0-total_step_49920",
+    "fid": 7.007605136672453,
+    "is_mean": 179.35008653263145,
+    "is_std": 2.835212288869389
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 62400,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_200-step_0-total_step_62400",
+    "fid": 5.958426400809799,
+    "is_mean": 200.03039913283413,
+    "is_std": 4.968518032789143
+  },
+  {
+    "epoch": 240,
+    "step": 0,
+    "total_step": 74880,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_240-step_0-total_step_74880",
+    "fid": 5.444424946417826,
+    "is_mean": 212.5592884854541,
+    "is_std": 4.004119052363618
+  },
+  {
+    "epoch": 280,
+    "step": 0,
+    "total_step": 87360,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_280-step_0-total_step_87360",
+    "fid": 5.041181324895433,
+    "is_mean": 225.70574312118143,
+    "is_std": 2.096467601918952
+  },
+  {
+    "epoch": 320,
+    "step": 0,
+    "total_step": 99840,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_320-step_0-total_step_99840",
+    "fid": 4.814036862752005,
+    "is_mean": 234.1576120121872,
+    "is_std": 3.6537285834199653
+  },
+  {
+    "epoch": 360,
+    "step": 0,
+    "total_step": 112320,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_360-step_0-total_step_112320",
+    "fid": 4.566193464367416,
+    "is_mean": 236.90587565555225,
+    "is_std": 3.5093766431898596
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 124800,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_400-step_0-total_step_124800",
+    "fid": 4.367403699075396,
+    "is_mean": 242.41716352460907,
+    "is_std": 3.778553491622042
+  },
+  {
+    "epoch": 440,
+    "step": 0,
+    "total_step": 137280,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_440-step_0-total_step_137280",
+    "fid": 4.312409493889675,
+    "is_mean": 247.92108030070645,
+    "is_std": 3.481127071154944
+  },
+  {
+    "epoch": 480,
+    "step": 0,
+    "total_step": 149760,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_480-step_0-total_step_149760",
+    "fid": 4.227029862573886,
+    "is_mean": 253.18944870499416,
+    "is_std": 3.0095130588921606
+  },
+  {
+    "epoch": 520,
+    "step": 0,
+    "total_step": 162240,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_520-step_0-total_step_162240",
+    "fid": 4.163729488719525,
+    "is_mean": 257.4543063249994,
+    "is_std": 4.043230405851528
+  },
+  {
+    "epoch": 560,
+    "step": 0,
+    "total_step": 174720,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_560-step_0-total_step_174720",
+    "fid": 4.07548831253456,
+    "is_mean": 256.1603239765326,
+    "is_std": 5.237005718184841
+  },
+  {
+    "epoch": 600,
+    "step": 0,
+    "total_step": 187200,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_600-step_0-total_step_187200",
+    "fid": 4.107052861301895,
+    "is_mean": 257.2392722394551,
+    "is_std": 4.219435586134059
+  },
+  {
+    "epoch": 640,
+    "step": 0,
+    "total_step": 199680,
+    "ckpt": "logs/imeanflow_b2_reproduce-20261014_003708/checkpoints/epoch_640-step_0-total_step_199680",
+    "fid": 4.053287759206,
+    "is_mean": 261.41394407097533,
+    "is_std": 4.171328924131403
+  }
+]

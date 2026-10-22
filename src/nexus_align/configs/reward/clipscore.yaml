@@ -1,0 +1,2 @@
+name: clipscore
+clip_path: ${data_and_model_dir}/openai/clip-vit-large-patch14  # CLIP-L weights

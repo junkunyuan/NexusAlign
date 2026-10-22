@@ -1,0 +1,23 @@
+# @package _global_
+# Reproduce MeanFlow-XL/2 from the paper.
+# Launch with: +reproduce=meanflow/xl2
+exp_info: meanflow_xl2_reproduce
+
+model:
+  name: meanflowdit_xl_2
+
+algorithm:
+  cfg_omega: 0.2  # effective guidance scale 2.5 with kappa 0.92
+  cfg_kappa: 0.92
+  cfg_min_t: 0.0
+  cfg_max_t: 0.75
+
+trainer:
+  epochs: 240
+  train_batch_size: 256
+  learning_rate: 1.0e-4
+  ema_decay: 0.9999
+  max_grad_norm: .inf  # paper uses no gradient clipping
+  save_ckpt_every_n_epochs: 20
+  save_ckpt_keep_last_n_epochs: 100
+  log_every_n_steps: 200

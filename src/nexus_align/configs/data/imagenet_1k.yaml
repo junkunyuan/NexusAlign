@@ -1,0 +1,27 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: imagenet_1k  # dataset name
+path: ${data_and_model_dir}/ILSVRC/imagenet-1k  # huggingface data path, deduplicate it beforehand
+split: train  # use training set
+
+# --------------------------------------------------------------------------------
+# Processing configs.
+# --------------------------------------------------------------------------------
+sample_ratio: 1.0  # sampling ratio
+img_size: 256  # image size
+flip_prob: 0.0  # the paper uses no flip
+
+# --------------------------------------------------------------------------------
+# VAE-latent configs.
+# Not use VAE latent by setting cache_dir to null.
+# --------------------------------------------------------------------------------
+vae: ${data_and_model_dir}/stabilityai/sd-vae-ft-mse  # vae model path
+vae_scale: 0.18215  # VAE latent scale, applied to every latent this dataset returns
+vae_bias: 0.  # VAE latent bias, applied to every latent this dataset returns
+read_batch: 256  # parquet reading batch size
+vae_batch: 256  # vae encoding batch size
+shard_size: 8192  # num items per shard to save
+preprocess_workers: 8  # num workers for preprocessing data
+cache_dir: ${data_and_model_dir}/ILSVRC/imagenet-1k/latents  # latent cache dir
+shared_cache: false  # if false, multi-node runs use node-specific cache subdirs

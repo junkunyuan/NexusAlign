@@ -1,0 +1,41 @@
+# --------------------------------------------------------------------------------
+# Config groups.
+# --------------------------------------------------------------------------------
+defaults:
+  - data: imagenet_1k
+  - algorithm: meanflow
+  - model: meanflow_dit
+  - trainer: sft
+  - evaluator: null
+  - reward: null
+  - override hydra/job_logging: none  # logging is configured by init_log instead
+  - _self_
+
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+job_type: train  # "train" runs the trainer, "eval" runs the evaluator
+data_and_model_dir: ${hydra:runtime.cwd}/data_and_model  # single entry for all data and model weights
+exp_info: ""  # experiment info/name; auto-names it {dataset}_{model}_{algorithm} if str is empty
+timestamp: true  # if True, append timestamp to exp_info
+log_dir: logs  # log dir; will reset as the abs path of join(log_dir, exp_info)
+notes: ""  # notes of this experiment
+
+# --------------------------------------------------------------------------------
+# Wandb configs.
+# --------------------------------------------------------------------------------
+wandb:
+  entity: null
+  project: nexus_align
+  name: null
+  mode: disabled  # "online", "offline", or "disabled"
+
+# --------------------------------------------------------------------------------
+# Hydra configs; do NOT change.
+# --------------------------------------------------------------------------------
+hydra:
+  output_subdir: null  # not create the .hydra/ subdir
+  run:
+    dir: .  # run in the current dir
+  job:
+    chdir: false  # not change working dir

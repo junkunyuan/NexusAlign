@@ -1,0 +1,35 @@
+# @package _global_
+# Reproduce DiffusionNFT's multi-reward training with SD3.5-M, CFG-free (Table 1).
+# Launch with: EXP=multi_reward bash scripts/reproduce/diffusion_nft_train.sh
+defaults:
+  - /data@stage_data.pickscore: pickscore  # Pick-a-Pic prompts
+  - /data@stage_data.geneval: geneval
+  - /data@stage_data.ocr: ocr
+  - /reward@reward.rewards.pickscore: pickscore
+  - /reward@reward.rewards.clipscore: clipscore
+  - /reward@reward.rewards.hpsv2: hpsv2
+  - /reward@reward.rewards.geneval: geneval
+  - /reward@reward.rewards.ocr: ocr
+exp_info: diffusion_nft_multi_reward_reproduce
+
+reward:
+  rewards:
+    geneval:
+      jpeg: false  # the official GenEval reward scores raw pixels in-process
+
+algorithm:
+  num_steps: 40  # 40 rollout steps for high-fidelity data collection
+  beta: 0.1
+
+trainer:
+  epochs: 1600  # the sum of the stage epochs
+  save_ckpt_every_n_epochs: 200
+  stages:  # the multi-stage scheme of Appendix C
+    - {data: pickscore, epochs: 800, rewards: [pickscore, clipscore, hpsv2]}
+    - {data: geneval, epochs: 300, rewards: [pickscore, clipscore, hpsv2, geneval]}
+    - {data: pickscore, epochs: 200, rewards: [pickscore, clipscore, hpsv2]}
+    - {data: geneval, epochs: 200, rewards: [pickscore, clipscore, hpsv2, geneval]}
+    - data: ocr
+      epochs: 100
+      rewards: [pickscore, clipscore, hpsv2, ocr]
+      algorithm: {eta_max: 0.95}  # a larger max eta stabilizes OCR

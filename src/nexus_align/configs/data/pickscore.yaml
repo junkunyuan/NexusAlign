@@ -1,0 +1,7 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: pickscore  # dataset name
+path: ${data_and_model_dir}/yifan123/flow_grpo/dataset/pickscore  # Flow-GRPO prompt dir
+split: train  # use training prompts
+file: "{split}.txt"  # file of a split under path; .txt or .jsonl

@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 21.712423104792833
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 120,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_60-step_0-total_step_120",
+    "pickscore": 21.702372943982482
+  },
+  {
+    "epoch": 120,
+    "step": 0,
+    "total_step": 240,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_120-step_0-total_step_240",
+    "pickscore": 21.71399104781449
+  },
+  {
+    "epoch": 180,
+    "step": 0,
+    "total_step": 360,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_180-step_0-total_step_360",
+    "pickscore": 21.698781185783446
+  },
+  {
+    "epoch": 240,
+    "step": 0,
+    "total_step": 480,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_240-step_0-total_step_480",
+    "pickscore": 21.699965470470488
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_300-step_0-total_step_600",
+    "pickscore": 21.705596439540386
+  },
+  {
+    "epoch": 360,
+    "step": 0,
+    "total_step": 720,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_360-step_0-total_step_720",
+    "pickscore": 21.72656435985118
+  },
+  {
+    "epoch": 420,
+    "step": 0,
+    "total_step": 840,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_420-step_0-total_step_840",
+    "pickscore": 21.73971755616367
+  },
+  {
+    "epoch": 480,
+    "step": 0,
+    "total_step": 960,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_480-step_0-total_step_960",
+    "pickscore": 21.771937309764326
+  },
+  {
+    "epoch": 540,
+    "step": 0,
+    "total_step": 1080,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_540-step_0-total_step_1080",
+    "pickscore": 21.751391403377056
+  },
+  {
+    "epoch": 600,
+    "step": 0,
+    "total_step": 1200,
+    "ckpt": "logs/flow_grpo_ocr_reproduce-20261020_234557/checkpoints/epoch_600-step_0-total_step_1200",
+    "pickscore": 21.724889749661088
+  }
+]

@@ -1,0 +1,20 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: meanflowdit_b_2  # meanflowdit_xl_2, meanflowdit_l_2, meanflowdit_m_2, meanflowdit_b_2
+input_size: 32  # input size (VAE latent size)
+num_classes: 1000  # categories (e.g., 1000 for ImageNet-1K)
+dtype: fp32  # model weight dtype
+ema_enabled: true  # if use ema model
+
+# --------------------------------------------------------------------------------
+# FSDP configs.
+# --------------------------------------------------------------------------------
+fsdp:
+  replicate: -1  # fsdp replicate
+  shard: 1  # fsdp shard
+  strategy: full_shard  # full_shard or shard_grad_op
+  cpu_offload: false  # offload params and grads to CPU
+  param_dtype: fp32  # model parameter dtype; the paper trains in full precision
+  reduce_dtype: fp32  # gradient reduction dtype
+  activation_ckpt: true  # activation checkpointing

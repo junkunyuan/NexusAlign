@@ -1,0 +1,8 @@
+# @package _global_
+# Reproduce Flow-GRPO (w/ KL) on GenEval with SD3.5-M.
+# Launch with: EXP=geneval bash scripts/reproduce/flow_grpo_train.sh
+exp_info: flow_grpo_geneval_reproduce
+
+trainer:
+  epochs: 2500  # 5000 steps, the length of the paper's learning curve
+  save_ckpt_every_n_epochs: 250

@@ -1,0 +1,23 @@
+# @package _global_
+# Reproduce the iMF-B/2 ablation setting from the paper:
+# 240 epochs at batch 256, expected 1-NFE FID 3.82.
+# Launch with: +reproduce=imeanflow/b2_ablation
+# Evaluate with: CFG_SCALE=7.5 CFG_MIN_T=0.4 CFG_MAX_T=0.65 (official training-time setting)
+exp_info: imeanflow_b2_ablation_reproduce
+
+model:
+  name: imeanflowdit_b_2
+
+algorithm:
+  cfg_beta: 1.0
+
+trainer:
+  epochs: 240
+  train_batch_size: 256
+  learning_rate: 1.0e-4
+  warmup_epochs: 10
+  ema_decay: 0.9999
+  max_grad_norm: .inf  # paper uses no gradient clipping
+  save_ckpt_every_n_epochs: 20
+  save_ckpt_keep_last_n_epochs: 100
+  log_every_n_steps: 200

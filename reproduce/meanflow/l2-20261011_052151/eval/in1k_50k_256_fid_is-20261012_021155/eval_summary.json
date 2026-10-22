@@ -1,0 +1,110 @@
+[
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 6240,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_20-step_0-total_step_6240",
+    "fid": 26.1691551991658,
+    "is_mean": 61.552458048800204,
+    "is_std": 1.7649373092023806
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 12480,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_40-step_0-total_step_12480",
+    "fid": 9.989051150701528,
+    "is_mean": 136.5430822987749,
+    "is_std": 2.203806622762532
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 18720,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_60-step_0-total_step_18720",
+    "fid": 6.2903065532188975,
+    "is_mean": 178.355928531572,
+    "is_std": 2.5780099205969926
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 24960,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_80-step_0-total_step_24960",
+    "fid": 5.095006125550924,
+    "is_mean": 202.73943855772262,
+    "is_std": 3.9827114699094612
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 31200,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_100-step_0-total_step_31200",
+    "fid": 4.376544360363425,
+    "is_mean": 225.43069749391515,
+    "is_std": 5.721175504129616
+  },
+  {
+    "epoch": 120,
+    "step": 0,
+    "total_step": 37440,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_120-step_0-total_step_37440",
+    "fid": 4.148086331962816,
+    "is_mean": 234.35586006866606,
+    "is_std": 3.530344130930518
+  },
+  {
+    "epoch": 140,
+    "step": 0,
+    "total_step": 43680,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_140-step_0-total_step_43680",
+    "fid": 3.8023253443818703,
+    "is_mean": 247.51278144610046,
+    "is_std": 4.414875351780159
+  },
+  {
+    "epoch": 160,
+    "step": 0,
+    "total_step": 49920,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_160-step_0-total_step_49920",
+    "fid": 3.769528284291823,
+    "is_mean": 249.80838670690235,
+    "is_std": 3.127850585182487
+  },
+  {
+    "epoch": 180,
+    "step": 0,
+    "total_step": 56160,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_180-step_0-total_step_56160",
+    "fid": 3.5616993960293826,
+    "is_mean": 255.59242886724377,
+    "is_std": 4.824571996855313
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 62400,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_200-step_0-total_step_62400",
+    "fid": 3.4076837377609195,
+    "is_mean": 261.61274006989674,
+    "is_std": 5.178129306063483
+  },
+  {
+    "epoch": 220,
+    "step": 0,
+    "total_step": 68640,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_220-step_0-total_step_68640",
+    "fid": 3.4859416372381133,
+    "is_mean": 263.2205847492779,
+    "is_std": 3.1263997528756384
+  },
+  {
+    "epoch": 240,
+    "step": 0,
+    "total_step": 74880,
+    "ckpt": "logs/meanflow_l2_reproduce-20261011_052151/checkpoints/epoch_240-step_0-total_step_74880",
+    "fid": 3.358909744028267,
+    "is_mean": 260.90019050419,
+    "is_std": 3.7336068424925104
+  }
+]

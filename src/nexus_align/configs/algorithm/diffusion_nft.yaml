@@ -1,0 +1,34 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: diffusion_nft
+
+# --------------------------------------------------------------------------------
+# Sampling configs.
+# --------------------------------------------------------------------------------
+resolution: 512  # image resolution
+num_steps: 10  # rollout sampling steps
+solver: dpm2  # rollout sampler: dpm2 (2nd-order DPM-Solver) or flow (Euler), both ODE
+max_sequence_length: 128  # T5 prompt tokens
+autocast_dtype: fp16  # transformer compute dtype
+
+# --------------------------------------------------------------------------------
+# Advantage configs.
+# --------------------------------------------------------------------------------
+group_size: 24  # images per prompt, K
+global_std: true  # divide by the std of all rewards instead of the group's
+
+# --------------------------------------------------------------------------------
+# Policy loss configs.
+# --------------------------------------------------------------------------------
+timestep_fraction: 0.99  # train on int(num_steps * fraction) sampling timesteps of each image
+adv_clip_max: 5.0  # optimality r = 0.5 + 0.5 * clip(advantage / max, -1, 1)
+beta: 1.0  # implicit policy coefficient beta; see paper Eq. (5)
+kl_beta: 1.0e-4  # coefficient of the velocity KL to the reference policy
+
+# --------------------------------------------------------------------------------
+# Soft update configs.
+# --------------------------------------------------------------------------------
+eta_rate: 0.001  # old policy decay eta = min(eta_rate * (step - eta_delay), eta_max)
+eta_max: 0.5  # max eta
+eta_delay: 0  # optimizer steps with eta = 0 (on-policy) before eta grows

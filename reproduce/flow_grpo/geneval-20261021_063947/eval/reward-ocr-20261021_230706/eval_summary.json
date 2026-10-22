@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.5611949819342362
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_250-step_0-total_step_500",
+    "ocr": 0.5980424754948402
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_500-step_0-total_step_1000",
+    "ocr": 0.6153405220288368
+  },
+  {
+    "epoch": 750,
+    "step": 0,
+    "total_step": 1500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_750-step_0-total_step_1500",
+    "ocr": 0.6253067552487444
+  },
+  {
+    "epoch": 1000,
+    "step": 0,
+    "total_step": 2000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_1000-step_0-total_step_2000",
+    "ocr": 0.6421484400092364
+  },
+  {
+    "epoch": 1250,
+    "step": 0,
+    "total_step": 2500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_1250-step_0-total_step_2500",
+    "ocr": 0.6296551232011024
+  },
+  {
+    "epoch": 1500,
+    "step": 0,
+    "total_step": 3000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_1500-step_0-total_step_3000",
+    "ocr": 0.6511041654480638
+  },
+  {
+    "epoch": 1750,
+    "step": 0,
+    "total_step": 3500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_1750-step_0-total_step_3500",
+    "ocr": 0.6599810384780889
+  },
+  {
+    "epoch": 2000,
+    "step": 0,
+    "total_step": 4000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_2000-step_0-total_step_4000",
+    "ocr": 0.6509384905728967
+  },
+  {
+    "epoch": 2250,
+    "step": 0,
+    "total_step": 4500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_2250-step_0-total_step_4500",
+    "ocr": 0.678824827367631
+  },
+  {
+    "epoch": 2500,
+    "step": 0,
+    "total_step": 5000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_2500-step_0-total_step_5000",
+    "ocr": 0.6685830143381466
+  }
+]

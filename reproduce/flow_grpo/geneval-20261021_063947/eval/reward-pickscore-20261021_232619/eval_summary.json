@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 21.712423104792833
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_250-step_0-total_step_500",
+    "pickscore": 21.742795700207353
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_500-step_0-total_step_1000",
+    "pickscore": 21.770926143042743
+  },
+  {
+    "epoch": 750,
+    "step": 0,
+    "total_step": 1500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_750-step_0-total_step_1500",
+    "pickscore": 21.812804515473545
+  },
+  {
+    "epoch": 1000,
+    "step": 0,
+    "total_step": 2000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_1000-step_0-total_step_2000",
+    "pickscore": 21.824354575946927
+  },
+  {
+    "epoch": 1250,
+    "step": 0,
+    "total_step": 2500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_1250-step_0-total_step_2500",
+    "pickscore": 21.774903301149607
+  },
+  {
+    "epoch": 1500,
+    "step": 0,
+    "total_step": 3000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_1500-step_0-total_step_3000",
+    "pickscore": 21.779035232029855
+  },
+  {
+    "epoch": 1750,
+    "step": 0,
+    "total_step": 3500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_1750-step_0-total_step_3500",
+    "pickscore": 21.889518194831908
+  },
+  {
+    "epoch": 2000,
+    "step": 0,
+    "total_step": 4000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_2000-step_0-total_step_4000",
+    "pickscore": 21.867597873322666
+  },
+  {
+    "epoch": 2250,
+    "step": 0,
+    "total_step": 4500,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_2250-step_0-total_step_4500",
+    "pickscore": 21.83072734065354
+  },
+  {
+    "epoch": 2500,
+    "step": 0,
+    "total_step": 5000,
+    "ckpt": "logs/flow_grpo_geneval_reproduce-20261021_063947/checkpoints/epoch_2500-step_0-total_step_5000",
+    "pickscore": 21.728507352992892
+  }
+]

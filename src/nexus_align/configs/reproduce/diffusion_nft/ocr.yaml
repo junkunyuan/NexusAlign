@@ -1,0 +1,15 @@
+# @package _global_
+# Reproduce DiffusionNFT on visual text rendering with SD3.5-M, CFG-free.
+# Launch with: EXP=ocr bash scripts/reproduce/diffusion_nft_train.sh
+exp_info: diffusion_nft_ocr_reproduce
+
+algorithm:
+  beta: 0.1
+  eta_rate: 0.0075  # a more conservative soft update, which stabilizes OCR
+  eta_max: 0.999
+  eta_delay: 75
+
+trainer:
+  updates_per_epoch: 2
+  epochs: 75  # 150 steps, as reported in the paper
+  save_ckpt_every_n_epochs: 10

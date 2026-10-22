@@ -1,0 +1,22 @@
+# @package _global_
+# Reproduce iMF-XL/2 from the paper.
+# Launch with: +reproduce=imeanflow/xl2
+# Evaluate with: CFG_SCALE=8.0 CFG_MIN_T=0.42 CFG_MAX_T=0.62 (official checkpoint setting)
+exp_info: imeanflow_xl2_reproduce
+
+model:
+  name: imeanflowdit_xl_2
+
+algorithm:
+  cfg_beta: 2.0
+
+trainer:
+  epochs: 800
+  train_batch_size: 1024
+  learning_rate: 1.0e-4
+  warmup_epochs: 10
+  ema_decay: 0.9999
+  max_grad_norm: .inf  # paper uses no gradient clipping
+  save_ckpt_every_n_epochs: 80
+  save_ckpt_keep_last_n_epochs: 100
+  log_every_n_steps: 200

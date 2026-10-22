@@ -1,0 +1,32 @@
+name: grpo  # trainer registry key
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+debug: false  # if True, enable all-rank console print
+seed: 42  # base seed; runtime RNG uses {seed + rank} in train mode
+deterministic: true
+groups_per_epoch: 48  # prompts sampled per epoch, each in a group of algorithm.group_size responses
+sample_batch_size: 9  # samples per rank in one sampling and training batch
+updates_per_epoch: 2  # optimizer steps per epoch; batches per epoch must be a multiple of it
+shuffle: true  # shuffle all samples before splitting them into batches
+log_every_n_steps: 2
+log_window_size: 2
+log_hardware: true
+log_tensorboard: false  # if True, also write scalars to log_dir/tensorboard
+plot_every_n_seconds: 60  # redraw the metric figures at most once every N seconds
+epochs: 2000
+learning_rate: 3.0e-4
+adam_beta1: 0.9
+adam_beta2: 0.999
+adam_weight_decay: 1.0e-4
+adam_epsilon: 1.0e-8
+max_grad_norm: 1.0
+ema_decay: 0.9  # max EMA decay; it warms up as min((1 + step) / (10 + step), ema_decay)
+ema_update_interval: 8  # update EMA every N optimizer steps
+save_ckpt_every_n_steps: null  # GRPO saves only end-of-epoch checkpoints
+save_ckpt_keep_last_n_steps: 10
+save_ckpt_every_n_epochs: 200  # save every N epochs, plus the initial weights at epoch 0
+save_ckpt_keep_last_n_epochs: 100
+resume_path: null  # e.g. ${log_dir}/checkpoints/epoch_60-step_0-total_step_120
+load_ckpt_only_model: false  # If true, only load state, model, and ema; else will load optimizer and lr_scheduler
+save_ckpt_only_model: false  # If true, only save state, model, and ema; else will save optimizer and lr_scheduler

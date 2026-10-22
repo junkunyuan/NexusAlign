@@ -1,0 +1,41 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: sd3_5_medium
+path: ${data_and_model_dir}/stabilityai/stable-diffusion-3.5-medium  # diffusers pipeline dir
+dtype: fp32  # transformer weight dtype; it computes under the algorithm's autocast
+frozen_dtype: fp16  # dtype of frozen Linear and Conv weights; must be the autocast dtype
+attn_backend: sdpa  # sdpa or fa3 (FlashAttention-3); fa3 is faster for Flow-GRPO only
+compile: true  # compile each transformer block; 1.4-1.8x faster, not bitwise equal
+ema_enabled: true  # if use ema model; it tracks only the LoRA weights
+vae_dtype: fp32  # VAE weight dtype
+text_encoder_dtype: fp16  # text encoder weight dtype
+
+# --------------------------------------------------------------------------------
+# LoRA configs.
+# --------------------------------------------------------------------------------
+lora:
+  rank: 32  # LoRA rank r
+  alpha: 64  # LoRA alpha
+  init: gaussian  # LoRA A init; B starts at zero
+  target_modules:  # attention projections of every joint transformer block
+    - attn.add_k_proj
+    - attn.add_q_proj
+    - attn.add_v_proj
+    - attn.to_add_out
+    - attn.to_k
+    - attn.to_out.0
+    - attn.to_q
+    - attn.to_v
+
+# --------------------------------------------------------------------------------
+# FSDP configs.
+# --------------------------------------------------------------------------------
+fsdp:
+  replicate: -1  # fsdp replicate
+  shard: -1  # fsdp shard; -1 shards within a node of up to 8 GPUs to fit the EMA copy
+  strategy: full_shard  # full_shard or shard_grad_op
+  cpu_offload: false  # offload params and grads to CPU
+  param_dtype: fp32  # model parameter dtype; fp16 compute comes from autocast
+  reduce_dtype: fp32  # gradient reduction dtype
+  activation_ckpt: false  # activation checkpointing

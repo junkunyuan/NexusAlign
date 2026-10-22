@@ -1,0 +1,5 @@
+name: deqa
+url: http://127.0.0.1:18086  # DeQA server on this node; see scripts/tools/reward_server.sh
+timeout: 120  # seconds per request
+max_retries: 10  # retries on server errors before failing the job
+normalize: true  # divide by 5 for training; evaluation reports the raw score
