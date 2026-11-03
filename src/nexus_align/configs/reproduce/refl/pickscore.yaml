@@ -1,0 +1,9 @@
+# @package _global_
+# Reproduce ReFL on PickScore with SD3.5-M, CFG-free.
+# The setting follows the ReFL row of DiffusionOPSD Table 1 and its config/refl.py.
+# Launch with: EXP=pickscore bash scripts/reproduce/refl_train.sh
+exp_info: refl_pickscore_reproduce  # experiment name
+
+trainer:
+  epochs: 100  # training epochs; 100 updates, as in DiffusionOPSD
+  save_ckpt_every_n_epochs: 10  # save every N epochs, plus the initial weights at epoch 0

@@ -8,9 +8,14 @@ from omegaconf import open_dict
 from nexus_align.registry import registry
 from nexus_align.engine.setup import prepare_env
 
-
+# --------------------------------------------------------------------------------
+# Reward models.
+# Training takes one `reward` with its configured normalization.
+# Evaluation takes a `rewards` dict keyed by name and reports the raw scores.
+# If we merge them, the code needs more branches.
+# --------------------------------------------------------------------------------
 def prepare_reward(cfg) -> dict:
-    """Build the configured reward as a keyword argument; empty when there is none."""
+    """Return the configured reward as a keyword argument, or {} if there is none."""
     if cfg.get("reward") is None:
         return {}
     reward = registry.get("reward", cfg.reward.name)(cfg_reward=cfg.reward)
@@ -18,20 +23,8 @@ def prepare_reward(cfg) -> dict:
     return {"reward": reward}
 
 
-def prepare_stage_datasets(cfg) -> dict:
-    """Build the datasets of training stages as a keyword argument; empty if none."""
-    if cfg.trainer.get("stages") is None:
-        return {}
-    stage_datasets = {
-        name: registry.get("dataset", cfg_data.name)(cfg_data=cfg_data)
-        for name, cfg_data in cfg.stage_data.items()
-    }
-    print(f"✅ Prepared stage datasets: {', '.join(stage_datasets)}")
-    return {"stage_datasets": stage_datasets}
-
-
 def prepare_rewards(cfg) -> dict:
-    """Build the rewards to evaluate, keyed by name; empty when there are none."""
+    """Return the rewards to evaluate, keyed by name, or {} if there are none."""
     if cfg.get("rewards") is None:
         return {}
     rewards = {}
@@ -43,22 +36,24 @@ def prepare_rewards(cfg) -> dict:
     return {"rewards": rewards}
 
 
+# --------------------------------------------------------------------------------
+# Entry point for training and evaluation.
+# --------------------------------------------------------------------------------
 def train(cfg) -> None:
-    """Run training."""
-    # 1. Prepare dataset.
+    """Run the training."""
+    # 1. Prepare the dataset.
     train_dataset = registry.get("dataset", cfg.data.name)(cfg_data=cfg.data)
     print("✅ Prepared training dataset")
 
-    # 2. Prepare model.
+    # 2. Prepare the model.
     model = registry.get("model", cfg.model.name)(cfg_model=cfg.model)
     print("✅ Prepared model")
 
-    # 3. Prepare algorithm.
+    # 3. Prepare the algorithm.
     algorithm = registry.get("algorithm", cfg.algorithm.name)(cfg.algorithm)
     print("✅ Prepared algorithm")
 
-    # 4. Prepare trainer, with the reward of online RL and the datasets of training
-    # stages if they are configured.
+    # 4. Prepare the trainer.
     trainer = registry.get("trainer", cfg.trainer.name)(
         cfg_trainer=cfg.trainer,
         train_dataset=train_dataset,
@@ -66,29 +61,28 @@ def train(cfg) -> None:
         algorithm=algorithm,
         log_dir=cfg.log_dir,
         **prepare_reward(cfg),
-        **prepare_stage_datasets(cfg),
     )
     print("✅ Prepared trainer")
 
-    # 5. Run training.
+    # 5. Run the training.
     trainer.run()
     print("✅ Training completed")
 
 
 def evaluate(cfg) -> None:
-    """Run evaluation."""
-    # 1. Prepare model; only the weights the evaluator samples with are built.
+    """Run the evaluation."""
+    # 1. Prepare the model. Build only the weights that the evaluator samples with.
     model = registry.get("model", cfg.model.name)(
         cfg_model=cfg.model,
         build_keys=(cfg.evaluator.model_key,),
     )
     print("✅ Prepared model")
 
-    # 2. Prepare algorithm.
+    # 2. Prepare the algorithm.
     algorithm = registry.get("algorithm", cfg.algorithm.name)(cfg.algorithm)
     print("✅ Prepared algorithm")
 
-    # 3. Prepare evaluator, with the rewards to score if any are configured.
+    # 3. Prepare the evaluator.
     evaluator = registry.get("evaluator", cfg.evaluator.name)(
         cfg_evaluator=cfg.evaluator,
         model=model,
@@ -98,7 +92,7 @@ def evaluate(cfg) -> None:
     )
     print("✅ Prepared evaluator")
 
-    # 4. Run evaluation.
+    # 4. Run the evaluation.
     evaluator.run()
     print("✅ Evaluation completed")
 
@@ -109,10 +103,8 @@ def evaluate(cfg) -> None:
     version_base="1.3",
 )
 def main(cfg):
-    # 0. Prepare environment.
     prepare_env(cfg)
 
-    # 1. Run the job selected by job_type.
     if cfg.job_type == "train":
         train(cfg)
     elif cfg.job_type == "eval":

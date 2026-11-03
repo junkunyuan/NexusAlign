@@ -1,4 +1,13 @@
-"""GRPO trainer: online RL epochs of group sampling, rewarding, and policy updates."""
+"""
+GRPO trainer: online RL epochs that sample groups, reward them, and update the policy.
+
+References:
+    - Flow-GRPO:
+        - Official code: https://github.com/yifan123/flow_grpo
+            - scripts/train_sd3.py: the epoch loop of main, with its sample
+              filtering, batching, and AdamW; calculate_zero_std_ratio
+            - flow_grpo/ema.py: EMAModuleWrapper
+"""
 
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -15,19 +24,10 @@ from torch.distributed.fsdp.sharded_grad_scaler import ShardedGradScaler
 
 from nexus_align.utils.dtype import DTYPE_MAP
 from nexus_align.models.base_model import BaseModel
+from nexus_align.engine.distributed import gather_tensor
 from nexus_align.trainers.base_trainer import BaseTrainer
 from nexus_align.algorithms.base_algorithm import BaseAlgorithm
 from nexus_align.datasets.dist_dataloader import DistributedGroupSampler
-
-
-def gather_tensor(tensor: torch.Tensor) -> torch.Tensor:
-    """Concatenate a tensor of the same shape from every rank, in rank order."""
-    buffer = torch.empty(
-        (dist.get_world_size() * tensor.shape[0], *tensor.shape[1:]),
-        dtype=tensor.dtype, device=tensor.device,
-    )
-    dist.all_gather_into_tensor(buffer, tensor.contiguous())
-    return buffer
 
 
 def zero_std_ratio(prompts: list[str], rewards: np.ndarray) -> tuple[float, float]:
@@ -39,25 +39,29 @@ def zero_std_ratio(prompts: list[str], rewards: np.ndarray) -> tuple[float, floa
 
 class GRPOTrainer(BaseTrainer):
     """
-    Generic online RL trainer; the algorithm owns the model-specific rollout and loss.
+    Generic online RL trainer. The algorithm owns the model-specific rollout and loss.
 
     - Each epoch samples groups_per_epoch prompts * group_size responses over
       num_batches_per_epoch batches of sample_batch_size per rank, then rewards them.
-    - It then trains on every batch in algorithm.num_micro_steps forward passes; one
+    - It then trains on every batch in algorithm.num_micro_steps forward passes. One
       optimizer step accumulates grad_accu_step batches, so an epoch has
       updates_per_epoch steps.
-    - EMA is stepped after every batch, as in Flow-GRPO.
+    - If ema_every_batch is True, the trainer calls ema_step after every batch.
 
     The algorithm provides:
-    - group_size: responses per prompt; autocast_dtype: the compute dtype of forward.
-    - num_micro_steps: forward passes per batch, e.g. one per trained denoising step.
+    - group_size: the responses per prompt.
+    - autocast_dtype: the compute dtype of forward.
+    - num_micro_steps: the forward passes per batch, for example one per trained
+      denoising step.
     - prepare(model, device, pipeline): bind the trained network and the model wrapper.
-    - rollout(prompts, epoch): {"samples": per-sample training tensors, "responses"}, where
-      the responses are scored by the reward.
+    - rollout(prompts, epoch): {"samples": per-sample training tensors, "responses"}.
+      The reward scores the responses.
     - compute_advantages(prompts, rewards): one advantage per response.
     - forward(batch): {"loss", "metrics"} of a batch of samples with "advantages" and
       the micro step index "step".
     """
+
+    ema_every_batch = True  # if False, call ema_step only after an optimizer step
 
     def __init__(
         self,
@@ -68,7 +72,7 @@ class GRPOTrainer(BaseTrainer):
         reward,
         log_dir: str = "logs/temp",
     ) -> None:
-        # Batches per epoch follow from the prompt groups per epoch and the world size.
+        # Get the batches per epoch from the prompt groups per epoch and the world size.
         cfg_trainer = dict(cfg_trainer)
         samples_per_round = dist.get_world_size() * cfg_trainer["sample_batch_size"]
         samples_per_epoch = cfg_trainer["groups_per_epoch"] * algorithm.group_size
@@ -95,9 +99,9 @@ class GRPOTrainer(BaseTrainer):
             log_dir=log_dir
         )
         self.reward = reward
-        self.algorithm.prepare(model.model, model.device, model)
+        self.prepare_algorithm()
 
-        # Only the trainable weights, such as LoRA, are optimized.
+        # Optimize only the trainable weights, such as LoRA.
         self.trainable_params = [p for p in model.model.parameters() if p.requires_grad]
         self.optimizer = torch.optim.AdamW(
             self.trainable_params,
@@ -133,6 +137,10 @@ class GRPOTrainer(BaseTrainer):
         )
         return DataLoader(dataset, batch_sampler=sampler, collate_fn=dataset.collate_fn)
 
+    def prepare_algorithm(self) -> None:
+        """Bind the trained network, device, and model wrapper to the algorithm."""
+        self.algorithm.prepare(self.model.model, self.model.device, self.model)
+
     def train_mode(self):
         self.model.model.train()
 
@@ -140,8 +148,7 @@ class GRPOTrainer(BaseTrainer):
         self.optimizer.zero_grad(set_to_none=True)
 
     def forward(self, data):
-        results = self.algorithm.forward(data)
-        return {"loss": results["loss"], "metrics": results["metrics"]}
+        return self.algorithm.forward(data)  # customed
 
     def backward(self, loss):
         self.scaler.scale(loss).backward()
@@ -163,7 +170,7 @@ class GRPOTrainer(BaseTrainer):
         self._grad_norm = grad_norm.detach()
 
     def optimizer_step(self):
-        # The scaler skips non-finite steps itself; otherwise skip them here.
+        # The scaler skips non-finite steps itself. If it is disabled, skip them here.
         if not self.scaler.is_enabled() and not torch.isfinite(self._grad_norm):
             print(f"⚠️ WARNING: grad norm is {self._grad_norm.item()}; skip this step")
             return
@@ -174,7 +181,7 @@ class GRPOTrainer(BaseTrainer):
         pass
 
     def ema_step(self):
-        """Step EMA every ema_update_interval steps, warming up its decay early on."""
+        """Update EMA every ema_update_interval steps, with a decay warmup."""
         if self.model.ema is None or (self.total_step + 1) % self.ema_update_interval:
             return
         decay = min((1 + self.total_step) / (10 + self.total_step), self.ema_decay)
@@ -183,19 +190,15 @@ class GRPOTrainer(BaseTrainer):
     # ----------------------------------------
     # Sampling.
     # ----------------------------------------
-    def sampler_epoch(self) -> int:
-        """Return the epoch that seeds the prompts of this epoch."""
-        return self.epoch
-
     @torch.no_grad()
     def sample_epoch(self) -> tuple[dict, dict]:
         """Sample one epoch of response groups, reward them, and compute advantages."""
         # 1. Roll out each batch and submit its rewards asynchronously.
         self.model.model.eval()
-        self.train_dataloader.batch_sampler.set_epoch(self.sampler_epoch())
+        self.train_dataloader.batch_sampler.set_epoch(self.epoch)
         batches, futures, all_prompts = [], [], []
         for prompts, metadatas in self.train_dataloader:
-            out = self.algorithm.rollout(prompts, self.epoch)
+            out = self.algorithm.rollout(prompts, self.epoch)  # customed
             future = self.executor.submit(
                 self.reward, out["responses"], prompts, metadatas, True
             )
@@ -211,24 +214,24 @@ class GRPOTrainer(BaseTrainer):
                 rewards[key] += list(value)
         rewards = {
             k: gather_tensor(torch.as_tensor(v, device=self.model.device).float())
-            for k, v in rewards.items()
+            for k, v in rewards.items() if k in self.reward.metrics
         }
         rewards = {k: v.cpu().numpy() for k, v in rewards.items()}
         gathered_prompts = [None] * dist.get_world_size()
         dist.all_gather_object(gathered_prompts, all_prompts)
         gathered_prompts = sum(gathered_prompts, [])
 
-        # 3. Advantages of this rank.
+        # 3. Compute the advantages of this rank.
         reward = rewards[self.reward.name]
-        advantages = self.algorithm.compute_advantages(gathered_prompts, reward)
+        advantages = self.algorithm.compute_advantages(gathered_prompts, reward)  # customed
         advantages = torch.as_tensor(advantages).reshape(dist.get_world_size(), -1)
         samples["advantages"] = advantages[dist.get_rank()].to(self.model.device)
 
-        # Headline reward metrics over the samples they apply to (-10 marks others).
+        # Get the main reward metrics over the samples that they apply to.
+        # A value of -10 marks the other samples.
         ratio, std_mean = zero_std_ratio(gathered_prompts, reward)
         metrics = {
             f"reward_{k}": float(np.mean(v[v != -10])) for k, v in rewards.items()
-            if k in self.reward.metrics
         }
         metrics.update({
             "zero_std_ratio": ratio,
@@ -238,7 +241,7 @@ class GRPOTrainer(BaseTrainer):
         return samples, metrics
 
     def filter_samples(self, samples: dict) -> dict:
-        """Drop zero-advantage samples, keeping a multiple of num_batches_per_epoch."""
+        """Drop zero-advantage samples, but keep a multiple of num_batches_per_epoch."""
         mask = samples["advantages"] != 0
         num_batches = self.num_batches_per_epoch
         true_count = mask.sum()
@@ -289,16 +292,19 @@ class GRPOTrainer(BaseTrainer):
                     self.clip_grad()
                     self.optimizer_step()
                     self.lr_scheduler_step()
-                    self.total_step += 1
                     self.step += 1
+                    self.total_step += 1
                     synced = True
 
-            # EMA steps after every batch with the current optimizer step count.
-            self.ema_step()
+            # Call ema_step after every batch, or after an optimizer step, with the
+            # current count of optimizer steps.
+            if self.ema_every_batch or synced:
+                self.ema_step()
             if not synced:
                 continue
 
-            # Update runtime state, save checkpoints, and log after each optimizer step.
+            # After each optimizer step, update the runtime state, save a checkpoint,
+            # and log the metrics.
             epoch_finished = self.step >= self.steps_per_epoch
             if epoch_finished:
                 self.epoch += 1
@@ -316,12 +322,15 @@ class GRPOTrainer(BaseTrainer):
             self.meters.start("step")
 
     def end_epoch(self) -> None:
-        """Run after the last optimizer step of an epoch, before its checkpoint is saved."""
+        """
+        Run after the last optimizer step of an epoch, before the trainer saves its
+        checkpoint.
+        """
         pass
 
     def run(self) -> None:
-        """Run training to max_epochs."""
-        # Load checkpoint and runtime state.
+        """Run the training until max_epochs."""
+        # Load the checkpoint and the runtime state.
         self.checkpoint_manager.load_ckpt(self)
         if self.step != 0:
             raise ValueError("❌ GRPO resumes only from end-of-epoch checkpoints")
@@ -331,12 +340,17 @@ class GRPOTrainer(BaseTrainer):
         if self.total_step == 0:
             self.checkpoint_manager.save_ckpt(self, epoch_finished=True)
 
+        # Start TensorBoard and the metric plotter on rank 0.
         self.tracker.open_writer()
         for _ in range(self.epoch, self.max_epochs):
             self.meters.start("epoch")
+            # train_epoch ends and restarts the step meter after each optimizer step.
             self.meters.start("step")
-            samples, rollout_metrics = self.sample_epoch()
-            self.train_epoch(samples, rollout_metrics)
+
+            with self.meters.count_flops("epoch"):
+                samples, rollout_metrics = self.sample_epoch()
+                self.train_epoch(samples, rollout_metrics)
+
             self.meters.end("epoch")
             self.meters.update_train_state(self.state_dict())
             self.update_log(epoch_finished=True)

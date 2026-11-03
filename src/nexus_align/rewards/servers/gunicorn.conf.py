@@ -1,7 +1,9 @@
-"""Gunicorn config of the reward servers: one worker per GPU of this node, on localhost.
+"""
+Gunicorn config of the reward servers: one worker per GPU of this node, on localhost.
 
-Follows reward-server's gunicorn.conf.py; the port and worker count come from the
-REWARD_SERVER_PORT and REWARD_SERVER_WORKERS environment variables.
+This config follows the gunicorn.conf.py of reward-server. The port and the worker
+count come from the REWARD_SERVER_PORT and REWARD_SERVER_WORKERS environment
+variables.
 """
 
 import os
@@ -11,19 +13,19 @@ USED_DEVICES = set()
 
 
 def pre_fork(server, worker):
-    # Runs on the server.
+    # This hook runs on the server.
     global USED_DEVICES
     worker.device_id = next(i for i in range(NUM_DEVICES) if i not in USED_DEVICES)
     USED_DEVICES.add(worker.device_id)
 
 
 def post_fork(server, worker):
-    # Runs on the worker.
+    # This hook runs on the worker.
     os.environ["CUDA_VISIBLE_DEVICES"] = str(worker.device_id)
 
 
 def child_exit(server, worker):
-    # Runs on the server.
+    # This hook runs on the server.
     global USED_DEVICES
     USED_DEVICES.remove(worker.device_id)
 

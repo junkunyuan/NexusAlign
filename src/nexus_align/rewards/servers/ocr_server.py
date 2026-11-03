@@ -1,6 +1,8 @@
-"""OCR reward server: PaddleOCR scored against the quoted prompt text, under gunicorn.
+"""
+OCR reward server: PaddleOCR scored against the quoted prompt text, under gunicorn.
 
-Runs in .venv-ocr, as PaddleOCR needs numpy<2; launch with scripts/tools/reward_server.sh.
+It runs in .venv-ocr, because PaddleOCR needs numpy<2. Launch it with
+scripts/tools/reward_server.sh.
 
 References:
     - Flow-GRPO:
@@ -8,13 +10,13 @@ References:
 """
 
 import os
-import pickle
-import traceback
 
 import numpy as np
-from flask import Flask, request
+from flask import Flask
 from Levenshtein import distance
 from paddleocr import PaddleOCR
+
+from common import pickle_route
 
 
 class OcrScorer:
@@ -38,7 +40,7 @@ class OcrScorer:
         for img, prompt in zip(images, prompts):
             try:
                 result = self.ocr.ocr(img, cls=False)
-                # Join the recognized lines, skipping zero-confidence ones.
+                # Join the recognized lines, but skip the lines with zero confidence.
                 recognized_text = ''.join(
                     [res[1][0] if res[1][1] > 0 else '' for res in result[0]]
                 ) if result[0] else ''
@@ -48,7 +50,7 @@ class OcrScorer:
                     dist = 0
                 else:
                     dist = distance(recognized_text, prompt)
-                # Many unrelated characters only cost the full length once.
+                # Many unrelated characters cost at most the full length.
                 if dist > len(prompt):
                     dist = len(prompt)
             except Exception as e:
@@ -59,19 +61,12 @@ class OcrScorer:
 
 
 def create_app(model_dir: str) -> Flask:
-    """Build the app; a POST of pickled {"images", "prompts"} returns {"scores"}."""
+    """Build the app. A POST of pickled {"images", "prompts"} returns {"scores"}."""
     scorer = OcrScorer(model_dir)
     app = Flask(__name__)
 
-    @app.route("/", methods=["POST"])
-    def inference():
-        try:
-            data = pickle.loads(request.get_data())
-            scores = scorer(data["images"], data["prompts"])
-            return pickle.dumps({"scores": scores}), 200
-        except Exception:
-            response = traceback.format_exc()
-            print(response)
-            return response.encode("utf-8"), 500
+    def inference(data):
+        return {"scores": scorer(data["images"], data["prompts"])}
 
+    pickle_route(app, "/", inference)
     return app

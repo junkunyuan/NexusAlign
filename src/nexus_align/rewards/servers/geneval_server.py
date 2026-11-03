@@ -1,8 +1,9 @@
-"""GenEval reward server: reward-server's GenEval app with local weights, under gunicorn.
+"""
+GenEval reward server: reward-server's GenEval app with local weights, under gunicorn.
 
-Runs in .venv-geneval (mmdet 2.x needs torch 2.1 and mmcv-full); launch with
-scripts/tools/reward_server.sh. The scoring code is reward-server's own, unmodified;
-only its weight paths are set here, and a /png route scores lossless images.
+It runs in .venv-geneval, because mmdet 2.x needs torch 2.1 and mmcv-full. Launch it
+with scripts/tools/reward_server.sh. The scoring code of reward-server is unchanged.
+This file only sets its weight paths and adds a /png route for lossless images.
 
 References:
     - Reward server code: https://github.com/yifan123/reward-server
@@ -11,13 +12,13 @@ References:
 """
 
 import sys
-import pickle
-import traceback
 from io import BytesIO
+
+from common import pickle_route
 
 
 def create_app(reward_server_dir: str, mmdet_config: str, ckpt_dir: str, clip_path: str):
-    """Build reward-server's app; run with reward_server_dir as the working dir."""
+    """Build reward-server's app. Its working directory must be reward_server_dir."""
     sys.path.insert(0, reward_server_dir)
 
     # pretrained="openai" in reward-server resolves to this local file, not the hub.
@@ -30,24 +31,17 @@ def create_app(reward_server_dir: str, mmdet_config: str, ckpt_dir: str, clip_pa
 
     import app_geneval
     from PIL import Image
-    from flask import request
     app = app_geneval.create_app()
 
-    @app.route("/png", methods=["POST"])
-    def inference_png():
+    def inference_png(data):
         """Score the exact pixels, as DiffusionNFT's in-process GenEval does."""
-        try:
-            data = pickle.loads(request.get_data())
-            images = [Image.open(BytesIO(d), formats=["png"]) for d in data["images"]]
-            outputs = app_geneval.INFERENCE_FN(
-                images, data["meta_datas"], data["only_strict"]
-            )
-            keys = ("scores", "rewards", "strict_rewards")
-            keys += ("group_rewards", "group_strict_rewards")
-            return pickle.dumps(dict(zip(keys, outputs))), 200
-        except Exception:
-            response = traceback.format_exc()
-            print(response)
-            return response.encode("utf-8"), 500
+        images = [Image.open(BytesIO(d), formats=["png"]) for d in data["images"]]
+        outputs = app_geneval.INFERENCE_FN(
+            images, data["meta_datas"], data["only_strict"]
+        )
+        keys = ("scores", "rewards", "strict_rewards")
+        keys += ("group_rewards", "group_strict_rewards")
+        return dict(zip(keys, outputs))
 
+    pickle_route(app, "/png", inference_png)
     return app

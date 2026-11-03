@@ -1,4 +1,15 @@
-"""Embedding components: patch and timestep embeddings."""
+"""
+Embedding components: patch and timestep embeddings.
+
+References:
+    - DiT:
+        - Paper: Scalable Diffusion Models with Transformers (ICCV 2023)
+        - Official code: https://github.com/facebookresearch/DiT
+            - models.py: TimestepEmbedder
+    - timm:
+        - Code: https://github.com/huggingface/pytorch-image-models
+            - timm/layers/patch_embed.py: PatchEmbed
+"""
 
 import math
 
@@ -61,15 +72,12 @@ class TimestepEmbedder(nn.Module):
         self.frequency_embedding_size = frequency_embedding_size
 
     @staticmethod
-    def positional_embedding(
-        t: torch.Tensor, dim: int, max_period: int = 10000
-    ) -> torch.Tensor:
+    def positional_embedding(t: torch.Tensor, dim: int) -> torch.Tensor:
         """
         Create sinusoidal timestep embeddings.
 
-        t: (B,) a batch of timestep tensor (may be fractional)
-        dim: dimension D of the output
-        max_period: controls the minimum frequency of the embeddings
+        t: (B,) a batch of timesteps, which can be fractional
+        dim: the even dimension D of the output
 
         return: a (B, D) tensor of positional embeddings.
 
@@ -77,20 +85,16 @@ class TimestepEmbedder(nn.Module):
         """
         half = dim // 2
         freqs = torch.exp(
-            -math.log(max_period)
+            -math.log(10000)
             * torch.arange(start=0, end=half, dtype=torch.float32)
             / half
         ).to(device=t.device)
         args = t[:, None].float() * freqs[None]
-        embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
-        if dim % 2:
-            zeros = torch.zeros_like(embedding[:, :1])
-            embedding = torch.cat([embedding, zeros], dim=-1)
-        return embedding
+        return torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
 
     def forward(self, t: torch.Tensor) -> torch.Tensor:
         """
-        t: (B,) a batch of timestep tensor
+        t: (B,) a batch of timesteps
         t_emb: (B, D) a batch of timestep embeddings
         """
         t_freq = self.positional_embedding(t, dim=self.frequency_embedding_size)

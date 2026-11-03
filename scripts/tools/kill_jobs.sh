@@ -3,19 +3,20 @@
 # Kill Running Jobs.
 # ================================================================================
 # Usage:
-#   bash scripts/tools/kill_jobs.sh      # list matching processes, confirm, then kill
+#   bash scripts/tools/kill_jobs.sh      # list the processes, confirm, then kill them
 #   bash scripts/tools/kill_jobs.sh -y   # kill without confirmation
 #   bash scripts/tools/kill_jobs.sh -n   # dry run: list only
-# Only nexus_align train/eval processes and their launch scripts from this repo are
-# targeted (matched by command line and working directory), together with their child
-# processes such as torchrun workers, dataloader workers, wandb services, and setup
-# steps (uv installs, asset downloads). Other GPU jobs are untouched.
+# The script kills only the nexus_align training and evaluation processes of this repo
+# and their launch scripts. It matches them by command line and working directory. It
+# also kills their child processes, such as torchrun workers, dataloader workers, wandb
+# services, and setup steps (uv installs, asset downloads). It does not touch other GPU
+# jobs.
 # ================================================================================
 
 set -e
 PROJECT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 PATTERN="nexus_align/cli/main.py|nexus_align\.cli\.main|bin/nexus-align"
-PATTERN+="|scripts/reproduce/[a-z0-9_]+_(train|eval)\.sh"  # launchers during setup
+PATTERN+="|scripts/reproduce/[a-z0-9_]+_(train|eval)\.sh"  # launch scripts during setup
 GRACE=20  # seconds to wait after SIGTERM before SIGKILL
 
 YES=false
@@ -29,9 +30,9 @@ for arg in "$@"; do
 done
 
 # --------------------------------------------------------------------------------
-# Find root processes: match the command line and this repo as the working directory.
+# Find the root processes by the command line and this repo as the working directory.
 # --------------------------------------------------------------------------------
-ancestors() {  # PIDs of this script and its parent shells, never to be killed
+ancestors() {  # PIDs of this script and its parent shells, which it must never kill
   local pid=$$
   while [[ "$pid" -gt 1 ]]; do
     echo "$pid"
@@ -52,7 +53,7 @@ if [[ ${#ROOTS[@]} -eq 0 ]]; then
   exit 0
 fi
 
-# Collect the full process trees so no worker survives.
+# Collect the full process trees, so that no worker survives.
 descendants() {
   for child in $(pgrep -P "$1" || true); do
     echo "$child"
@@ -78,7 +79,7 @@ if ! $YES; then
 fi
 
 # --------------------------------------------------------------------------------
-# Kill: SIGTERM first so torchrun shuts its workers down, then SIGKILL survivors.
+# Kill: send SIGTERM first so that torchrun stops its workers, then SIGKILL the rest.
 # --------------------------------------------------------------------------------
 alive() {
   for pid in "${ALL[@]}"; do kill -0 "$pid" 2>/dev/null && echo "$pid" || true; done
@@ -100,7 +101,7 @@ if [[ ${#SURVIVORS[@]} -gt 0 ]]; then
 fi
 
 # --------------------------------------------------------------------------------
-# Verify: no matching processes left and GPU memory released.
+# Verify: no matched processes remain, and the GPU memory is free.
 # --------------------------------------------------------------------------------
 if [[ -n "$(alive)" ]]; then
   echo "❌ Failed to kill: $(alive | tr '\n' ' ')"

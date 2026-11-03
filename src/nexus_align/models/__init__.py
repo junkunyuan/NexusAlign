@@ -1,4 +1,4 @@
-"""Model registry: register built-in model factories by name on import."""
+"""Model registry: register built-in model classes by name on import."""
 
 from nexus_align.registry import registry
 from nexus_align.models.meanflow_dit import MeanFlowDiTModelNames, MeanFlowDiTModel

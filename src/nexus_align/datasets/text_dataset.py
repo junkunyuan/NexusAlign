@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 class TextDataset(Dataset):
     """
-    Texts of one split, read from <path>/<file> with {split} filled in.
+    Texts of one split from <path>/<file>, where the split name replaces {split}.
 
     - A .txt file holds one text per line, with empty metadata.
     - A .jsonl file holds one metadata dict per line, with the text under text_key.

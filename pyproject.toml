@@ -1,68 +1,73 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexus-align"
-version = "0.1.0-a1"
-description = "NexusAlign: A Unified Research Framework for Tracking, Reproducing, and Extending Foundation Model Algorithms."
-readme = { file = "README.md", content-type = "text/markdown" }
-license = { file = "LICENSE" }
+version = "0.1.0a1"
+description = "NexusAlign: A Unified Research Framework for Reproducing and Extending Foundation Model Algorithms."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
-authors = [
-  { name = "Junkun Yuan" }
-]
-keywords = [
-    "foundation models",
-    "diffusion models",
-    "image generation",
-    "flow matching"
-]
+authors = [{ name = "Junkun Yuan" }]
+keywords = ["foundation models", "diffusion models", "image generation", "flow matching"]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Operating System :: OS Independent"
+    "Operating System :: POSIX :: Linux",
 ]
-
 dependencies = [
-    # Core dependencies
+    # PyTorch (from the cu126 index) and FlashAttention-3 kernels for Hopper GPUs
     "torch==2.12.0+cu126",
     "torchvision==0.27.0+cu126",
+    "flash-attn-3==3.0.1",
+    # Models
     "diffusers>=0.40",
-    "accelerate>=1.13",
-    # For configs
+    "transformers>=5.19.0",
+    "peft>=0.21.2",
+    "accelerate>=1.13",  # fast weight loading in diffusers and transformers
+    # Configs
     "hydra-core>=1.3.0",
     "omegaconf>=2.3",
     "PyYAML>=6.0",
-    # For data
+    # Data and assets
     "numpy>=2.4",
     "pyarrow>=24.0",
     "Pillow>=12.0",
     "safetensors>=0.7",
+    "huggingface-hub>=1.33",
+    # Evaluation and reward servers
     "torch-fidelity>=0.4",
-    # For logs
+    "requests>=2.34",
+    # Logging and monitoring
     "tensorboard>=2.20",
     "wandb>=0.26",
-    # For display
     "matplotlib>=3.10",
     "tqdm>=4.67",
     "psutil>=7.2",
     "nvidia-ml-py>=13.0",
-    "transformers>=5.19.0",
-    "peft>=0.21.2",
-    # FlashAttention-3 kernels for Hopper GPUs
-    "flash-attn-3==3.0.1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/junkunyuan/NexusAlign"
+Repository = "https://github.com/junkunyuan/NexusAlign"
+
+[project.scripts]
+nexus-align = "nexus_align.cli.main:main"
+
+[dependency-groups]
+dev = ["ruff"]
+
+[tool.setuptools.package-data]
+nexus_align = ["configs/**/*.yaml"]
+
 [tool.uv]
-environments = [
-  "sys_platform == 'linux'",
-]
+environments = ["sys_platform == 'linux'"]
 
 [[tool.uv.index]]
 name = "pytorch-cu126"
@@ -70,34 +75,9 @@ url = "https://download.pytorch.org/whl/cu126"
 explicit = true
 
 [tool.uv.sources]
-torch = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
-]
-torchvision = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
-]
-flash-attn-3 = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux'" },
-]
-[project.urls]
-Homepage = "https://github.com/junkunyuan/NexusAlign"
-Repository = "https://github.com/junkunyuan/NexusAlign"
-
-[project.optional-dependencies]
-dev = [
-    "ruff",
-    "pytest",
-    "ipdb"
-]
-
-[project.scripts]
-nexus-align = "nexus_align.cli.main:main"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
+torch = { index = "pytorch-cu126" }
+torchvision = { index = "pytorch-cu126" }
+flash-attn-3 = { index = "pytorch-cu126" }
 
 [tool.ruff]
 line-length = 88

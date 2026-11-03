@@ -16,7 +16,7 @@ from nexus_align.engine.checkpoint import CheckpointManager
 from nexus_align.algorithms.base_algorithm import BaseAlgorithm
 
 
-# Configs that only select what to sweep or what to keep, not how the metrics are computed.
+# Configs that select only what to sweep or keep, not how to calculate the metrics.
 SWEEP_KEYS = ("ckpts", "dry_run", "new_run", "save_images", "num_workers", "compile")
 
 CKPT_RE = re.compile(r"(?:total_step_)?(\d+)$")
@@ -40,11 +40,12 @@ def parse_train_state(ckpt: str) -> dict[str, int | None]:
 
 class BaseEvaluator(ABC):
     """
-    Base evaluator: owns the checkpoint sweep and the metric aggregation.
+    Base evaluator that does the checkpoint sweep and aggregates the metrics.
 
-    - __init__ prepares paths and the checkpoint manager from evaluator config.
+    - __init__ prepares the paths, the checkpoint manager, and the evaluated weights
+      from the evaluator config.
     - run() evaluates every checkpoint without metrics yet, then refreshes the
-      summary JSON file and the evaluation curve after each new result.
+      summary JSON file and the evaluation curves after each new result.
     - Subclasses provide the per-checkpoint evaluation.
     """
 
@@ -55,30 +56,38 @@ class BaseEvaluator(ABC):
         algorithm: BaseAlgorithm = None,
         log_dir: str = "logs/temp",
     ) -> None:
-        # Get model, algorithm, and evaluation config.
+        # Get the model, the algorithm, and the evaluation config.
         self.model = model
         self.algorithm = algorithm
         for key, value in cfg_evaluator.items():
             setattr(self, key, value)
 
-        # Get checkpoint dir of the evaluated experiment; eval_dir is resolved in prepare_env.
+        # Get the checkpoint directory of the experiment. prepare_env sets eval_dir.
         self.ckpt_dir = os.path.join(log_dir, "checkpoints")
         if dist.get_rank() == 0:
-            self.check_config(cfg_evaluator)
+            config_path = os.path.join(self.eval_dir, "config_eval.yaml")
+            with open(config_path, "r", encoding="utf-8") as f:
+                saved_config = yaml.safe_load(f)["evaluator"]
+            config = OmegaConf.to_container(cfg_evaluator, resolve=True)
+            self.check_config(saved_config, config)
         dist.barrier()
 
-        # Build checkpoint manager; only the evaluated weights are loaded.
+        # Build the checkpoint manager, which loads only the evaluated weights.
         self.checkpoint_manager = CheckpointManager(save_ckpt_dir=self.ckpt_dir)
         self.load_ckpt_keys = [self.model_key, "algorithm"]
 
-    def check_config(self, cfg_evaluator: Mapping) -> None:
-        """Warn when a reused eval dir was built with a different evaluator config."""
-        config_path = os.path.join(self.eval_dir, "config_eval.yaml")
-        if not os.path.exists(config_path):
-            return
-        with open(config_path, "r", encoding="utf-8") as f:
-            saved_config = (yaml.safe_load(f) or {}).get("evaluator", {})
-        config = OmegaConf.to_container(cfg_evaluator, resolve=True)
+        # Sample with the configured weights. The algorithm runs the sampling loop.
+        self.world_size = dist.get_world_size()
+        self.rank = dist.get_rank()
+        self.device = model.device
+        self.eval_model = getattr(model, self.model_key)
+        assert self.eval_model is not None, (
+            f"❌ Model has no <{self.model_key}> weights to evaluate"
+        )
+        self.eval_model.eval()
+
+    def check_config(self, saved_config: dict, config: dict) -> None:
+        """Warn if a reused evaluation directory used a different evaluator config."""
         changed = [k for k, v in config.items()
                    if k not in SWEEP_KEYS and saved_config.get(k) != v]
         if changed:
@@ -100,13 +109,16 @@ class BaseEvaluator(ABC):
             )
         dist.barrier()
 
-    @abstractmethod
+    def ckpt_eval_dir(self, ckpt: str) -> str:
+        """Return the evaluation directory of one checkpoint."""
+        return os.path.join(self.eval_dir, os.path.basename(ckpt))
+
     def metrics_path(self, ckpt: str) -> str:
         """Return the metrics file of one checkpoint."""
-        ...
+        return os.path.join(self.ckpt_eval_dir(ckpt), "metrics.json")
 
     def is_evaluated(self, ckpt: str) -> bool:
-        """Return True when the checkpoint needs no evaluation; its metrics file exists."""
+        """Return True if the checkpoint has a metrics file, so it needs no evaluation."""
         return os.path.exists(self.metrics_path(ckpt))
 
     @abstractmethod

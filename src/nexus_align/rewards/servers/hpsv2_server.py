@@ -1,7 +1,8 @@
-"""HPSv2.1 reward server: HPS v2.1 CLIP-H human preference score, under gunicorn.
+"""
+HPSv2.1 reward server: human preference score with CLIP-H, under gunicorn.
 
-Runs in .venv-hpsv2, as the open_clip copy of HPSv2 needs protobuf<4; launch with
-scripts/tools/reward_server.sh.
+It runs in .venv-hpsv2, because the open_clip copy of HPSv2 needs protobuf<4.
+Launch it with scripts/tools/reward_server.sh.
 
 References:
     - HPSv2:
@@ -11,15 +12,14 @@ References:
           (flow_grpo/hpsv2_scorer.py)
 """
 
-import pickle
-import traceback
-
 import numpy as np
 import torch
 import torchvision.transforms.functional as F
-from flask import Flask, request
+from flask import Flask
 from torchvision.transforms import InterpolationMode
 from hpsv2.src.open_clip import create_model, get_tokenizer
+
+from common import pickle_route
 
 
 def preprocess(images: torch.Tensor, image_size: int, mean, std) -> torch.Tensor:
@@ -37,8 +37,8 @@ def preprocess(images: torch.Tensor, image_size: int, mean, std) -> torch.Tensor
 
 
 def create_app(checkpoint_path: str) -> Flask:
-    """Build the app; a POST of pickled {"images", "prompts"} returns {"scores"}."""
-    # The HPS checkpoint holds every weight, so the CLIP-H weights are not loaded first.
+    """Build the app. A POST of pickled {"images", "prompts"} returns {"scores"}."""
+    # The HPS checkpoint holds all weights, so do not load the CLIP-H weights first.
     model = create_model(
         "ViT-H-14",
         precision="amp",
@@ -60,21 +60,15 @@ def create_app(checkpoint_path: str) -> Flask:
     mean, std = model.visual.image_mean, model.visual.image_std
     app = Flask(__name__)
 
-    @app.route("/", methods=["POST"])
-    def inference():
-        try:
-            data = pickle.loads(request.get_data())
-            images = torch.from_numpy(np.ascontiguousarray(data["images"])).cuda()
-            images = images.permute(0, 3, 1, 2).float() / 255  # NHWC -> NCHW
-            with torch.no_grad():
-                image = preprocess(images, image_size, mean, std)
-                text = tokenizer(data["prompts"]).cuda()
-                outputs = model(image, text)
-                logits = outputs["image_features"] @ outputs["text_features"].T
-            return pickle.dumps({"scores": torch.diagonal(logits).tolist()}), 200
-        except Exception:
-            response = traceback.format_exc()
-            print(response)
-            return response.encode("utf-8"), 500
+    def inference(data):
+        images = torch.from_numpy(np.ascontiguousarray(data["images"])).cuda()
+        images = images.permute(0, 3, 1, 2).float() / 255  # NHWC -> NCHW
+        with torch.no_grad():
+            image = preprocess(images, image_size, mean, std)
+            text = tokenizer(data["prompts"]).cuda()
+            outputs = model(image, text)
+            logits = outputs["image_features"] @ outputs["text_features"].T
+        return {"scores": torch.diagonal(logits).tolist()}
 
+    pickle_route(app, "/", inference)
     return app

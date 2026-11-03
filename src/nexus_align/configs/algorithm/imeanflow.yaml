@@ -13,11 +13,11 @@ ratio_r_not_equal_t: 0.5  # fraction of samples with r != t
 # --------------------------------------------------------------------------------
 # CFG configs.
 # --------------------------------------------------------------------------------
-cfg_prob: 0.1  # CFG label dropout prob
-cfg_omega_max: 8.0  # omega is sampled from [1, cfg_omega_max]
-cfg_beta: 1.0  # omega ~ p(omega) ∝ omega^-beta=
-cfg_min_t_range: [0.0, 0.5]  # min timestep to apply CFG; t_min ~ U(range)
-cfg_max_t_range: [0.5, 1.0]  # max timestep to apply CFG; t_max ~ U(range)
+cfg_prob: 0.1  # probability to drop the class label for CFG
+cfg_omega_max: 8.0  # sample omega from [1, cfg_omega_max]
+cfg_beta: 1.0  # omega ~ p(omega) ∝ omega^-beta
+cfg_min_t_range: [0.0, 0.5]  # lowest timestep for CFG; t_min ~ U(range)
+cfg_max_t_range: [0.5, 1.0]  # highest timestep for CFG; t_max ~ U(range)
 
 # --------------------------------------------------------------------------------
 # Loss weighting configs.

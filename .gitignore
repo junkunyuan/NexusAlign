@@ -1,12 +1,17 @@
+# Python
 __pycache__/
 *.py[cod]
-*.egg-info/
-build/
-dist/
+
+# Packaging
 .venv*
+*.egg-info/
+
+# Tool caches
 .ruff_cache/
-.pytest_cache/
+
+# Run outputs
 /logs
-/data_and_model
 wandb/
-.env
+
+# Datasets and checkpoints
+/data_and_model

@@ -1,4 +1,4 @@
-"""FID-IS evaluator: distributed sampling followed by FID/IS on the generated images."""
+"""FID-IS evaluator: distributed sampling, then the FID and IS of the images."""
 
 import os
 import json
@@ -19,10 +19,11 @@ from nexus_align.models.base_model import BaseModel
 from nexus_align.models.components.embedding import to_2tuple
 from nexus_align.evaluators.base_evaluator import BaseEvaluator
 from nexus_align.algorithms.base_algorithm import BaseAlgorithm
+from nexus_align.engine.distributed import broadcast_from_rank0, gather_tensor
 from nexus_align.eval.metrics import build_feature_extractor, features_to_metrics
 
 
-# Level 1 encodes about 3x faster than the default 6 and grows the files by only ~4%.
+# Level 1 encodes about 3x faster than the default 6, with files only about 4% larger.
 PNG_COMPRESS_LEVEL = 1
 
 
@@ -52,38 +53,26 @@ class FIDISEvaluator(BaseEvaluator):
             algorithm=algorithm,
             log_dir=log_dir
         )
-        self.world_size = dist.get_world_size()
-        self.rank = dist.get_rank()
-        self.device = model.device
-
         # Sampling noise must differ across ranks, so seed each rank differently.
         set_seed(self.global_seed + self.rank)
 
-        # Sample with the configured weights; the algorithm owns the sampling loop.
-        self.eval_model = getattr(model, self.model_key)
-        assert self.eval_model is not None, (
-            f"❌ Model has no <{self.model_key}> weights to evaluate"
-        )
-        self.eval_model.eval()
         if self.compile:
             self.eval_model = torch.compile(self.eval_model)
         self.algorithm.prepare(self.eval_model, self.device)
 
-        # Get VAE decoder and latent normalization tensors.
+        # Get the VAE decoder and the latent normalization tensors.
         self.vae = AutoencoderKL.from_pretrained(self.vae_path).to(self.device)
         if self.compile:
             self.vae.decoder = torch.compile(self.vae.decoder)
         self.latents_scale = torch.full((1, 4, 1, 1), self.vae_scale, device=self.device)
-        self.latents_bias = torch.full((1, 4, 1, 1), self.vae_bias, device=self.device)
+        self.latents_mean = torch.tensor(self.vae_mean).view(-1, 1, 1).to(self.device)
+        self.latents_std = torch.tensor(self.vae_std).view(-1, 1, 1).to(self.device)
 
         # Round the sample count up to a whole distributed batch.
         self.global_batch_size = self.per_proc_batch_size * self.world_size
-        self.total_samples = int(
-            math.ceil(self.num_fid_samples / self.global_batch_size) * self.global_batch_size
-        )
-        self.iterations = self.total_samples // self.global_batch_size
+        self.iterations = math.ceil(self.num_fid_samples / self.global_batch_size)
 
-        # Check the metric requirements once, before any checkpoint is sampled.
+        # Check the metric requirements once, before sampling any checkpoint.
         if self.resolution != 256:
             raise NotImplementedError(f"❌ Unsupported evaluation resolution: {self.resolution}")
         assert os.path.exists(self.fid_stats), f"❌ FID statistics not found: {self.fid_stats}"
@@ -91,16 +80,13 @@ class FIDISEvaluator(BaseEvaluator):
         # Every rank scores its own shard of the samples.
         self.feature_extractor = build_feature_extractor(self.device, self.inception_weights)
 
-    def metrics_path(self, ckpt: str) -> str:
-        return os.path.join(self.eval_dir, os.path.basename(ckpt), "metrics.json")
-
     def reuse_saved_images(self, img_dir: str) -> bool:
-        """Return True when the folder already holds exactly the expected images."""
-        sample_ready = [False]
+        """Return True if the directory already holds exactly the expected images."""
+        sample_ready = False
         if self.rank == 0:
             img_paths = glob.glob(os.path.join(img_dir, "*.png"))
-            sample_ready[0] = len(img_paths) == self.num_fid_samples
-            if sample_ready[0]:
+            sample_ready = len(img_paths) == self.num_fid_samples
+            if sample_ready:
                 print(f"✅ Found {len(img_paths)} images in <{img_dir}>, skipping sampling")
             elif img_paths:
                 print(
@@ -109,18 +95,19 @@ class FIDISEvaluator(BaseEvaluator):
                 )
                 for path in img_paths:
                     os.remove(path)
-        dist.broadcast_object_list(sample_ready, src=0)
+        sample_ready = broadcast_from_rank0(sample_ready)
         dist.barrier()
-        return sample_ready[0]
+        return sample_ready
 
     @torch.no_grad()
     def sample_images(self, img_dir: str) -> tuple[torch.Tensor, ...] | None:
-        """Generate images in parallel, each rank handling its own shard of indices.
-
-        With save_images the shard is written as PNG files by a thread pool and
-        nothing is returned; otherwise its Inception features are returned instead.
         """
-        # Skip sampling only when the folder holds exactly the expected images.
+        Generate images in parallel. Each rank samples its own shard of indices.
+
+        If save_images is true, a thread pool writes the shard as PNG files, and this
+        method returns None. If not, it returns the Inception features of the shard.
+        """
+        # Skip sampling only if the directory holds exactly the expected images.
         if self.save_images and self.reuse_saved_images(img_dir):
             return None
 
@@ -133,13 +120,19 @@ class FIDISEvaluator(BaseEvaluator):
         total = 0
         with ThreadPoolExecutor(self.num_workers) as pool:
             for _ in range(self.iterations):
+                index = offsets + self.rank + total  # global sample indices
                 z = torch.randn(
                     self.per_proc_batch_size, self.eval_model.in_channels,
                     latent_h, latent_w, device=self.device,
                 )
-                y = torch.randint(
-                    0, self.eval_model.num_classes, (self.per_proc_batch_size,), device=self.device
-                )
+                if self.balanced_labels:
+                    # 50 per class for 50k samples, as in iMeanFlow's evaluate.py.
+                    y = index % self.eval_model.num_classes
+                else:
+                    y = torch.randint(
+                        0, self.eval_model.num_classes, (self.per_proc_batch_size,),
+                        device=self.device,
+                    )
                 samples = self.algorithm.sample({
                     "latents": z,
                     "labels": y,
@@ -148,10 +141,11 @@ class FIDISEvaluator(BaseEvaluator):
                     "cfg_max_t": self.cfg_max_t,
                     "num_steps": self.num_steps,
                 }).to(torch.float32)
-                images = self.vae.decode((samples - self.latents_bias) / self.latents_scale).sample
+                latents = samples * self.latents_std + self.latents_mean
+                images = self.vae.decode(latents / self.latents_scale).sample
                 images = torch.clamp(127.5 * images + 128.0, 0, 255)  # +128 so uint8 truncation rounds
                 if self.save_images:
-                    # Encoding runs in the pool, overlapping with the next sampled batch.
+                    # The pool encodes the images during the sampling of the next batch.
                     array = images.permute(0, 2, 3, 1).to("cpu", dtype=torch.uint8).numpy()
                     for i, image in enumerate(array):
                         index = i * self.world_size + self.rank + total
@@ -162,10 +156,10 @@ class FIDISEvaluator(BaseEvaluator):
                     f2048, flogits = self.feature_extractor(images.to(torch.uint8))
                     feats_2048.append(f2048)
                     feats_logits.append(flogits)
-                    indices.append(offsets + self.rank + total)
+                    indices.append(index)
                 total += self.global_batch_size
                 pbar.update(1)
-            for future in futures:  # surface any error raised while writing the files
+            for future in futures:  # raise any error of the PNG writer threads
                 future.result()
         pbar.close()
 
@@ -175,14 +169,14 @@ class FIDISEvaluator(BaseEvaluator):
 
     @torch.no_grad()
     def extract_saved_features(self, img_dir: str) -> tuple[torch.Tensor, ...]:
-        """Read the saved images, one strided shard per rank, and score them with Inception."""
+        """Read one strided shard of saved images per rank and get their Inception features."""
         img_paths = sorted(glob.glob(os.path.join(img_dir, "*.png")))
         assert len(img_paths) == self.num_fid_samples, (
             f"❌ Found {len(img_paths)}/{self.num_fid_samples} images in <{img_dir}>"
         )
 
-        # Pad the shortest shards so every rank gathers the same number of features;
-        # the padding indices are out of range and get dropped after the gather.
+        # Pad the shortest shards so every rank gathers the same number of features.
+        # The padding indices are out of range, so compute_metrics drops them.
         shard_paths = img_paths[self.rank::self.world_size]
         shard_indices = list(range(self.rank, len(img_paths), self.world_size))
         padding = math.ceil(len(img_paths) / self.world_size) - len(shard_paths)
@@ -211,26 +205,19 @@ class FIDISEvaluator(BaseEvaluator):
         with open(metrics_file, "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=4)
 
-        fid = metrics.get("frechet_inception_distance")
-        is_mean = metrics.get("inception_score_mean")
-        is_std = metrics.get("inception_score_std")
+        fid = metrics["frechet_inception_distance"]
+        is_mean = metrics["inception_score_mean"]
+        is_std = metrics["inception_score_std"]
         print(f"📊 FID: {fid:.2f}  Inception Score: {is_mean:.2f} ± {is_std:.2f}")
         print(f"💾 Saved metrics to <{metrics_file}>")
 
     def compute_metrics(self, features: tuple, metrics_file: str) -> None:
-        """Gather the Inception features scored by every rank and reduce them on rank 0."""
-        gathered = []
-        for tensor in features:
-            buffer = torch.empty(
-                (self.world_size * tensor.shape[0], *tensor.shape[1:]),
-                dtype=tensor.dtype, device=self.device,
-            )
-            dist.all_gather_into_tensor(buffer, tensor.contiguous())
-            gathered.append(buffer)
+        """Gather the Inception features of all ranks and get the metrics on rank 0."""
+        gathered = [gather_tensor(tensor) for tensor in features]
         if self.rank != 0:
             return
 
-        # Drop the padding samples and restore the order the saved PNG files would have.
+        # Drop the padding and sort the rest in the order of the saved PNG files.
         feats_2048, feats_logits, indices = (buffer.cpu() for buffer in gathered)
         order = torch.argsort(indices)
         order = order[indices[order] < self.num_fid_samples]
@@ -238,8 +225,8 @@ class FIDISEvaluator(BaseEvaluator):
         self.save_metrics(metrics, metrics_file)
 
     def evaluate(self, ckpt: str) -> None:
-        """Sample images from one checkpoint, then compute the metrics."""
-        sample_dir = os.path.join(self.eval_dir, os.path.basename(ckpt))
+        """Sample images from one checkpoint, then calculate the metrics."""
+        sample_dir = self.ckpt_eval_dir(ckpt)
         img_dir = os.path.join(sample_dir, "img_dir")
         if self.rank == 0:
             os.makedirs(img_dir if self.save_images else sample_dir, exist_ok=True)

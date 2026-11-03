@@ -1,4 +1,4 @@
-"""Metric tracking: scalar logging to Tensorboard and wandb."""
+"""Metric tracking: scalars to TensorBoard and wandb, results.jsonl, and figures."""
 
 import os
 import json
@@ -10,23 +10,21 @@ from torch.utils.tensorboard import SummaryWriter
 from nexus_align.engine.plotter import MetricPlotter
 
 
-def init_wandb(**wandb_init_params) -> bool:
-    """Initialize wandb on rank 0; init_params are forwarded to wandb.init."""
+def init_wandb(**wandb_init_params) -> None:
+    """Initialize wandb on rank 0 and pass wandb_init_params to wandb.init."""
     if dist.get_rank() == 0 and wandb_init_params["mode"] != "disabled":
         wandb.init(**wandb_init_params)
-        wandb.define_metric("total_step")
         wandb.define_metric("epoch")
-        wandb.define_metric("total_step/*", step_metric="total_step")
+        wandb.define_metric("total_step")
         wandb.define_metric("epoch/*", step_metric="epoch")
+        wandb.define_metric("total_step/*", step_metric="total_step")
         print(f"📌 Wandb initialized ({wandb_init_params['mode']} mode)")
     dist.barrier()
-
-    return wandb.run is not None
 
 
 class TrainingTracker:
     """
-    Rank-0 training metric tracker for tensorboard and wandb.
+    Training metric tracker on rank 0 for TensorBoard and wandb.
 
     - Logs scalars to TensorBoard when a writer is available.
     - Logs scalars to wandb when wandb is initialized.
@@ -47,7 +45,7 @@ class TrainingTracker:
         self.plotter = MetricPlotter(log_dir, interval=plot_every_n_seconds)
 
     def open_writer(self) -> None:
-        """Open the TensorBoard writer (rank 0 only)."""
+        """Open the TensorBoard writer and start the metric plotter (rank 0 only)."""
         if dist.get_rank() == 0:
             if self.log_tensorboard:
                 tb_dir = os.path.join(self.log_dir, "tensorboard")
@@ -72,11 +70,11 @@ class TrainingTracker:
         self,
         name: str,
         value: float,
-        total_step: int | None = None,
         epoch: int | None = None,
+        total_step: int | None = None,
     ) -> None:
-        """Track one metric against the total_step and/or epoch x-axis."""
-        x_axes = {"total_step": total_step, "epoch": epoch}
+        """Track one metric against the epoch x-axis, the total_step x-axis, or both."""
+        x_axes = {"epoch": epoch, "total_step": total_step}
         for axis, x in x_axes.items():
             if x is None:
                 continue
@@ -86,32 +84,13 @@ class TrainingTracker:
             if wandb.run is not None:
                 wandb.log({key: value, axis: x})
 
-    def track_all(
-        self,
-        metrics: dict,
-        total_step: int | None = None,
-        epoch: int | None = None,
-    ) -> None:
-        """Track every metric in the dict against the total_step and/or epoch x-axis."""
-        for name, value in metrics.items():
-            self.track(name, value, total_step=total_step, epoch=epoch)
-
-    def save_metrics(self, metrics: dict) -> None:
-        """Append the latest metrics to a JSONL file."""
-        if dist.get_rank() != 0:
-            return
-        with open(self.save_result_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(metrics, ensure_ascii=False) + "\n")
-
     def log_all_meters(self, meters, epoch_finished: bool = False) -> None:
-        """Track all meters, print a summary, and append JSONL."""
-        metrics = meters.latest_metrics()
-        self.track_all(
-            metrics,
-            epoch=meters.epoch if epoch_finished else None,
-            total_step=None if epoch_finished else meters.total_step
-        )
-        # A step log at step 0 ends an epoch; the epoch log right after prints it.
+        """Track all meters, print a summary, and append a record to results.jsonl."""
+        epoch = meters.epoch if epoch_finished else None
+        total_step = None if epoch_finished else meters.total_step
+        for name, value in meters.latest_metrics().items():
+            self.track(name, value, epoch=epoch, total_step=total_step)
+        # A step log at step 0 ends an epoch. The epoch log that follows prints it.
         if not epoch_finished and meters.step == 0:
             return
         record = {
@@ -123,4 +102,5 @@ class TrainingTracker:
         if dist.get_rank() == 0:
             print(meters.info(epoch_finished=epoch_finished))
             self.plotter.update(record)
-        self.save_metrics(record)
+            with open(self.save_result_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")

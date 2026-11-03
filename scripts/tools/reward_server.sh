@@ -6,10 +6,10 @@
 #     bash scripts/tools/reward_server.sh <name>        # start on this node
 #     bash scripts/tools/reward_server.sh <name> stop   # stop on this node
 # where <name> is ocr, geneval, deqa, hpsv2, imagereward, hpsv3, or unifiedreward.
-# A reward model whose dependencies conflict with training runs in its own venv
-# (.venv-<name>, built on first use) behind gunicorn on 127.0.0.1, one server per node;
-# unifiedreward runs in sglang instead, as Flow-GRPO does.
-# Start returns once the server answers, or fails within TIMEOUT seconds.
+# If the dependencies of a reward model conflict with the training, the model runs in
+# its own venv (.venv-<name>, built at the first start) behind gunicorn on 127.0.0.1,
+# with one server per node. unifiedreward runs in sglang instead, as Flow-GRPO does.
+# Start returns when the server answers, or fails within TIMEOUT seconds.
 # ================================================================================
 
 set -e
@@ -39,8 +39,8 @@ PID_FILE="${LOG_DIR}/${NAME}-$(hostname).pid"
 URL="http://127.0.0.1:${PORT}"
 mkdir -p "$LOG_DIR"
 
-is_up() {  # a GET on the POST-only route returns 405 once a worker serves requests
-  if [[ "$NAME" == "unifiedreward" ]]; then  # sglang logs this once its warmup passes
+is_up() {  # a GET on the POST-only route returns 405 when a worker serves requests
+  if [[ "$NAME" == "unifiedreward" ]]; then  # sglang logs this after its warmup passes
     [[ "$(curl -s --noproxy '*' -o /dev/null -w '%{http_code}' --max-time 5 "$URL/health")" == "200" ]] \
       && grep -q "ready to roll" "$LOG"
   else
@@ -52,8 +52,9 @@ is_up() {  # a GET on the POST-only route returns 405 once a worker serves reque
 # Stop.
 # --------------------------------------------------------------------------------
 if [[ "$ACTION" == "stop" ]]; then
-  # sglang leads its own process group, so its workers stop with it; it can hang while
-  # draining requests, so the group is killed if it outlives the grace period.
+  # sglang leads its own process group, so its workers stop with it. sglang can hang
+  # while it drains requests, so the script kills the group if it outlives the grace
+  # period.
   if [[ -f "$PID_FILE" ]]; then
     PID=$(cat "$PID_FILE")
     if kill -- "-$PID" 2>/dev/null || kill "$PID" 2>/dev/null; then
@@ -72,13 +73,13 @@ if is_up; then
 fi
 
 # --------------------------------------------------------------------------------
-# Prepare environment.
+# Prepare the environment.
 # --------------------------------------------------------------------------------
 if [[ -f "${VENV}/.installed" ]]; then
-  echo "Reward environment installed, skipping..."
+  echo "✅ Reward environment installed, skipping..."
 else
-  echo "Installing ${NAME} reward environment..."
-  rm -rf "$VENV"  # drop a partial install
+  echo "⏳ Installing ${NAME} reward environment..."
+  rm -rf "$VENV"  # remove a partial install
   command -v uv >/dev/null || pip install uv
   UV="$(command -v uv || echo "${HOME}/.local/bin/uv")"
   # torch 2.1.2 has no wheels for Python releases newer than 3.11.
@@ -88,17 +89,17 @@ else
   PT_PIP="${UV} pip install --python ${VENV}/bin/python -i"
   PT=https://download.pytorch.org/whl
   if [[ "$NAME" == "ocr" ]]; then
-    # Pin the deps whose newest releases need numpy 2, so uv does not backtrack through
-    # their large wheels.
+    # Pin the dependencies whose newest releases need numpy 2, so that uv does not
+    # backtrack through their large wheels.
     $UV_PIP paddlepaddle==2.6.2 paddleocr==2.9.1 python-Levenshtein flask gunicorn "setuptools<70" \
       numpy==1.26.4 opencv-python==4.11.0.86 opencv-contrib-python==4.11.0.86 \
       opencv-python-headless==4.11.0.86 scipy==1.17.1 tifffile==2026.3.3 contourpy==1.3.3
-    # paddleocr pulls in GUI builds of OpenCV that need libGL; keep one headless build.
+    # paddleocr installs GUI builds of OpenCV that need libGL. Keep one headless build.
     "$UV" pip uninstall --python "${VENV}/bin/python" opencv-python opencv-contrib-python \
       opencv-python-headless
     $UV_PIP opencv-contrib-python-headless==4.11.0.86 numpy==1.26.4
   elif [[ "$NAME" == "hpsv2" || "$NAME" == "imagereward" ]]; then
-    # Versions follow DiffusionNFT's setup.py and README.
+    # The versions follow DiffusionNFT's setup.py and README.
     $PT_PIP ${PT}/cu126 torch==2.6.0+cu126 torchvision==0.21.0+cu126
     NFT_DEPS="transformers==4.40.0 tokenizers==0.19.1 huggingface-hub==0.29.1 \
       diffusers==0.33.1 accelerate==1.4.0 datasets==3.3.2 pyarrow==19.0.1 numpy==1.26.4 \
@@ -110,13 +111,13 @@ else
         "clip @ git+https://github.com/openai/CLIP.git@d05afc436d78f1c48dc0dbf8e5980a9d471f35f6"
     fi
   elif [[ "$NAME" == "deqa" ]]; then
-    # torch follows reward-server, and the rest DeQA-Score's pyproject.toml.
+    # torch follows reward-server. The rest follows DeQA-Score's pyproject.toml.
     $PT_PIP ${PT}/cu121 torch==2.1.2 torchvision==0.16.2
     $UV_PIP torch==2.1.2 torchvision==0.16.2 transformers==4.36.1 tokenizers==0.15.0 \
       sentencepiece==0.1.99 accelerate==0.21.0 icecream einops==0.6.1 numpy==1.26.0 \
       protobuf flask==3.1.0 gunicorn==23.0.0
   elif [[ "$NAME" == "hpsv3" ]]; then
-    # Versions follow HPSv3's requirements.txt; deepspeed is only needed for training.
+    # The versions follow HPSv3's requirements.txt. Only training needs deepspeed.
     $PT_PIP ${PT}/cu126 torch==2.6.0+cu126 torchvision==0.21.0+cu126
     $UV_PIP --no-deps hpsv3==1.0.0
     $UV_PIP transformers==4.45.2 tokenizers==0.20.3 accelerate==1.8.0 peft==0.10.0 trl==0.8.6 \
@@ -124,26 +125,28 @@ else
       einops==0.8.1 safetensors==0.5.3 matplotlib==3.10.3 pandas==2.3.0 tensorboard==2.19.0 \
       opencv-python-headless==4.11.0.86 numpy==2.1.2 flask==3.1.0 gunicorn==23.0.0
   elif [[ "$NAME" == "unifiedreward" ]]; then
-    # Flow-GRPO installs the sglang of its time unpinned; compressed-tensors is pinned to
-    # a release that still works with the transformers that sglang pins.
-    $PT_PIP ${PT}/cu124 torch==2.6.0 torchvision==0.21.0  # the builds sglang pins
+    # Flow-GRPO installs sglang without a pin, so we pin the release of its time. We pin
+    # compressed-tensors to a release that still works with the transformers that sglang
+    # pins.
+    $PT_PIP ${PT}/cu124 torch==2.6.0 torchvision==0.21.0  # the builds that sglang pins
     $UV_PIP "sglang[all]==0.4.6.post5" compressed-tensors==0.9.4
   else
-    # Versions follow reward-server; opencv is headless as no display libs are needed.
+    # The versions follow reward-server. opencv is headless, because the server needs
+    # no display libraries. Pillow 13 cannot crop with the numpy boxes of reward-server.
     $PT_PIP ${PT}/cu121 torch==2.1.2 torchvision==0.16.2
     $UV_PIP torch==2.1.2 torchvision==0.16.2 numpy==1.26.0 gunicorn==23.0.0 \
       open-clip-torch==2.31.0 opencv-python-headless==4.11.0.86 clip-benchmark==1.6.1 \
-      flask==3.1.0 pandas==2.2.3 "setuptools<70" wheel ninja
+      flask==3.1.0 pandas==2.2.3 pillow==12.3.0 "setuptools<70" wheel ninja
     ARCH=$("${VENV}/bin/python" -c "import torch; print('%d.%d' % torch.cuda.get_device_capability())")
     TORCH_CUDA_ARCH_LIST=$ARCH MMCV_WITH_OPS=1 FORCE_CUDA=1 MAX_JOBS=32 \
       $UV_PIP --no-build-isolation mmcv-full==1.7.2
     $UV_PIP --no-build-isolation "${DATA}/open-mmlab/mmdetection"
-    # mmcv-full pulls in opencv-python, which needs libGL; keep only the headless build.
+    # mmcv-full installs opencv-python, which needs libGL. Keep only the headless build.
     "$UV" pip uninstall --python "${VENV}/bin/python" opencv-python
     $UV_PIP --reinstall-package opencv-python-headless opencv-python-headless==4.11.0.86 numpy==1.26.0
   fi
   touch "${VENV}/.installed"
-  echo "Installed ${NAME} reward environment"
+  echo "✅ Installed ${NAME} reward environment"
 fi
 
 # --------------------------------------------------------------------------------
@@ -174,10 +177,10 @@ else
 fi
 echo "🚀 Starting ${NAME} reward server at ${URL}, log: <${LOG}>"
 if [[ "$NAME" == "unifiedreward" ]]; then
-  # The official launch of Flow-GRPO, data parallel over this node's GPUs; the smaller
-  # static memory leaves room for sampling on the same GPUs. It runs in data_and_model/
-  # so that the vision tower named in the model config resolves to the local copy, and
-  # its warmup requests to itself skip the proxy.
+  # This is the official launch of Flow-GRPO, with data parallel over the GPUs of this
+  # node. The smaller static memory leaves space for sampling on the same GPUs. It runs
+  # in data_and_model/, so that the vision tower that the model config names resolves
+  # to the local copy. With no_proxy, its warmup requests to itself skip the proxy.
   setsid nohup env -C "$DATA" no_proxy="127.0.0.1,localhost,${no_proxy:-}" \
     "${VENV}/bin/python" -m sglang.launch_server \
     --model-path "${DATA}/CodeGoat24/UnifiedReward-7b-v1.5" \
@@ -200,7 +203,7 @@ for (( i = 0; i < TIMEOUT; i += 5 )); do
     echo "✅ ${NAME} reward server is up at ${URL}"
     exit 0
   fi
-  # sglang's launcher outlives its failed workers, so its log is checked too.
+  # The sglang launcher outlives its failed workers, so the script also checks its log.
   if ! kill -0 "$(cat "$PID_FILE")" 2>/dev/null \
       || grep -q "Child process unexpectedly failed" "$LOG"; then
     echo "❌ ${NAME} reward server exited; see <${LOG}>"

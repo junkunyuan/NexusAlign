@@ -14,7 +14,7 @@ from nexus_align.algorithms.base_algorithm import BaseAlgorithm
 
 
 class SFTTrainer(BaseTrainer):
-    """Generic trainer for algorithm-defined supervised fine-tuning steps."""
+    """Generic trainer for supervised fine-tuning steps that the algorithm defines."""
 
     def __init__(
         self,
@@ -41,7 +41,7 @@ class SFTTrainer(BaseTrainer):
             weight_decay=self.adam_weight_decay,
             eps=self.adam_epsilon,
         )
-        warmup_steps = getattr(self, "warmup_epochs", 0) * self.steps_per_epoch
+        warmup_steps = self.warmup_epochs * self.steps_per_epoch
         if warmup_steps > 0:
             self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
                 self.optimizer, lambda step: min(step / warmup_steps, 1.0)
@@ -56,14 +56,8 @@ class SFTTrainer(BaseTrainer):
 
     def forward(self, data):
         results = self.algorithm.forward(data)
-
-        loss = results["loss"]
-        
-        metrics = dict(results.get("metrics", {}))
-        metrics.setdefault("loss", loss.detach())
-        self._metrics = metrics
-        
-        return {"loss": loss}
+        self._metrics = results["metrics"]
+        return results
 
     def backward(self, loss):
         self.scaler.scale(loss).backward()

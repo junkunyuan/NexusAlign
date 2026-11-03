@@ -4,9 +4,14 @@ SD3 model: Stable Diffusion 3 MMDiT with LoRA, plus its frozen VAE and text enco
 References:
     - SD3:
         - Paper: Scaling Rectified Flow Transformers for High-Resolution Image Synthesis
+          (ICML 2024)
         - Weights: https://huggingface.co/stabilityai/stable-diffusion-3.5-medium
     - Flow-GRPO:
         - Official code: https://github.com/yifan123/flow_grpo
+            - scripts/train_sd3.py: the LoRA config and the precision of main
+    - diffusers:
+        - Code: https://github.com/huggingface/diffusers
+            - examples/dreambooth/train_dreambooth_lora_sd3.py: encode_prompt
 """
 
 from types import SimpleNamespace
@@ -29,10 +34,10 @@ from nexus_align.models.base_model import BaseModel
 def fa3_attention(
     query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, **kwargs
 ):
-    """SDPA by FlashAttention-3 for unmasked fp16/bf16 attention, by SDPA otherwise."""
+    """Use FlashAttention-3 for unmasked fp16 or bf16 attention, else use SDPA."""
     dtype = query.dtype
     if torch.is_autocast_enabled("cuda"):
-        dtype = torch.get_autocast_dtype("cuda")  # SDPA would cast its inputs to it
+        dtype = torch.get_autocast_dtype("cuda")  # SDPA casts its inputs to this dtype
     fa3 = dtype in (torch.float16, torch.bfloat16) and query.shape[-1] <= 256
     if attn_mask is not None or dropout_p or kwargs or not fa3:
         return F.scaled_dot_product_attention(
@@ -54,26 +59,25 @@ class SD3Model(BaseModel):
 
     - self.model / self.ema: the transformer, trainable only through its LoRA weights.
     - self.vae, self.text_encoders, self.tokenizers, self.scheduler: frozen, unsharded.
-    - EMA tracks only the trainable (LoRA) weights, and checkpoints hold only them.
+    - The EMA tracks only the trainable (LoRA) weights, and checkpoints hold only them.
     """
 
     def __init__(self, cfg_model, build_keys: tuple[str, ...] = ("model", "ema")) -> None:
         super().__init__(cfg_model, build_keys)
-        self.save_trainable_only = True  # checkpoints hold LoRA weights only
+        self.save_trainable_only = True  # checkpoints hold only the LoRA weights
         if cfg_model.get("attn_backend", "sdpa") == "fa3":
             try:
                 import flash_attn_interface  # noqa: F401
-            except ImportError as e:
-                raise ImportError(
-                    "❌ attn_backend=fa3 needs the flash-attn-3 package of pyproject.toml; "
-                    "reinstall the environment, e.g. with uv sync"
-                ) from e
-            # The diffusers attention processors call F.scaled_dot_product_attention.
-            functions = {**vars(F), "scaled_dot_product_attention": fa3_attention}
-            attention_processor.F = SimpleNamespace(**functions)
+            except ImportError:
+                print("⚠️ flash-attn-3 is not installed; fa3 falls back to SDPA")
+            else:
+                # Diffusers attention processors call F.scaled_dot_product_attention.
+                functions = {**vars(F), "scaled_dot_product_attention": fa3_attention}
+                attention_processor.F = SimpleNamespace(**functions)
         path = cfg_model.path
 
-        # Frozen components; the VAE decodes in fp32 and the text encoders run in fp16.
+        # Load the frozen components. The VAE decodes in fp32, and the text encoders
+        # run in fp16.
         self.scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
             path, subfolder="scheduler"
         )
@@ -115,9 +119,7 @@ class SD3Model(BaseModel):
 
     @torch.no_grad()
     def ema_step(self, decay: float) -> None:
-        """Step the trainable EMA params; the frozen base weights stay untouched."""
-        if self.ema is None:
-            raise ValueError("EMA model is not built")
+        """Update only the trainable EMA parameters, and not the frozen base weights."""
         for ema_p, p in zip(self.ema.parameters(), self.model.parameters()):
             if p.requires_grad:
                 ema_p.add_((1 - decay) * (p.data - ema_p))
@@ -157,9 +159,8 @@ class SD3Model(BaseModel):
         prompt_embeds = torch.cat([clip_embeds, t5_embeds], dim=-2)
         return prompt_embeds, pooled_embeds
 
-    @torch.no_grad()
     def decode(self, latents: torch.Tensor) -> torch.Tensor:
-        """Decode latents to images in [0, 1]."""
+        """Decode latents to images in [0, 1], so that reward gradients flow back."""
         config = self.vae.config
         latents = latents / config.scaling_factor + config.shift_factor
         images = self.vae.decode(latents.to(self.vae.dtype), return_dict=False)[0]

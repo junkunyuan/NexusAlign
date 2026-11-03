@@ -6,15 +6,19 @@
 
 ## Introduction
 
-**Paper:** [*Flow-GRPO: Training Flow Matching Models via Online RL* (NeurIPS 2025)](https://arxiv.org/abs/2505.05470)
+**Paper:** *Flow-GRPO: Training Flow Matching Models via Online RL* ([NeurIPS 2025](https://arxiv.org/abs/2505.05470))
 
-**Official code:** [yifan123/flow_grpo](https://github.com/yifan123/flow_grpo).
+**Summary:** Turn the ODE sampler of a flow matching model into an equivalent SDE. GRPO can then explore and optimize it with online rewards.
 
-**Summary:** Turn the ODE sampler of a flow matching model into an equivalent SDE, so that GRPO can explore and optimize it with online rewards.
+**Implementation:** We follow the official code [yifan123/flow_grpo](https://github.com/yifan123/flow_grpo), with the GenEval reward from [yifan123/reward-server](https://github.com/yifan123/reward-server), except for:
+
+- **GPUs and EMA:** We train on 64 GPUs instead of the official 32, with the same 1152 images per epoch. `train_sd3.py` steps EMA after every batch. So in every 8 updates, EMA steps once here and twice in the official setting. Its decay per 8 updates is thus 0.9 here and 0.81 there.
+- **GenEval metric:** GenEval† is reward-server's partial score (`geneval`). DiffusionNFT's `evaluation.py` also reports it. The paper's Overall is the mean task accuracy, which our evaluation summaries also record (`<task>_accuracy`).
+- **Infrastructure:** `torch.compile`, FlashAttention-3, fp16 frozen weights, and FSDP speed up training and change only the rounding. The code for logging, checkpointing, and the OCR server is our own.
 
 ## Results
 
-Table 2 of paper.
+**Table 2 of the paper:** SD3.5-M trained separately on the rewards of GenEval, OCR, and PickScore.
 
 | Model | GenEval† | OCR† | PickScore† | Aesthetic | DeQA | ImgRwd | PickScore | UniRwd | ClipScore | HPSv2.1 | HPSv3 | Run |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -27,14 +31,14 @@ Table 2 of paper.
 | PickScore (paper) | - | - | **23.31** | 5.92 | 4.22 | 1.28 | 23.53 | 3.66 | - | - | - | - |
 | PickScore (ours) | 0.64 | 0.66 | **23.25** | 5.88 | 4.21 | 1.27 | 23.46 | 3.38 | 0.284 | 0.315 | 12.60 | [run](pickscore-20261021_071622) |
 
-- † means scoring on their own test prompts, and the other on DrawBench.
-- In-domain results are highlighted in bold.
+- **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench.
+- **Bold:** in-domain results.
 
 ## Command
 
 ### Training
 
-Train SD3.5-M model.
+Train SD3.5-M on one reward with its specific training data:
 ```bash
 # EXP is geneval, ocr, or pickscore.
 EXP=geneval bash scripts/reproduce/flow_grpo_train.sh
@@ -42,14 +46,16 @@ EXP=geneval bash scripts/reproduce/flow_grpo_train.sh
 
 ### Evaluation
 
+Evaluate GenEval, OCR, and PickScore, each on its own test dataset.
 ```bash
-# GenEval, OCR, and PickScore, each on its own test prompts.
 for TASK in geneval ocr pickscore; do
   EXP_NAME=<log_dir_name> DATA=$TASK REWARDS=$TASK \
     bash scripts/reproduce/flow_grpo_eval.sh
 done
+```
 
-# The other metrics on DrawBench, two reward models per eval to avoid OOM.
+Evaluate the other metrics on DrawBench, with two reward models per evaluation to prevent OOM.
+```bash
 for REWARDS in "unifiedreward aesthetic" "deqa imagereward" "hpsv3 pickscore" \
     "clipscore hpsv2"; do
   EXP_NAME=<log_dir_name> DATA=drawbench REWARDS="$REWARDS" \

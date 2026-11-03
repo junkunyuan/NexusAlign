@@ -49,7 +49,7 @@ def fsdp_wrap(
     
     fsdp_kwargs = {}
 
-    # Assgin value to replicate and shard.
+    # Assign values to replicate and shard.
     world_size = dist.get_world_size()
     if replicate < 0 and shard < 0:
         shard = min(world_size, 8)
@@ -64,7 +64,7 @@ def fsdp_wrap(
             f"must equal world_size ({world_size})"
         )
     
-    # Build mesh.
+    # Build the device mesh.
     if replicate == 1:
         mesh_shape = (shard,)
         mesh_dim_names = ("shard",)
@@ -83,7 +83,7 @@ def fsdp_wrap(
         raise ValueError(f"❌ Invalid FSDP strategy: {strategy}")
     fsdp_kwargs["reshard_after_forward"] = RESHARD_AFTER_FORWARD[strategy]
 
-    # FSDP mixed precision; a null param_dtype keeps every parameter's own dtype.
+    # FSDP mixed precision. A null param_dtype keeps the dtype of each parameter.
     param_dtype = DTYPE_MAP[param_dtype] if param_dtype else None
     reduce_dtype = DTYPE_MAP[reduce_dtype]
     fsdp_kwargs["mp_policy"] = MixedPrecisionPolicy(
@@ -95,7 +95,7 @@ def fsdp_wrap(
     offload_policy = CPUOffloadPolicy() if cpu_offload else OffloadPolicy()
     fsdp_kwargs["offload_policy"] = offload_policy
 
-    # Activation wrap.
+    # Wrap the modules for activation checkpointing.
     if activation_ckpt:
         checkpoint_wrapper_fn = partial(
             checkpoint_wrapper,
@@ -108,7 +108,7 @@ def fsdp_wrap(
             check_fn=lambda m: isinstance(m, wrap_modules),
         )
 
-    # FSDP wrap model.
+    # Wrap the model with FSDP.
     for submodule in module.modules():
         if isinstance(submodule, wrap_modules):
             fully_shard(submodule, **fsdp_kwargs)
@@ -116,6 +116,11 @@ def fsdp_wrap(
 
     total_params = sum(p.numel() for p in module.parameters()) / 1e9  # DTensor.numel is global
     trainable_params = sum(p.numel() for p in module.parameters() if p.requires_grad) / 1e9
+    wrapped = {  # a set, so that the parameters of nested wrapped modules count once
+        p for m in module.modules() if isinstance(m, wrap_modules)
+        for p in m.parameters()
+    }
+    wrapped_params = sum(p.numel() for p in wrapped) / 1e9
     info = [f"\n📦 Sharded {model_name} with FSDP2:"]
     info += [f"    strategy: {strategy}"]
     info += [f"    fsdp mesh: {tuple(mesh.shape)} (replicate, shard)"]
@@ -124,6 +129,7 @@ def fsdp_wrap(
     info += [f"    CPU offload: {cpu_offload}"]
     info += [f"    total params: {total_params:.4f} B"]
     info += [f"    trainable params: {trainable_params:.4f} B"]
+    info += [f"    wrapped params: {wrapped_params:.4f} B"]
     print("\n".join(info))
 
     return module

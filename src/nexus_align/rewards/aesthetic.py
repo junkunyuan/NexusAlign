@@ -1,4 +1,5 @@
-"""Aesthetic reward: LAION aesthetic predictor, an MLP on CLIP-L image embeddings.
+"""
+Aesthetic reward: LAION aesthetic predictor, an MLP on CLIP-L image embeddings.
 
 References:
     - Improved aesthetic predictor:
@@ -15,7 +16,7 @@ from transformers import CLIPModel, CLIPProcessor
 
 
 class MLP(nn.Module):
-    """Aesthetic head; the dropout layers keep the state dict keys of the checkpoint."""
+    """Aesthetic head. The dropout layers keep the state dict keys of the checkpoint."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -42,7 +43,7 @@ class Aesthetic:
     def __init__(self, cfg_reward) -> None:
         self.name = cfg_reward.name
         self.device = torch.device("cuda", torch.cuda.current_device())
-        # The PIL image processor matches Flow-GRPO's; the torchvision one does not.
+        # The PIL image processor matches Flow-GRPO's, but the torchvision one does not.
         self.processor = CLIPProcessor.from_pretrained(
             cfg_reward.clip_path, use_fast=False
         )

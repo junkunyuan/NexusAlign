@@ -1,4 +1,4 @@
-"""Reward evaluator: generate for the test prompts once and average the rewards."""
+"""Reward evaluator: sample the test prompts once and average the rewards."""
 
 import os
 import json
@@ -7,7 +7,6 @@ import hashlib
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
-import yaml
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -20,11 +19,12 @@ from nexus_align.eval.summary import refresh_summary
 from nexus_align.models.base_model import BaseModel
 from nexus_align.datasets.text_dataset import TextDataset
 from nexus_align.algorithms.base_algorithm import BaseAlgorithm
+from nexus_align.engine.distributed import broadcast_from_rank0, gather_tensor
 from nexus_align.evaluators.base_evaluator import BaseEvaluator, parse_train_state
 from nexus_align.evaluators.fid_is_evaluator import save_png, load_png
 
 
-# Configs that decide the generated images; saved images are reused only if they match.
+# Configs that decide the generated images. Reuse saved images only if they match.
 SAMPLE_KEYS = ("split", "global_seed", "num_steps", "guidance_scale", "model_key")
 
 
@@ -32,12 +32,14 @@ class RewardEvaluator(BaseEvaluator):
     """
     Generate one response per test prompt with the algorithm and score it with rewards.
 
-    - Every rank samples a strided shard of the prompts; the padding is dropped later.
-    - Images are saved as PNG files with their sampling configs, so a later run with
-      other rewards scores the saved images instead of sampling again.
-    - Only the rewards whose metrics are missing are scored, and their metrics are
-      merged into the metrics file of each checkpoint.
-    - Each metric is averaged over the prompts it applies to (-10 marks the others).
+    - Every rank samples a strided shard of the prompts. The evaluator drops the
+      padding later.
+    - The evaluator saves the images as PNG files with their sampling configs. A later
+      run with other rewards then scores the saved images and does not sample again.
+    - The evaluator scores only the rewards with missing metrics. It merges their
+      metrics into the metrics file of each checkpoint.
+    - Each metric is the mean over the prompts that it applies to. The value -10
+      marks the other prompts.
     """
 
     def __init__(
@@ -55,19 +57,9 @@ class RewardEvaluator(BaseEvaluator):
             log_dir=log_dir
         )
         self.rewards = rewards
-        self.world_size = dist.get_world_size()
-        self.rank = dist.get_rank()
-        self.device = model.device
-
-        # Sample with the configured weights; the algorithm owns the sampling loop.
-        self.eval_model = getattr(model, self.model_key)
-        assert self.eval_model is not None, (
-            f"❌ Model has no <{self.model_key}> weights to evaluate"
-        )
-        self.eval_model.eval()
         self.algorithm.prepare(self.eval_model, self.device, model)
 
-        # Test prompts; indices past the end pad every rank to the same count.
+        # Get the test prompts. Indices past the end pad every rank to the same count.
         dataset = TextDataset(self.data, split=self.split)
         self.prompts, self.metadatas = dataset.texts, dataset.metadatas
         self.num_prompts = len(self.prompts)
@@ -78,7 +70,7 @@ class RewardEvaluator(BaseEvaluator):
             self.indices[i: i + size] for i in range(0, len(self.indices), size)
         ]
 
-        # What the saved images must match: the prompts and the sampling configs.
+        # The saved images must match the prompts and the sampling configs.
         config = OmegaConf.to_container(cfg_evaluator, resolve=True)
         prompts_sha256 = hashlib.sha256("\n".join(self.prompts).encode()).hexdigest()
         self.sample_config = {
@@ -88,16 +80,10 @@ class RewardEvaluator(BaseEvaluator):
             **{key: config[key] for key in SAMPLE_KEYS},
         }
 
-    def check_config(self, cfg_evaluator) -> None:
-        """Fail when a reused eval dir sampled other prompts or with other configs."""
-        super().check_config(cfg_evaluator)
-        config_path = os.path.join(self.eval_dir, "config_eval.yaml")
-        with open(config_path, "r", encoding="utf-8") as f:
-            saved = (yaml.safe_load(f) or {}).get("evaluator", {})
-        config = OmegaConf.to_container(cfg_evaluator, resolve=True)
-        changed = [k for k in SAMPLE_KEYS if saved.get(k) != config[k]]
-        if saved.get("data", {}).get("name") != config["data"]["name"]:
-            changed.append("data")
+    def check_config(self, saved_config: dict, config: dict) -> None:
+        """Fail if a reused evaluation directory used other sampling configs."""
+        super().check_config(saved_config, config)
+        changed = [k for k in SAMPLE_KEYS if saved_config.get(k) != config[k]]
         if changed:
             raise ValueError(
                 f"❌ <{self.eval_dir}> was sampled with other configs {changed}; "
@@ -108,14 +94,8 @@ class RewardEvaluator(BaseEvaluator):
         """Map the padding indices to the last prompt."""
         return [min(i, self.num_prompts - 1) for i in indices]
 
-    def ckpt_eval_dir(self, ckpt: str) -> str:
-        return os.path.join(self.eval_dir, os.path.basename(ckpt))
-
-    def metrics_path(self, ckpt: str) -> str:
-        return os.path.join(self.ckpt_eval_dir(ckpt), "metrics.json")
-
     def samples_path(self, ckpt: str) -> str:
-        """Return the sampling configs file, written once all images are saved."""
+        """Return the sampling configs file, which sample() writes after the images."""
         return os.path.join(self.ckpt_eval_dir(ckpt), "samples.json")
 
     def image_path(self, ckpt: str, index: int) -> str:
@@ -135,17 +115,14 @@ class RewardEvaluator(BaseEvaluator):
             if any(m not in metrics for m in reward.metrics)
         }
 
-    def is_evaluated(self, ckpt: str) -> bool:
-        return not self.pending_rewards(ckpt)
-
     def metric_names(self, ckpts: list[str]) -> list[str]:
-        """Return the headline metrics of every reward scored in this dir, in run order."""
+        """Return the headline metrics of all scored rewards, in the order of the runs."""
         names = []
-        for ckpt in ckpts:  # rewards of earlier runs, found by their names among the keys
+        for ckpt in ckpts:  # find the rewards of earlier runs by their names in the keys
             for key in self.load_metrics(ckpt):
                 try:
                     metrics = registry.get("reward", key).metrics
-                except KeyError:  # not a reward name, e.g. a sub-metric
+                except KeyError:  # not a reward name, for example a sub-metric
                     continue
                 names += [m for m in metrics if m not in names]
         current = [m for reward in self.rewards.values() for m in reward.metrics]
@@ -167,40 +144,42 @@ class RewardEvaluator(BaseEvaluator):
             )
         dist.barrier()
 
+    def is_evaluated(self, ckpt: str) -> bool:
+        return not self.pending_rewards(ckpt)
+
     def find_samples(self, ckpt: str) -> bool:
-        """Return True when all images of the checkpoint are saved with these configs."""
-        found, changed = [False], [[]]
+        """Return True if all images of the checkpoint exist with these configs."""
+        found, changed = False, []
         sample_dir = self.ckpt_eval_dir(ckpt)
         if self.rank == 0 and os.path.exists(self.samples_path(ckpt)):
             with open(self.samples_path(ckpt), "r", encoding="utf-8") as f:
                 saved = json.load(f)
-            changed = [[k for k, v in self.sample_config.items() if saved.get(k) != v]]
+            changed = [k for k, v in self.sample_config.items() if saved.get(k) != v]
             missing = [
                 i for i in range(self.num_prompts)
                 if not os.path.exists(self.image_path(ckpt, i))
             ]
-            if changed[0]:
+            if changed:
                 print(f"❌ Images in <{sample_dir}> were sampled with other configs")
             elif missing:
                 print(f"⚠️ WARNING: {len(missing)}/{self.num_prompts} images missing "
                       f"in <{sample_dir}>, sampling again")
                 os.remove(self.samples_path(ckpt))
             else:
-                found[0] = True
+                found = True
                 print(f"✅ Found {self.num_prompts} images in <{sample_dir}>, "
                       "skipping sampling")
-        dist.broadcast_object_list(found, src=0)
-        dist.broadcast_object_list(changed, src=0)
-        if changed[0]:
+        found, changed = broadcast_from_rank0((found, changed))
+        if changed:
             raise ValueError(
-                f"❌ Saved images do not match the configs {changed[0]}; "
+                f"❌ Saved images do not match the configs {changed}; "
                 "set evaluator.new_run=true to evaluate in a new dir"
             )
-        return found[0]
+        return found
 
     @torch.no_grad()
     def sample(self, ckpt: str) -> list:
-        """Sample the test prompts; images are kept as uint8 and saved as PNG files."""
+        """Sample the test prompts. Return uint8 images and save them as PNG files."""
         image_dir = os.path.dirname(self.image_path(ckpt, 0))
         os.makedirs(self.ckpt_eval_dir(ckpt), exist_ok=True)
 
@@ -225,18 +204,18 @@ class RewardEvaluator(BaseEvaluator):
                         if index < self.num_prompts:
                             path = self.image_path(ckpt, index)
                             futures.append(pool.submit(save_png, image, path))
-                else:  # e.g. videos with audio, which are not saved
+                else:  # for example, videos with audio, which sample() does not save
                     response = {
                         k: v.cpu() if torch.is_tensor(v) else v
                         for k, v in response.items()
                     }
                 responses.append(response)
                 pbar.update(1)
-            for future in futures:  # surface any error raised while writing the files
+            for future in futures:  # raise any error of the PNG writer threads
                 future.result()
         pbar.close()
 
-        # Mark the images complete only after every rank has written its shard.
+        # Mark the images as complete only after every rank writes its shard.
         dist.barrier()
         if self.rank == 0 and os.path.isdir(image_dir):
             with open(self.samples_path(ckpt), "w", encoding="utf-8") as f:
@@ -245,7 +224,7 @@ class RewardEvaluator(BaseEvaluator):
         return responses
 
     def load_samples(self, ckpt: str) -> list:
-        """Read the saved images of this rank, batched as in sampling."""
+        """Read the saved images of this rank, in the same batches as sample()."""
         responses = []
         with ThreadPoolExecutor(self.num_workers) as pool:
             for indices in self.batches:
@@ -263,7 +242,7 @@ class RewardEvaluator(BaseEvaluator):
             responses = self.load_samples(ckpt)
         else:
             responses = self.sample(ckpt)
-            # Release the cached sampling memory; reward servers share these GPUs.
+            # Release the cached sampling memory. The reward servers share these GPUs.
             torch.cuda.empty_cache()
 
         print(f"⏳ Scoring with {', '.join(rewards)}")
@@ -286,9 +265,7 @@ class RewardEvaluator(BaseEvaluator):
         gathered = {}
         for key, value in values.items():
             tensor = torch.as_tensor(value, dtype=torch.float64, device=self.device)
-            buffer = tensor.new_empty(self.world_size * len(tensor))
-            dist.all_gather_into_tensor(buffer, tensor)
-            gathered[key] = buffer.cpu()
+            gathered[key] = gather_tensor(tensor).cpu()
         if self.rank == 0:
             valid = gathered.pop("index") < self.num_prompts
             metrics = self.load_metrics(ckpt)

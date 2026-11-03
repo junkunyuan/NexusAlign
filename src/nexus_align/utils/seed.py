@@ -1,4 +1,4 @@
-"""Random control: seed setting and deterministic mode utilities."""
+"""Random control: set the seed and the deterministic mode."""
 
 import os
 import random
@@ -23,8 +23,6 @@ def set_deterministic(deterministic: bool = True) -> None:
     torch.backends.cudnn.benchmark = not deterministic
     torch.backends.cudnn.deterministic = deterministic
     torch.use_deterministic_algorithms(deterministic)
-    # Do not fill every new tensor with NaN; this costs ~10% of the time of SD3 forwards
-    # and does not change any result, as no op reads uninitialized memory.
     torch.utils.deterministic.fill_uninitialized_memory = False
 
     enable = "Enabled" if deterministic else "Disabled"

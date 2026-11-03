@@ -1,4 +1,11 @@
-"""Dataloader construction: distributed dataloader builder."""
+"""
+Dataloader construction: distributed dataloader builder.
+
+References:
+    - Flow-GRPO:
+        - Official code: https://github.com/yifan123/flow_grpo
+            - scripts/train_sd3.py: DistributedKRepeatSampler
+"""
 
 import random
 
@@ -23,7 +30,7 @@ class DistributedGroupSampler(Sampler):
 
     Every batch draws world_size * batch_size / group_size prompts, repeats each one
     group_size times, shuffles them, and gives each rank its slice of batch_size.
-    Batch i of epoch e is seeded by seed + e * num_batches + i, so all ranks agree.
+    The seed of batch i in epoch e is seed + e * num_batches + i, so all ranks agree.
     """
 
     def __init__(
@@ -53,14 +60,24 @@ class DistributedGroupSampler(Sampler):
 
     def __iter__(self):
         for i in range(self.num_batches):
+            # Make sure the sample order is the same across ranks.
             g = torch.Generator()
             g.manual_seed(self.seed + self.epoch * self.num_batches + i)
+
+            # Pick the first num_groups samples, for example ["dog", "sun", "car"].
             indices = torch.randperm(len(self.dataset), generator=g)[:self.num_groups]
+            
+            # Repeat the samples to make groups, for example
+            # ["dog", "dog", "sun", "sun", "car", "car"].
             repeated = [idx for idx in indices.tolist() for _ in range(self.group_size)]
-            order = torch.randperm(len(repeated), generator=g).tolist()
-            shuffled = [repeated[k] for k in order]
-            start = self.rank * self.batch_size
-            yield shuffled[start: start + self.batch_size]
+
+            # Shuffle the samples.
+            order = torch.randperm(len(repeated), generator=g).tolist()  # shuffle order
+            shuffled = [repeated[k] for k in order]  # global list, same on all ranks
+
+            # Yield the samples of this rank.
+            start = self.rank * self.batch_size  # this rank's slice
+            yield shuffled[start: start + self.batch_size]  # batch_size prompt indices
 
     def set_epoch(self, epoch: int) -> None:
         self.epoch = epoch
@@ -68,26 +85,25 @@ class DistributedGroupSampler(Sampler):
 
 def build_dataloader(
     dataset: Dataset,
-    batch_size: int = 0,
-    sampler: Sampler | None = None,
-    num_workers: int = 4,
-    drop_last: bool = False,
-    grad_accu_step: int = 1,
-    generator: torch.Generator = None
+    batch_size: int,
+    sampler: Sampler,
+    num_workers: int,
+    drop_last: bool,
+    grad_accu_step: int,
+    generator: torch.Generator,
 ) -> DataLoader:
     """
     Build a distributed dataloader and print a data summary.
 
-    trainer provides *_batch_size, shuffle/drop_last, and grad_accu_step.
+    The trainer gives batch_size, sampler, drop_last, and grad_accu_step.
     """
-    rank = dist.get_rank()
     world_size = dist.get_world_size()
-    
-    # Calculate batchsize.
+
+    # Calculate the batch size.
     batch_size_per_rank = batch_size // world_size // grad_accu_step
     batch_size = batch_size_per_rank * world_size * grad_accu_step
 
-    # Build data loader.
+    # Build the dataloader.
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size_per_rank,
@@ -99,7 +115,7 @@ def build_dataloader(
         generator=generator
     )
 
-    # Print info.
+    # Print the data summary.
     info = ["\n📚 DataLoader:"]
     info += [f"    batch_size_per_rank: {batch_size_per_rank}"]
     info += [f"    effective_batch_size: {batch_size}"]

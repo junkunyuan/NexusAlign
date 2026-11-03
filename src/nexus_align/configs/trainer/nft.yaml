@@ -1,33 +1,52 @@
-name: nft  # trainer registry key
 # --------------------------------------------------------------------------------
 # General configs.
 # --------------------------------------------------------------------------------
-debug: false  # if True, enable all-rank console print
-seed: 42  # base seed; runtime RNG uses {seed + rank} in train mode
-deterministic: true
-groups_per_epoch: 48  # prompts sampled per epoch, each in a group of algorithm.group_size responses
+name: nft  # trainer registry key
+debug: false  # if True, all ranks print to the console
+seed: 42  # base seed; the runtime RNG uses {seed + rank} in train mode
+deterministic: true  # if True, use deterministic mode for reproducibility
+
+# --------------------------------------------------------------------------------
+# Data configs.
+# --------------------------------------------------------------------------------
+groups_per_epoch: 48  # prompts sampled per epoch
 sample_batch_size: 9  # samples per rank in one sampling and training batch
-updates_per_epoch: 1  # optimizer steps per epoch; batches per epoch must be a multiple of it
-shuffle: true  # shuffle all samples before splitting them into batches
-log_every_n_steps: 2
-log_window_size: 2
-log_hardware: true
-log_tensorboard: false  # if True, also write scalars to log_dir/tensorboard
-plot_every_n_seconds: 60  # redraw the metric figures at most once every N seconds
-epochs: 1000
-learning_rate: 3.0e-4
-adam_beta1: 0.9
-adam_beta2: 0.999
-adam_weight_decay: 1.0e-4
-adam_epsilon: 1.0e-8
-max_grad_norm: 1.0
-ema_decay: 0.9  # max EMA decay; it warms up as min((1 + step) / (10 + step), ema_decay)
+updates_per_epoch: 1  # optimizer steps per epoch
+shuffle: true  # shuffle the training data
+
+# --------------------------------------------------------------------------------
+# Training configs.
+# --------------------------------------------------------------------------------
+epochs: 1000  # training epochs
+learning_rate: 3.0e-4  # AdamW learning rate
+adam_beta1: 0.9  # AdamW beta1
+adam_beta2: 0.999  # AdamW beta2
+adam_weight_decay: 1.0e-4  # AdamW weight decay
+adam_epsilon: 1.0e-8  # AdamW epsilon
+max_grad_norm: 1.0  # max gradient norm for clipping
+
+# --------------------------------------------------------------------------------
+# EMA configs.
+# --------------------------------------------------------------------------------
+ema_decay: 0.9  # EMA decay
 ema_update_interval: 1  # update EMA every N optimizer steps
-save_ckpt_every_n_steps: null  # NFT saves only end-of-epoch checkpoints
-save_ckpt_keep_last_n_steps: 10
+
+# --------------------------------------------------------------------------------
+# Logging configs.
+# --------------------------------------------------------------------------------
+log_every_n_steps: 2  # print and track the metrics every N total steps
+log_hardware: true  # if True, track GPU and CPU usage, and GPU efficiency such as MFU
+peak_tflops: null  # dense FP16/BF16 TFLOPS of one GPU for MFU; null looks it up by GPU
+log_tensorboard: false  # if True, also write scalars to log_dir/tensorboard
+plot_every_n_seconds: 30  # redraw the metric figures at most once every N seconds
+
+# --------------------------------------------------------------------------------
+# Checkpoint configs.
+# --------------------------------------------------------------------------------
 save_ckpt_every_n_epochs: 100  # save every N epochs, plus the initial weights at epoch 0
-save_ckpt_keep_last_n_epochs: 100
-resume_path: null  # e.g. ${log_dir}/checkpoints/epoch_60-step_0-total_step_120
-load_ckpt_only_model: false  # If true, only load state, model, and ema; else will load optimizer and lr_scheduler
-save_ckpt_only_model: false  # If true, only save state, model, and ema; else will save optimizer and lr_scheduler
-stages: null  # stages trained in order, each {data, epochs, rewards, algorithm}; null trains on data with reward
+save_ckpt_keep_last_n_epochs: 100  # keep only the last N epoch checkpoints
+save_ckpt_every_n_steps: null  # NFT saves only end-of-epoch checkpoints
+save_ckpt_keep_last_n_steps: 10  # keep only the last N step checkpoints
+resume_path: null  # for example ${log_dir}/checkpoints/epoch_2-step_10-total_step_50
+load_ckpt_only_model: false  # if true, skip the optimizer, lr_scheduler, and scaler
+save_ckpt_only_model: false  # if true, skip the optimizer, lr_scheduler, and scaler

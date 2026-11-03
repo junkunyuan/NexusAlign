@@ -3,8 +3,10 @@ DiT components: adaLN-Zero block, final layer, unpatchify, and 2D sin-cos positi
 
 References:
     - DiT:
-        - Paper: Scalable Diffusion Models with Transformers
+        - Paper: Scalable Diffusion Models with Transformers (ICCV 2023)
         - Official code: https://github.com/facebookresearch/DiT
+            - models.py: modulate, DiTBlock, FinalLayer, DiT.unpatchify,
+              get_2d_sincos_pos_embed
 """
 
 import numpy as np
@@ -64,10 +66,10 @@ class DiTBlock(nn.Module):
 
 class FinalLayer(nn.Module):
     """
-    Final DiT projection layer.
+    Final projection layer of DiT.
 
     - Applies conditioned normalization.
-    - Projects hidden tokens back to patch pixels.
+    - Projects the hidden tokens back to patch pixels.
     """
     def __init__(
         self, hidden_size: int, patch_size: int | tuple[int, int], out_channels: int
@@ -119,29 +121,20 @@ def unpatchify(
 # Sine/Cosine Positional Embedding Functions.
 # https://github.com/facebookresearch/mae/blob/main/util/pos_embed.py
 # --------------------------------------------------------------------------------
-def get_2d_sincos_pos_embed(
-    embed_dim: int,
-    grid_size: int | tuple[int, int]
-) -> np.ndarray:
+def get_2d_sincos_pos_embed(embed_dim: int, grid_size: tuple[int, int]) -> np.ndarray:
     """
-    grid_size: grid height and width, as an int or an (h, w) pair
+    grid_size: grid height and width (h, w)
     Returns pos_embed: (h*w, embed_dim).
     """
-    h, w = to_2tuple(grid_size)
+    assert embed_dim % 2 == 0
+    h, w = grid_size
     grid_h = np.arange(h, dtype=np.float32)
     grid_w = np.arange(w, dtype=np.float32)
     grid = np.meshgrid(grid_w, grid_h)  # here w goes first
     grid = np.stack(grid, axis=0)
-
     grid = grid.reshape([2, 1, h, w])
-    pos_embed = get_2d_sincos_pos_embed_from_grid(embed_dim, grid)
-    return pos_embed
 
-
-def get_2d_sincos_pos_embed_from_grid(embed_dim: int, grid: np.ndarray) -> np.ndarray:
-    assert embed_dim % 2 == 0
-
-    # use half of dimensions to encode grid_h.
+    # Use half of the dimensions to encode grid_h.
     emb_h = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid[0])  # (H*W, D/2)
     emb_w = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid[1])  # (H*W, D/2)
 
@@ -152,7 +145,7 @@ def get_2d_sincos_pos_embed_from_grid(embed_dim: int, grid: np.ndarray) -> np.nd
 def get_1d_sincos_pos_embed_from_grid(embed_dim: int, pos: np.ndarray) -> np.ndarray:
     """
     embed_dim: output dimension for each position
-    pos: positions to be encoded, size (M,)
+    pos: positions to encode, size (M,)
     Returns an (M, D) array of embeddings.
     """
     assert embed_dim % 2 == 0

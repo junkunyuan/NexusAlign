@@ -1,0 +1,22 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: refl  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Sampling configs.
+# --------------------------------------------------------------------------------
+resolution: 512  # image resolution
+num_steps: 10  # rollout sampling steps
+max_sequence_length: 128  # T5 prompt tokens
+autocast_dtype: fp16  # transformer and VAE compute dtype
+group_size: 24  # images per prompt; ReFL needs no groups and uses DiffusionNFT's value
+
+# --------------------------------------------------------------------------------
+# Reward loss configs.
+# --------------------------------------------------------------------------------
+# [7, 10) of 10 steps are the last 25% of the steps, as in DiffusionOPSD.
+train_step_range: [7, 10]  # train each image at a random sampling step in [low, high); see paper Algorithm 1
+margin: 2.0  # margin of the loss phi(r) = relu(margin - r) on the standardized reward
+calibration_prompts: 512  # first training prompts that set the reward mean and std
+reward_weight: 1.0e-3  # reward loss weight lambda; see paper Eq. 2

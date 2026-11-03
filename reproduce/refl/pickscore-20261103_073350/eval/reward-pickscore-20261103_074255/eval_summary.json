@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 19.818079790566117
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 10,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_10-step_0-total_step_10",
+    "pickscore": 22.344796459190547
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_20-step_0-total_step_20",
+    "pickscore": 23.006295830011368
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 30,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_30-step_0-total_step_30",
+    "pickscore": 23.216290426440537
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_40-step_0-total_step_40",
+    "pickscore": 23.52250563260168
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_50-step_0-total_step_50",
+    "pickscore": 23.63128908444196
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 60,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_60-step_0-total_step_60",
+    "pickscore": 23.748440012335777
+  },
+  {
+    "epoch": 70,
+    "step": 0,
+    "total_step": 70,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_70-step_0-total_step_70",
+    "pickscore": 23.892482165247202
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 80,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_80-step_0-total_step_80",
+    "pickscore": 23.976653915829957
+  },
+  {
+    "epoch": 90,
+    "step": 0,
+    "total_step": 90,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_90-step_0-total_step_90",
+    "pickscore": 24.01805200986564
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/refl_pickscore_reproduce-20261103_073350/checkpoints/epoch_100-step_0-total_step_100",
+    "pickscore": 24.072286592796445
+  }
+]

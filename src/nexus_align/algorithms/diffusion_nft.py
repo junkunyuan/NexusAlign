@@ -1,9 +1,16 @@
-"""DiffusionNFT algorithm: negative-aware fine-tuning on the forward process.
+"""
+DiffusionNFT algorithm: negative-aware fine-tuning on the forward process.
 
 References:
     - DiffusionNFT:
         - Paper: DiffusionNFT: Online Diffusion Reinforcement with Forward Process
+          (ICLR 2026)
         - Official code: https://github.com/NVlabs/DiffusionNFT
+            - scripts/train_nft_sd3.py: the old-policy rollouts, the NFT loss, the
+              adaptive x0 weight, and the velocity KL of main; return_decay, for the
+              soft update; eval_fn, for the evaluation sampler
+            - flow_grpo/diffusers_patch/solver.py: run_sampling, dpm_step
+            - flow_grpo/diffusers_patch/pipeline_with_logprob.py: pipeline_with_logprob
 """
 
 from contextlib import contextmanager
@@ -13,6 +20,7 @@ import torch
 from torch.distributed.tensor import DTensor
 
 from nexus_align.utils.dtype import DTYPE_MAP
+from nexus_align.algorithms.flow_grpo import group_advantages
 from nexus_align.algorithms.base_algorithm import BaseAlgorithm
 
 
@@ -20,9 +28,9 @@ def dpm2_step(
     x0_preds: list[torch.Tensor], sample: torch.Tensor, sigmas: torch.Tensor, i: int
 ) -> torch.Tensor:
     """
-    One step from sigmas[i] to sigmas[i + 1] of the 2nd-order multistep DPM-Solver.
+    Do one step from sigmas[i] to sigmas[i + 1] with the 2nd-order multistep DPM-Solver.
 
-    x0_preds holds the x0 predictions up to step i; the first and the last steps are
+    x0_preds holds the x0 predictions up to step i. The first and the last steps are
     1st-order (DDIM), as in the official deterministic dpm2 solver.
     """
     sigmas = sigmas.to(torch.float64)
@@ -31,7 +39,7 @@ def dpm2_step(
         noise_pred = (sample - (1 - s) * x0_preds[-1]) / s
         return (1 - t) * x0_preds[-1] + torch.sqrt(t**2) * noise_pred
 
-    # The flow schedule has alpha = 1 - sigma; lambda is the half log-SNR.
+    # The flow schedule has alpha = 1 - sigma. lambda is the half log-SNR.
     sigma_t, sigma_s0, sigma_s1 = t, s, sigmas[i - 1]
     alpha_t, alpha_s0, alpha_s1 = 1 - sigma_t, 1 - sigma_s0, 1 - sigma_s1
     lambda_t = torch.log(alpha_t) - torch.log(sigma_t)
@@ -49,7 +57,7 @@ def dpm2_step(
 
 
 def adaptive_x0_loss(x0_pred: torch.Tensor, x0: torch.Tensor) -> torch.Tensor:
-    """x0 regression divided by its stop-gradient mean absolute error, per sample."""
+    """Divide the x0 squared error by its detached mean absolute error, per sample."""
     dims = tuple(range(1, x0.ndim))
     with torch.no_grad():
         weight = (
@@ -64,7 +72,7 @@ class DiffusionNFT(BaseAlgorithm):
     """DiffusionNFT training algorithm."""
 
     def __init__(self, cfg_algorithm):
-        super().__init__(cfg_algorithm)
+        super().__init__()
 
         # Sampling configs.
         self.resolution = cfg_algorithm.get("resolution", 512)  # image resolution
@@ -75,17 +83,16 @@ class DiffusionNFT(BaseAlgorithm):
 
         # Advantage configs.
         self.group_size = cfg_algorithm.get("group_size", 24)  # images per prompt, K
-        self.global_std = cfg_algorithm.get("global_std", True)  # divide by the std of all rewards instead of the group's
 
         # Policy loss configs.
         self.timestep_fraction = cfg_algorithm.get("timestep_fraction", 0.99)  # train on int(num_steps * fraction) sampling timesteps of each image
         self.adv_clip_max = cfg_algorithm.get("adv_clip_max", 5.0)  # optimality r = 0.5 + 0.5 * clip(advantage / max, -1, 1)
-        self.beta = cfg_algorithm.get("beta", 1.0)  # implicit policy coefficient beta; see paper Eq. (5)
+        self.beta = cfg_algorithm.get("beta", 1.0)  # implicit policy coefficient beta; see paper Eq. 5
         self.kl_beta = cfg_algorithm.get("kl_beta", 1.0e-4)  # coefficient of the velocity KL to the reference policy
 
         # Soft update configs.
         self.eta_rate = cfg_algorithm.get("eta_rate", 0.001)  # old policy decay eta = min(eta_rate * (step - eta_delay), eta_max)
-        self.eta_max = cfg_algorithm.get("eta_max", 0.5)  # max eta
+        self.eta_max = cfg_algorithm.get("eta_max", 0.5)  # highest eta
         self.eta_delay = cfg_algorithm.get("eta_delay", 0)  # optimizer steps with eta = 0 (on-policy) before eta grows
 
         self.pipeline = None
@@ -100,7 +107,7 @@ class DiffusionNFT(BaseAlgorithm):
         super().prepare(model, device)
         self.pipeline = pipeline
         self.scheduler = pipeline.scheduler
-        # Local shards of the trained params, as sharded params are slow to dispatch.
+        # Keep plain local shards of the trained params. Ops on a DTensor cost CPU time.
         self.params = [
             (p.to_local() if isinstance(p, DTensor) else p).detach()
             for p in model.parameters() if p.requires_grad
@@ -108,7 +115,7 @@ class DiffusionNFT(BaseAlgorithm):
 
     @contextmanager
     def old_policy(self):
-        """Swap in the old policy's weights; it starts as a copy of the trained ones."""
+        """Swap in the old policy weights, which start as a copy of the trained ones."""
         if self.old_params is None:
             self.old_params = [p.detach().clone() for p in self.params]
         current = [p.detach().clone() for p in self.params]
@@ -117,10 +124,6 @@ class DiffusionNFT(BaseAlgorithm):
             yield
         finally:
             torch._foreach_copy_(self.params, current)
-
-    def reset_old_policy(self) -> None:
-        """Restart the old policy as a copy of the trained weights at its next use."""
-        self.old_params = None
 
     @torch.no_grad()
     def update_old_policy(self, epoch: int, step: int) -> None:
@@ -131,10 +134,14 @@ class DiffusionNFT(BaseAlgorithm):
             (step - self.eta_delay) * self.eta_rate, self.eta_max
         )
         for p, old in zip(self.params, self.old_params):
-            old.copy_(old * eta + p.detach().clone() * (1.0 - eta))
+            old.copy_(old * eta + p * (1.0 - eta))
 
     def predict(self, latents, sigma, embeds, pooled_embeds, guidance_scale):
-        """Sampling velocity; the timestep is truncated to an integer, as officially."""
+        """
+        Predict the sampling velocity.
+
+        Like the official code, this function truncates the timestep to an integer.
+        """
         do_cfg = guidance_scale > 1.0
         model_input = torch.cat([latents] * 2) if do_cfg else latents
         batch_size = model_input.shape[0]
@@ -158,15 +165,15 @@ class DiffusionNFT(BaseAlgorithm):
         return noise_pred
 
     def forward(self, data):
-        """NFT loss of one batch at its data["step"]-th timestep; see paper Eq. (5)."""
-        # 1. Noise the clean latents at this image's timestep of the step.
+        """Calculate the NFT loss at the data["step"]-th timestep; see paper Eq. 5."""
+        # 1. Add noise to the clean latents at the timestep of each image for this step.
         j = data["step"]
         x0, timesteps = data["latents"], data["timesteps"][:, j]
         t = (timesteps / 1000.0).view(-1, *([1] * (x0.ndim - 1)))
         noise = torch.randn_like(x0.float())
         xt = (1 - t) * x0 + t * noise
 
-        # 2. Velocities of the old, trained, and reference (LoRA disabled) policies.
+        # 2. Predict the old, trained, and reference (LoRA disabled) velocities.
         inputs = {
             "hidden_states": xt,
             "timestep": timesteps,
@@ -174,8 +181,8 @@ class DiffusionNFT(BaseAlgorithm):
             "pooled_projections": data["pooled_prompt_embeds"],
             "return_dict": False,
         }
-        # The old policy runs in its own autocast region, as autocast caches the fp16
-        # casts of trained weights within a region, which would keep the old ones.
+        # The old policy runs in its own autocast region. Autocast caches the fp16 casts
+        # of the trained weights in a region, so a shared region keeps the old casts.
         with torch.no_grad(), self.old_policy():
             with torch.autocast("cuda", dtype=DTYPE_MAP[self.autocast_dtype]):
                 old_pred = self.model(**inputs)[0]
@@ -184,9 +191,11 @@ class DiffusionNFT(BaseAlgorithm):
             with torch.no_grad(), self.model.disable_adapter():
                 ref_pred = self.model(**inputs)[0]
 
-        # 3. Optimality-weighted losses of the implicit positive and negative policies.
+        # 3. Weight the losses of the implicit positive and negative policies with the
+        # optimality r.
         adv_clip_max = self.adv_clip_max
         advantages = torch.clamp(data["advantages"], -adv_clip_max, adv_clip_max)
+        # Normalize the advantages to [0, 1].
         r = torch.clamp((advantages / adv_clip_max) / 2.0 + 0.5, 0, 1)
         positive_pred = self.beta * pred + (1 - self.beta) * old_pred
         negative_pred = (1.0 + self.beta) * old_pred - self.beta * pred
@@ -196,7 +205,7 @@ class DiffusionNFT(BaseAlgorithm):
         policy_loss = r * positive_loss / beta + (1.0 - r) * negative_loss / beta
         policy_loss = (policy_loss * adv_clip_max).mean()
 
-        # 4. KL to the reference policy as the squared velocity difference.
+        # 4. Use the squared velocity difference as the KL to the reference policy.
         dims = tuple(range(1, x0.ndim))
         kl_loss = torch.mean(((pred - ref_pred) ** 2).mean(dim=dims))
         loss = policy_loss + self.kl_beta * kl_loss
@@ -215,7 +224,7 @@ class DiffusionNFT(BaseAlgorithm):
 
         solver is "dpm2" for rollouts, or "flow" (Euler) for evaluation by default.
         """
-        # 1. Prepare prompts, with negative prompts first for CFG.
+        # 1. Prepare the prompts, with the negative prompts first for CFG.
         embeds, pooled_embeds = data["prompt_embeds"], data["pooled_prompt_embeds"]
         guidance_scale = data.get("guidance_scale", 1.0)
         num_steps = data.get("num_steps", self.num_steps)
@@ -234,7 +243,7 @@ class DiffusionNFT(BaseAlgorithm):
             device=self.device, dtype=embeds.dtype,
         )
 
-        # 3. Denoise, stepping in fp32 and storing latents in the prompt dtype.
+        # 3. Denoise in fp32 steps, and keep the latents in the prompt dtype.
         self.scheduler.set_timesteps(num_steps, device=self.device)
         timesteps, sigmas = self.scheduler.timesteps, self.scheduler.sigmas.float()
         all_latents, x0_preds = [latents], []
@@ -264,11 +273,11 @@ class DiffusionNFT(BaseAlgorithm):
 
     @torch.no_grad()
     def rollout(self, prompts: list[str], epoch: int) -> dict:
-        """Sample images with the old policy; return their clean latents and images."""
+        """Sample images with the old policy. Return them and their clean latents."""
         max_length = self.max_sequence_length
         embeds, pooled_embeds = self.pipeline.encode_prompt(prompts, max_length)
         with self.old_policy():
-            out = self.sample({
+            out = self.sample({  # yjk: check here
                 "prompt_embeds": embeds,
                 "pooled_prompt_embeds": pooled_embeds,
                 "solver": self.solver,
@@ -283,13 +292,13 @@ class DiffusionNFT(BaseAlgorithm):
             "prompt_embeds": embeds,
             "pooled_prompt_embeds": pooled_embeds,
             "timesteps": out["timesteps"].gather(1, order),
-            "latents": out["latents"][:, -1],  # clean latents
+            "latents": out["latents"][:, -1],  # keep only the clean latents
         }
         return {"samples": samples, "responses": self.decode(out["latents"][:, -1])}
 
     @torch.no_grad()
     def generate(self, prompts: list[str], num_steps: int, guidance_scale: float):
-        """Evaluation images of the Euler ODE sampler at the given CFG scale."""
+        """Make evaluation images with the Euler ODE sampler at the given CFG scale."""
         max_length = self.max_sequence_length
         embeds, pooled_embeds = self.pipeline.encode_prompt(prompts, max_length)
         data = {
@@ -306,14 +315,4 @@ class DiffusionNFT(BaseAlgorithm):
         return self.decode(out["latents"][:, -1])
 
     def compute_advantages(self, prompts: list[str], rewards: np.ndarray) -> np.ndarray:
-        """Subtract each prompt group's mean; std is global when global_std is set."""
-        prompts = np.array(prompts)
-        rewards = np.asarray(rewards, dtype=np.float64)
-        advantages = np.zeros_like(rewards)
-        for prompt in np.unique(prompts):
-            group = rewards[prompts == prompt]
-            mean = np.mean(group, axis=0, keepdims=True)
-            std = rewards if self.global_std else group
-            std = np.std(std, axis=0, keepdims=True) + 1e-4
-            advantages[prompts == prompt] = (group - mean) / std
-        return advantages
+        return group_advantages(prompts, rewards)

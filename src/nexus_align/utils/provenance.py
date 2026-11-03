@@ -12,7 +12,7 @@ PROJECT_DIR = Path(__file__).resolve().parents[3]
 
 
 def _git(*args: str) -> str | None:
-    """Run a git command in the project dir; return its stdout or None if unavailable."""
+    """Run git in the project directory. Return its stdout, or None if it fails."""
     try:
         out = subprocess.run(
             ["git", *args], cwd=PROJECT_DIR, capture_output=True, text=True, check=True, timeout=10,
@@ -38,7 +38,7 @@ def collect_provenance() -> dict:
     """
     Collect non-private facts about the run: code version, software versions, hardware.
 
-    Hostname, IP addresses, user names, and environment variables are deliberately excluded.
+    It does not collect the hostname, IP addresses, user names, or environment variables.
     """
     dirty = _git("status", "--porcelain")
     git = {

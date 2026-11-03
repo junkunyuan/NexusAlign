@@ -11,8 +11,8 @@ def init_dist_env() -> tuple[int, int]:
     """
     Initialize the distributed process group.
 
-    ``torchrun`` is expected for distributed running.
-    Environment variables "WORLD_SIZE", "RANK", and "LOCAL_RANK" are expected.
+    Launch with ``torchrun``. This function needs the environment variables
+    "WORLD_SIZE", "RANK", and "LOCAL_RANK".
     
     Returns (world_size, rank).
     """
@@ -44,7 +44,7 @@ def init_dist_env() -> tuple[int, int]:
 
 
 def dist_safe_exit(exit_code: int = 0, message: str = "") -> None:
-    """Destroy the process group (if initialized) and exit the process."""
+    """Destroy the process group if it is initialized, then exit the process."""
     print(f"🛑 Exiting with code {exit_code}\n{message}")
     if dist.is_available() and dist.is_initialized():
         try:
@@ -54,3 +54,19 @@ def dist_safe_exit(exit_code: int = 0, message: str = "") -> None:
             print(f"⚠️ Failed to destroy process group: {e}")
     os._exit(exit_code)
 
+
+def broadcast_from_rank0(obj):
+    """Return rank 0's obj on every rank."""
+    objs = [obj]
+    dist.broadcast_object_list(objs, src=0)
+    return objs[0]
+
+
+def gather_tensor(tensor: torch.Tensor) -> torch.Tensor:
+    """Concatenate a tensor of the same shape from every rank, in rank order."""
+    buffer = torch.empty(
+        (dist.get_world_size() * tensor.shape[0], *tensor.shape[1:]),
+        dtype=tensor.dtype, device=tensor.device,
+    )
+    dist.all_gather_into_tensor(buffer, tensor.contiguous())
+    return buffer

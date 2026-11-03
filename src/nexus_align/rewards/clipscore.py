@@ -1,4 +1,5 @@
-"""ClipScore reward: CLIP-L cosine similarity of an image and its prompt.
+"""
+ClipScore reward: CLIP-L cosine similarity of an image and its prompt.
 
 References:
     - DiffusionNFT:
@@ -24,7 +25,7 @@ def get_size(size: dict | int) -> tuple[int, int] | int:
 
 
 class ClipScore:
-    """CLIP logit divided by its scale of 100, i.e. the cosine, as DiffusionNFT."""
+    """CLIP cosine, the logit divided by its scale of 100, as in DiffusionNFT."""
 
     metrics = ("clipscore",)  # headline metrics to report
 

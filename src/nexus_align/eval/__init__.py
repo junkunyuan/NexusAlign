@@ -1,1 +1,1 @@
-"""Evaluation: checkpoint sampling and FID/IS metrics."""
+"""Evaluation: FID/IS metrics and the summary of evaluated checkpoints."""

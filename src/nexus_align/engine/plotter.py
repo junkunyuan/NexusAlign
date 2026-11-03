@@ -1,4 +1,4 @@
-"""Training curves: metric figures drawn in the background, off the training process."""
+"""Training curves: a child process draws the metric figures in the background."""
 
 import os
 import math
@@ -10,17 +10,20 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 
 from nexus_align.utils.plot import (
-    FIGURE_DIR, LINE_COLOR, X_AXES, set_plot_style, save_figure
+    FIGURE_DIR, LINE_COLOR, X_AXES, set_plot_style, grid_figure, save_figure
 )
 
 
-# Record keys that are x axes or redundant duplicates, never drawn as a curve.
+# Record keys that are x axes or redundant duplicates. Do not draw them as curves.
 AXIS_KEYS = ("epoch", "step", "total_step")
 SKIP_SUFFIXES = ("_mean", "_peak", "_total")
 
+# Timing metrics of the other x axis. Do not draw them against this one.
+OTHER_AXIS_KEYS = {"epoch": ("step_avg_time",), "total_step": ("epoch_avg_time",)}
+
 
 def metric_keys(records: list[dict]) -> list[str]:
-    """List the metrics to draw, in the order the records introduce them."""
+    """List the metrics to draw, in the order that the records introduce them."""
     keys = []
     for record in records:
         for key, value in record.items():
@@ -32,7 +35,10 @@ def metric_keys(records: list[dict]) -> list[str]:
 
 
 def axis_points(records: list[dict], axis: dict) -> list[dict]:
-    """Sort the records by this x value, one record per x; epochs take the end-of-epoch ones."""
+    """
+    Sort the records by this x value, with one record per x. For the epoch axis, use
+    only the end-of-epoch records.
+    """
     points = {}
     for record in records:
         if axis["key"] == "epoch" and record.get("step") != 0:
@@ -57,18 +63,13 @@ def draw_metric(ax, points: list[dict], key: str, axis: dict) -> None:
 def plot_axis(records: list[dict], out_dir: str, axis: dict) -> list[str]:
     """Draw every metric against one x axis: one combined figure and one per metric."""
     points = axis_points(records, axis)
-    keys = metric_keys(points)
+    keys = [k for k in metric_keys(points) if k not in OTHER_AXIS_KEYS[axis["key"]]]
     if len(points) < 2 or not keys:
         return []
 
-    ncols = min(3, len(keys))
-    nrows = math.ceil(len(keys) / ncols)
-    fig = Figure(figsize=(7 * ncols, 4.5 * nrows))
-    axes = [ax for row in fig.subplots(nrows, ncols, squeeze=False) for ax in row]
+    fig, axes = grid_figure(len(keys), 7, 4.5)
     for ax, key in zip(axes, keys):
         draw_metric(ax, points, key, axis)
-    for ax in axes[len(keys):]:  # hide the unused cells of the last row
-        ax.axis("off")
     paths = [save_figure(fig, out_dir, f"{axis['name']}.png")]
 
     for key in keys:
@@ -79,7 +80,7 @@ def plot_axis(records: list[dict], out_dir: str, axis: dict) -> list[str]:
 
 
 def draw_figures(records: list[dict], fig_dir: str) -> list[str]:
-    """Draw every figure from the records; runs in the drawing process."""
+    """Draw every figure from the records. This runs in the drawing process."""
     set_plot_style()
     paths = []
     for axis in X_AXES:
@@ -92,9 +93,9 @@ class MetricPlotter:
     Background plotter of the training metric curves (rank 0 only).
 
     - update() only appends the latest record, so the training loop never blocks.
-    - A daemon thread redraws every figure at most once every interval seconds, in a
-      child process, as drawing in the training process holds its GIL for seconds and
-      stalls the kernel launches of training.
+    - A daemon thread redraws every figure in a child process, at most once every
+      interval seconds. If the training process draws the figures, it holds its GIL
+      for seconds and stalls the kernel launches of training.
     - close() draws the final figures and stops the thread.
     """
 
@@ -103,16 +104,14 @@ class MetricPlotter:
         self.interval = interval
         self.records = []
         self.drawn = 0
-        self.lock = threading.Lock()  # guards the records, never held while drawing
+        self.lock = threading.Lock()  # guards the records, not the drawing
         self.draw_lock = threading.Lock()  # serializes the drawing itself
         self._stop = threading.Event()
         self._thread = None
         self._pool = None
 
     def start(self) -> None:
-        """Prepare the figure dir and start the background drawing thread."""
-        if self._thread is not None:
-            return
+        """Prepare the figure directory and start the background drawing thread."""
         os.makedirs(self.fig_dir, exist_ok=True)
         context = multiprocessing.get_context("spawn")
         self._pool = ProcessPoolExecutor(1, mp_context=context)
@@ -122,7 +121,7 @@ class MetricPlotter:
         print(f"📌 Metric figures refreshed every {self.interval:.0f}s in <{self.fig_dir}>")
 
     def update(self, record: dict) -> None:
-        """Append one log record; the drawing itself happens in the background."""
+        """Append one log record. The drawing itself occurs in the background."""
         with self.lock:
             self.records.append(dict(record))
 
@@ -138,11 +137,8 @@ class MetricPlotter:
                 records = list(self.records)
             if len(records) == self.drawn:
                 return []
-            if self._pool is None:
-                paths = draw_figures(records, self.fig_dir)
-            else:
-                paths = self._pool.submit(draw_figures, records, self.fig_dir).result()
-            self.drawn = len(records)  # only after success, so a failed draw is retried
+            paths = self._pool.submit(draw_figures, records, self.fig_dir).result()
+            self.drawn = len(records)  # only after success, so the next draw retries
             return paths
 
     def close(self) -> None:

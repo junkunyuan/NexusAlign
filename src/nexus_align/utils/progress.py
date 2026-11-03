@@ -3,15 +3,13 @@
 from tqdm import tqdm
 
 import torch
-import torch.distributed as dist
 
 
 class TqdmBar:
     """
     Distributed-aware tqdm wrapper.
 
-    - Shows the progress bar only on the selected rank.
-    - Uses rank="all" to show a bar on every rank.
+    - Shows the progress bar only on the first GPU of each node.
     """
 
     def __init__(
@@ -21,15 +19,10 @@ class TqdmBar:
         unit: str,
         colour: str = "blue",
         mininterval=1.0,
-        display_on: int | str = "node",
     ) -> None:
         fmt = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
-        display = False
-        if display_on == "all":
-            display = True
-        if display_on == "node" and torch.cuda.current_device() == 0:
-            display = True
-        
+        display = torch.cuda.current_device() == 0
+
         self.pbar = tqdm(
             total=total,
             desc=desc,

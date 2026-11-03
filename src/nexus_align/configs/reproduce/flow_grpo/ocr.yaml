@@ -1,8 +1,9 @@
 # @package _global_
-# Reproduce Flow-GRPO (w/ KL) on visual text rendering with SD3.5-M.
+# Reproduce Flow-GRPO (with KL) on visual text rendering with SD3.5-M.
+# The args follow general_ocr_sd3 of the official config/grpo.py and config/base.py.
 # Launch with: EXP=ocr bash scripts/reproduce/flow_grpo_train.sh
-exp_info: flow_grpo_ocr_reproduce
+exp_info: flow_grpo_ocr_reproduce  # experiment name
 
 trainer:
-  epochs: 600  # 1200 steps, the length of the paper's learning curve
-  save_ckpt_every_n_epochs: 60
+  epochs: 600  # training epochs; 1200 steps, the length of the paper's learning curve
+  save_ckpt_every_n_epochs: 60  # save every N epochs, plus the initial weights at epoch 0

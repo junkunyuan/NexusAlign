@@ -1,4 +1,4 @@
-"""Package init: import submodules to register built-in factories on import."""
+"""Package init: import the submodules to register the built-in components."""
 
 import nexus_align.datasets  # noqa: F401
 import nexus_align.models  # noqa: F401

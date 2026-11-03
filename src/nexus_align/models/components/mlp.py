@@ -1,4 +1,11 @@
-"""MLP components: feed-forward networks."""
+"""
+MLP components: feed-forward networks.
+
+References:
+    - timm:
+        - Code: https://github.com/huggingface/pytorch-image-models
+            - timm/layers/mlp.py: Mlp
+"""
 
 import torch
 import torch.nn as nn

@@ -2,40 +2,42 @@
 # Config groups.
 # --------------------------------------------------------------------------------
 defaults:
-  - data: imagenet_1k
-  - algorithm: meanflow
-  - model: meanflow_dit
-  - trainer: sft
-  - evaluator: null
-  - reward: null
-  - override hydra/job_logging: none  # logging is configured by init_log instead
-  - _self_
+  - data: null  # dataset config, chosen with data=<name>
+  - model: null  # model config, chosen with model=<name>
+  - algorithm: null  # algorithm config, chosen with algorithm=<name>
+  - trainer: null  # trainer config, chosen with trainer=<name>
+  - evaluator: null  # evaluator config, chosen with evaluator=<name>
+  - reward: null  # reward config, chosen with reward=<name>
+  - override hydra/job_logging: none  # init_log configures the logging instead
+  - _self_  # this file overrides the defaults above
 
 # --------------------------------------------------------------------------------
 # General configs.
 # --------------------------------------------------------------------------------
-job_type: train  # "train" runs the trainer, "eval" runs the evaluator
-data_and_model_dir: ${hydra:runtime.cwd}/data_and_model  # single entry for all data and model weights
-exp_info: ""  # experiment info/name; auto-names it {dataset}_{model}_{algorithm} if str is empty
-timestamp: true  # if True, append timestamp to exp_info
-log_dir: logs  # log dir; will reset as the abs path of join(log_dir, exp_info)
+job_type: train  # "train" runs the trainer and "eval" runs the evaluator
+data_and_model_dir: ${hydra:runtime.cwd}/data_and_model  # root directory of all assets
+# If exp_info is empty, train mode names it {data}-{model}-{algorithm}.
+# Eval mode needs it.
+exp_info: ""  # experiment name
+timestamp: true  # if True, append a timestamp to exp_info in train mode
+log_dir: logs  # log directory; the run uses the full path of join(log_dir, exp_info)
 notes: ""  # notes of this experiment
 
 # --------------------------------------------------------------------------------
 # Wandb configs.
 # --------------------------------------------------------------------------------
 wandb:
-  entity: null
-  project: nexus_align
-  name: null
+  entity: null  # wandb user or team; null uses the default entity
+  project: nexus_align  # wandb project
+  name: null  # wandb run name; null lets wandb pick one
   mode: disabled  # "online", "offline", or "disabled"
 
 # --------------------------------------------------------------------------------
-# Hydra configs; do NOT change.
+# Hydra configs. Do NOT change them.
 # --------------------------------------------------------------------------------
 hydra:
-  output_subdir: null  # not create the .hydra/ subdir
+  output_subdir: null  # do not make the .hydra/ subdirectory
   run:
-    dir: .  # run in the current dir
+    dir: .  # run in the current directory
   job:
-    chdir: false  # not change working dir
+    chdir: false  # do not change the working directory

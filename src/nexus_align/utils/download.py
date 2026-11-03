@@ -1,23 +1,23 @@
 """
-Download models, datasets, and evaluation assets into the data_and_model dir.
+Download datasets, models, and evaluation assets into the data_and_model directory.
 
-Every asset is stored at <data_and_model_dir>/<name>, so the names below match the
-paths used by the configs (e.g. data.vae, evaluator.inception_weights).
+The script stores every asset at <data_and_model_dir>/<name>, so the names below
+match the paths in the configs, for example data.vae and evaluator.inception_weights.
 
 Usage (from the project root):
     python src/nexus_align/utils/download.py --list
     python src/nexus_align/utils/download.py stabilityai/sd-vae-ft-mse
     python src/nexus_align/utils/download.py meanflow  # a preset: all assets of one experiment
-    python src/nexus_align/utils/download.py paddleocr  # a dir: all assets under it
+    python src/nexus_align/utils/download.py paddleocr  # a directory: all assets in it
     python src/nexus_align/utils/download.py all
     python src/nexus_align/utils/download.py ILSVRC/imagenet-1k --include "data/train-*"
 
-A name not in ASSETS is downloaded as a custom asset when its source is given:
+To download a name that is not in ASSETS as a custom asset, give its source:
     python src/nexus_align/utils/download.py Qwen/Qwen3-8B --source hf
     python src/nexus_align/utils/download.py ylecun/mnist --source hf --repo-type dataset
     python src/nexus_align/utils/download.py others/file.pth --source url --url <url>
 
-Gated Hugging Face repos (e.g. ImageNet) need a token: pass --token or set HF_TOKEN.
+Gated Hugging Face repos such as ImageNet need a token. Pass --token or set HF_TOKEN.
 """
 
 import argparse
@@ -29,13 +29,13 @@ from pathlib import Path
 from tqdm import tqdm
 
 # --------------------------------------------------------------------------------
-# Preset assests to download here.
+# Preset assets to download here.
 # --------------------------------------------------------------------------------
 PROJECT_DIR = Path(__file__).resolve().parents[3]
 DEFAULT_DIR = PROJECT_DIR / "data_and_model"
 
-# name -> {"kind": "datasets" | "models" | "others", "source": "hf" | "url", ...};
-# the name is also the local path.
+# name -> {"kind": "datasets" | "models" | "others", "source": "hf" | "url", ...}.
+# The name is also the local path.
 ASSETS = {
     # Datasets.
     "ILSVRC/imagenet-1k": {"kind": "datasets", "source": "hf", "repo_type": "dataset"},
@@ -62,10 +62,10 @@ ASSETS = {
         "source": "url",
         "url": "https://github.com/toshas/torch-fidelity/releases/download/v0.2.0/weights-inception-2015-12-05-6726825d.pth",
     },
-    "fid_stats/adm_in256_stats.npz": {  # ImageNet 256x256 reference statistics of MeanFlow
+    "fid_stats/imf_jax_in256_stats.npz": {  # iMeanFlow's JAX reference statistics of ImageNet 256x256
         "kind": "others",
         "source": "url",
-        "url": "https://raw.githubusercontent.com/zhuyu-cs/MeanFlow/b006921898d82ea0dd75cfae5d242863fcfba56e/fid_stats/adm_in256_stats.npz",
+        "url": "https://huggingface.co/Lyy0725/iMF/resolve/main/imagenet_256_fid_stats.npz",
     },
     "paddleocr/whl/det/en/en_PP-OCRv3_det_infer": {
         "kind": "others",
@@ -148,7 +148,7 @@ ASSETS = {
         "ignore": ["*.bin"],
     },
     "CodeGoat24/UnifiedReward-7b-v1.5": {"kind": "models", "source": "hf"},
-    # Vision tower that sglang builds UnifiedReward with, before loading its own weights.
+    # sglang builds UnifiedReward with this vision tower, then loads its own weights.
     "google/siglip-so400m-patch14-384": {
         "kind": "models",
         "source": "hf",
@@ -169,19 +169,19 @@ ASSETS = {
 }
 KINDS = {"datasets": "📚", "models": "🤖", "others": "🧩"}
 
-# preset -> asset names; "all" is added automatically.
+# preset -> asset names. The code below adds "all" automatically.
 PRESETS = {
     "meanflow": [
         "stabilityai/sd-vae-ft-mse",
         "ILSVRC/imagenet-1k",
         "torch_fidelity/weights-inception-2015-12-05-6726825d.pth",
-        "fid_stats/adm_in256_stats.npz",
+        "fid_stats/imf_jax_in256_stats.npz",
     ],
     "imeanflow": [
         "stabilityai/sd-vae-ft-mse",
         "ILSVRC/imagenet-1k",
         "torch_fidelity/weights-inception-2015-12-05-6726825d.pth",
-        "fid_stats/adm_in256_stats.npz",
+        "fid_stats/imf_jax_in256_stats.npz",
     ],
     "flow_grpo": [
         "stabilityai/stable-diffusion-3.5-medium",
@@ -223,7 +223,7 @@ PRESETS = {
         "CodeGoat24/UnifiedReward-7b-v1.5",
         "google/siglip-so400m-patch14-384",
         "xswu/HPSv2",
-        "MizzenAI/HPSv3",  # not used by Flow-GRPO or DiffusionNFT
+        "MizzenAI/HPSv3",  # Flow-GRPO and DiffusionNFT do not use it
         "Qwen/Qwen2-VL-7B-Instruct",
     ],
 }
@@ -231,7 +231,7 @@ PRESETS["all"] = list(ASSETS)
 
 
 def resolve_names(names: list[str]) -> list[str]:
-    """Expand presets and dirs, validate asset names, keep the order, and drop duplicates."""
+    """Expand presets and directories in order, check the names, and drop duplicates."""
     resolved = []
     for name in names:
         expanded = PRESETS.get(name) or [n for n in ASSETS if n.startswith(f"{name}/")] or [name]
@@ -270,7 +270,7 @@ def download_url(name: str, info: dict, dest: Path, args) -> None:
     if dest.exists() and not args.force:
         return
     tmp = dest.with_suffix(dest.suffix + ".part")
-    if "files" in info:  # only the listed files under url, kept at their relative paths
+    if "files" in info:  # only the listed files under url, at their relative paths
         shutil.rmtree(tmp, ignore_errors=True)
         for file in info["files"]:
             fetch(f"{info['url']}/{file}", tmp / file)
@@ -286,7 +286,7 @@ def download_url(name: str, info: dict, dest: Path, args) -> None:
 
 
 def unpack(archive: Path, dest: Path, fmt: str) -> None:
-    """Unpack an archive into dest, dropping its top-level dir if it is the only entry."""
+    """Unpack an archive into dest, and drop its top-level directory if it is alone."""
     tmp_dir = dest.with_name(dest.name + ".unpack")
     shutil.rmtree(tmp_dir, ignore_errors=True)
     shutil.unpack_archive(archive, tmp_dir, format=fmt)
@@ -301,7 +301,7 @@ DOWNLOADERS = {"hf": download_hf, "url": download_url}
 
 
 def download(names: list[str], args) -> None:
-    """Download every asset, keep going on failures, and report them at the end."""
+    """Download every asset. If some fail, continue and report them at the end."""
     root = Path(args.dir).expanduser().resolve()
     failed = []
     for i, name in enumerate(names, 1):
@@ -321,7 +321,7 @@ def download(names: list[str], args) -> None:
 
 
 def print_by_kind(names: list[str], root: Path, indent: int) -> None:
-    """Print assets grouped by kind, marking the ones already present under root."""
+    """Print the assets by kind, and mark the ones that already exist in root."""
     pad = " " * indent
     for kind in KINDS:
         members = [n for n in names if ASSETS[n]["kind"] == kind]
@@ -343,7 +343,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=8, help="parallel file downloads (HF only)")
     parser.add_argument("--force", action="store_true", help="re-download even if the asset exists")
     parser.add_argument("--source", choices=list(DOWNLOADERS), default=None, help="source of a custom asset")
-    parser.add_argument("--repo-type", choices=["model", "dataset", "space"], default="model", help="HF repo type of a custom asset")
+    parser.add_argument("--repo-type", choices=["dataset", "model", "space"], default="model", help="HF repo type of a custom asset")
     parser.add_argument("--url", default=None, help="URL of a custom asset with --source url")
     args = parser.parse_args()
     if args.source == "url" and not args.url:

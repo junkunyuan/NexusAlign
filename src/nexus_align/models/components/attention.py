@@ -1,4 +1,11 @@
-"""Attention components: multi-head self-attention."""
+"""
+Attention components: multi-head self-attention.
+
+References:
+    - timm:
+        - Code: https://github.com/huggingface/pytorch-image-models
+            - timm/layers/attention.py: Attention
+"""
 
 import torch
 import torch.nn as nn

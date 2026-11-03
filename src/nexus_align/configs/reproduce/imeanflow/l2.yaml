@@ -1,22 +1,29 @@
 # @package _global_
-# Reproduce iMF-L/2 from the paper.
+# Reproduce iMF-L/2 with the setting in Table 4 of the paper.
+# The other args follow the official configs/default.py and configs/train_config.yml.
 # Launch with: +reproduce=imeanflow/l2
-# Evaluate with: CFG_SCALE=10.5 CFG_MIN_T=0.4 CFG_MAX_T=0.6 (official checkpoint setting)
-exp_info: imeanflow_l2_reproduce
+# Evaluate with: CFG_SCALE=10.5 CFG_MIN_T=0.4 CFG_MAX_T=0.6 (official eval_config.yml)
+exp_info: imeanflow_l2_reproduce  # experiment name
+
+# Normalize the latents per channel, as the official vae_util.py does.
+data:
+  vae_scale: 1.  # VAE latent scale
+  vae_mean: [0.86488, -0.27787343, 0.21616915, 0.3738409]  # VAE latent mean
+  vae_std: [4.85503674, 5.31922414, 3.93725398, 3.9870003]  # VAE latent std
 
 model:
-  name: imeanflowdit_l_2
+  name: imeanflowdit_l_2  # imeanflowdit_xl_2, imeanflowdit_l_2, imeanflowdit_m_2, imeanflowdit_b_2
 
 algorithm:
-  cfg_beta: 2.0
+  cfg_beta: 2.0  # omega ~ p(omega) ∝ omega^-beta
 
 trainer:
-  epochs: 640
-  train_batch_size: 1024
-  learning_rate: 1.0e-4
-  warmup_epochs: 10
-  ema_decay: 0.9999
-  max_grad_norm: .inf  # paper uses no gradient clipping
-  save_ckpt_every_n_epochs: 64
-  save_ckpt_keep_last_n_epochs: 100
-  log_every_n_steps: 200
+  epochs: 640  # training epochs
+  train_batch_size: 1024  # total batch size of one optimizer step over all ranks
+  learning_rate: 1.0e-4  # Adam learning rate
+  warmup_epochs: 10  # linear LR warmup from 0 over N epochs, then constant; 0 disables it
+  ema_decay: 0.9999  # EMA decay
+  max_grad_norm: .inf  # max gradient norm for clipping; the paper uses no clipping
+  save_ckpt_every_n_epochs: 64  # save every N epochs; null disables it
+  save_ckpt_keep_last_n_epochs: 100  # keep only the last N epoch checkpoints
+  log_every_n_steps: 200  # print and track the metrics every N total steps

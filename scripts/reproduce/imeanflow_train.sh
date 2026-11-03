@@ -8,33 +8,30 @@
 
 set -e
 # --------------------------------------------------------------------------------
-# Prepare experiment.
+# Prepare the experiment.
 # --------------------------------------------------------------------------------
-EXP=${EXP:-b2}  # b2, m2, l2, xl2, b2_ablation
-echo "imeanflow training: EXP=${EXP}"
+EXP=${EXP:-b2}  # b2, m2, l2, xl2
+echo "🚀 imeanflow training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
-# Prepare environment.
+# Prepare the environment.
 # --------------------------------------------------------------------------------
-export NNODES=${NNODES:-1}  # distributed vars; set on every node for multi-node runs
+export NNODES=${NNODES:-1}  # torchrun variables; set on every node for multi-node runs
 export NODE_RANK=${NODE_RANK:-0}
 export NPROC_PER_NODE=${NPROC_PER_NODE:-$(nvidia-smi -L | wc -l)}
 export MASTER_ADDR=${MASTER_ADDR:-127.0.0.1}
 export MASTER_PORT=${MASTER_PORT:-29500}
 export PYTHONPATH="$(pwd)/src:$PYTHONPATH"
-export NCCL_DEBUG=VERSION  # simple NCCL print
+export NCCL_DEBUG=VERSION  # print only the NCCL version
 
-echo NNODES ${NNODES}
-echo NODE_RANK ${NODE_RANK}
-echo NPROC_PER_NODE ${NPROC_PER_NODE}
-echo MASTER_ADDR ${MASTER_ADDR}
-echo MASTER_PORT ${MASTER_PORT}
+echo "🖥️ NNODES=${NNODES} NODE_RANK=${NODE_RANK} NPROC_PER_NODE=${NPROC_PER_NODE}" \
+  "MASTER_ADDR=${MASTER_ADDR} MASTER_PORT=${MASTER_PORT}"
 
 if [ -d ".venv" ]; then
-  echo "Environment installed, skipping..."
+  echo "✅ Environment installed, skipping..."
   source .venv/bin/activate
 else
-  echo "Installing environment..."
+  echo "⏳ Installing environment..."
   pip install uv
   uv venv .venv
   source .venv/bin/activate
@@ -48,20 +45,20 @@ fi
 prepare() {
   local dst="data_and_model/$1" tmp="data_and_model/.tmp/$1"
   if [[ -e "$dst" ]]; then
-    echo "$1 exists, skipping..."
+    echo "✅ $1 exists, skipping..."
   else
     rm -rf "$tmp"
     python src/nexus_align/utils/download.py "$1" --dir data_and_model/.tmp
     mkdir -p "$(dirname "$dst")"
     mv "$tmp" "$dst"
-    echo "Prepared $1"
+    echo "💾 Prepared $1"
   fi
 }
 prepare ILSVRC/imagenet-1k
 prepare stabilityai/sd-vae-ft-mse
 
 # --------------------------------------------------------------------------------
-# Start training.
+# Start the training.
 # --------------------------------------------------------------------------------
 torchrun \
     --nnodes ${NNODES} \

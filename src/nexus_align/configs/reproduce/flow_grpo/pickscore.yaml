@@ -1,11 +1,12 @@
 # @package _global_
-# Reproduce Flow-GRPO (w/ KL) on human preference alignment with SD3.5-M.
+# Reproduce Flow-GRPO (with KL) on human preference alignment with SD3.5-M.
+# The args follow pickscore_sd3 of the official config/grpo.py and config/base.py.
 # Launch with: EXP=pickscore bash scripts/reproduce/flow_grpo_train.sh
-exp_info: flow_grpo_pickscore_reproduce
+exp_info: flow_grpo_pickscore_reproduce  # experiment name
 
 algorithm:
-  beta: 0.01  # KL coefficient for PickScore
+  beta: 0.01  # KL coefficient; see paper Eq. 5
 
 trainer:
-  epochs: 1500  # 3000 steps, the length of the paper's learning curve
-  save_ckpt_every_n_epochs: 150
+  epochs: 1500  # training epochs; 3000 steps, the length of the paper's learning curve
+  save_ckpt_every_n_epochs: 150  # save every N epochs, plus the initial weights at epoch 0

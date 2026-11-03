@@ -1,15 +1,18 @@
 # @package _global_
 # Reproduce DiffusionNFT on visual text rendering with SD3.5-M, CFG-free.
+# The args follow sd3_ocr of the official config/nft.py and config/base.py.
+# The training steps follow Table 2 of the paper.
 # Launch with: EXP=ocr bash scripts/reproduce/diffusion_nft_train.sh
-exp_info: diffusion_nft_ocr_reproduce
+exp_info: diffusion_nft_ocr_reproduce  # experiment name
 
 algorithm:
-  beta: 0.1
-  eta_rate: 0.0075  # a more conservative soft update, which stabilizes OCR
-  eta_max: 0.999
-  eta_delay: 75
+  beta: 0.1  # implicit policy coefficient beta; see paper Eq. 5
+  # Use a more conservative soft update, which stabilizes OCR.
+  eta_rate: 0.0075  # old policy decay eta = min(eta_rate * (step - eta_delay), eta_max)
+  eta_max: 0.999  # highest eta
+  eta_delay: 75  # optimizer steps with eta = 0 (on-policy) before eta grows
 
 trainer:
-  updates_per_epoch: 2
-  epochs: 75  # 150 steps, as reported in the paper
-  save_ckpt_every_n_epochs: 10
+  updates_per_epoch: 2  # optimizer steps per epoch
+  epochs: 75  # training epochs; 150 steps, as the paper reports
+  save_ckpt_every_n_epochs: 10  # save every N epochs, plus the initial weights at epoch 0

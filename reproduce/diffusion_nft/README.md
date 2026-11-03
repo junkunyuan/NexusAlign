@@ -6,15 +6,20 @@
 
 ## Introduction
 
-**Paper:** [*DiffusionNFT: Online Diffusion Reinforcement with Forward Process* (ICLR 2026)](https://arxiv.org/abs/2509.16117)
+**Paper:** *DiffusionNFT: Online Diffusion Reinforcement with Forward Process* ([ICLR 2026](https://arxiv.org/abs/2509.16117))
 
-**Official code:** [NVlabs/DiffusionNFT](https://github.com/NVlabs/DiffusionNFT).
+**Summary:** Run online RL on the forward process. One flow-matching loss learns the positive and negative policies that the reward defines on the rollouts.
 
-**Summary:** Optimize a diffusion model on the forward process with a flow matching objective, contrasting positive and negative generations to define an implicit policy improvement direction, without likelihoods or CFG.
+**Implementation:** We follow the official code [NVlabs/DiffusionNFT](https://github.com/NVlabs/DiffusionNFT), with the GenEval reward from [yifan123/reward-server](https://github.com/yifan123/reward-server), except for:
+
+- **Paper and code:** Where the paper and the code differ, we follow the code. It trains 9 of the 10 timesteps and uses a KL weight of 1e-4. For OCR, its old policy stays on-policy for 75 steps, then decays at a rate of 0.0075.
+- **T5 length in evaluation:** The evaluation encodes the prompts with 128 T5 tokens, as the training and `eval_fn` do. `evaluation.py` of the official code uses the diffusers default of 256.
+- **GPUs:** We train on 64 GPUs instead of 8, with the same 1152 images per update (576 for OCR).
+- **Infrastructure:** `torch.compile`, fp16 frozen weights, FSDP, and the in-place old-policy swap speed up training and change only the rounding. The code for logging, checkpointing, and the reward servers is our own.
 
 ## Results
 
-Table 2 of paper.
+**Table 2 of the paper:** SD3.5-M trained on GenEval, OCR, and PickScore.
 
 | Model | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -27,14 +32,14 @@ Table 2 of paper.
 | PickScore (paper) | 0.53 | 0.64 | - | **24.03** | 0.270 | 0.315 | 6.17 | 1.29 | 3.40 | - | - | - |
 | PickScore (ours) | 0.57 | 0.73 | **23.78** | 24.04 | 0.274 | 0.317 | 6.20 | 1.35 | 3.43 | 4.26 | 12.65 | [run](pickscore-20261020_040000) |
 
-- † means scoring on their own test prompts, and the other on DrawBench.
-- In-domain results are highlighted in bold.
+- **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench.
+- **Bold:** in-domain results.
 
 ## Command
 
 ### Training
 
-Train SD3.5-M model.
+Train SD3.5-M on one reward with its specific training data:
 ```bash
 # EXP is geneval, ocr, or pickscore.
 EXP=geneval bash scripts/reproduce/diffusion_nft_train.sh
@@ -42,7 +47,7 @@ EXP=geneval bash scripts/reproduce/diffusion_nft_train.sh
 
 ### Evaluation
 
-For a GenEval or PickScore training run:
+**Evaluate GenEval or PickScore runs:** with CFG off for every metric.
 ```bash
 # GenEval, PickScore, and OCR, each on its own test prompts.
 for TASK in geneval pickscore ocr; do
@@ -50,7 +55,7 @@ for TASK in geneval pickscore ocr; do
     bash scripts/reproduce/diffusion_nft_eval.sh
 done
 
-# The other metrics on DrawBench, two reward models per eval to avoid OOM.
+# The other metrics on DrawBench, with two reward models per evaluation to prevent OOM.
 for REWARDS in "unifiedreward aesthetic" "deqa imagereward" "hpsv3 pickscore" \
     "clipscore hpsv2"; do
   EXP_NAME=<log_dir_name> DATA=drawbench REWARDS="$REWARDS" \
@@ -58,7 +63,7 @@ for REWARDS in "unifiedreward aesthetic" "deqa imagereward" "hpsv3 pickscore" \
 done
 ```
 
-For an OCR training run (with CFG for every metric but OCR, as in the paper):
+**Evaluate OCR runs:** with CFG for every metric except OCR, as in the paper.
 ```bash
 # GenEval and PickScore, with CFG on.
 for TASK in geneval pickscore; do

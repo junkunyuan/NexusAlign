@@ -8,33 +8,30 @@
 
 set -e
 # --------------------------------------------------------------------------------
-# Prepare experiment.
+# Prepare the experiment.
 # --------------------------------------------------------------------------------
 EXP=${EXP:-pickscore}  # geneval, ocr, pickscore
-echo "flow_grpo training: EXP=${EXP}"
+echo "🚀 flow_grpo training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
-# Prepare environment.
+# Prepare the environment.
 # --------------------------------------------------------------------------------
-export NNODES=${NNODES:-1}  # distributed vars; set on every node for multi-node runs
+export NNODES=${NNODES:-1}  # torchrun variables; set on every node for multi-node runs
 export NODE_RANK=${NODE_RANK:-0}
 export NPROC_PER_NODE=${NPROC_PER_NODE:-$(nvidia-smi -L | wc -l)}
 export MASTER_ADDR=${MASTER_ADDR:-127.0.0.1}
 export MASTER_PORT=${MASTER_PORT:-29500}
 export PYTHONPATH="$(pwd)/src:$PYTHONPATH"
-export NCCL_DEBUG=VERSION  # simple NCCL print
+export NCCL_DEBUG=VERSION  # print only the NCCL version
 
-echo NNODES ${NNODES}
-echo NODE_RANK ${NODE_RANK}
-echo NPROC_PER_NODE ${NPROC_PER_NODE}
-echo MASTER_ADDR ${MASTER_ADDR}
-echo MASTER_PORT ${MASTER_PORT}
+echo "🖥️ NNODES=${NNODES} NODE_RANK=${NODE_RANK} NPROC_PER_NODE=${NPROC_PER_NODE}" \
+  "MASTER_ADDR=${MASTER_ADDR} MASTER_PORT=${MASTER_PORT}"
 
 if [ -d ".venv" ]; then
-  echo "Environment installed, skipping..."
+  echo "✅ Environment installed, skipping..."
   source .venv/bin/activate
 else
-  echo "Installing environment..."
+  echo "⏳ Installing environment..."
   pip install uv
   uv venv .venv
   source .venv/bin/activate
@@ -47,20 +44,20 @@ fi
 prepare() {
   local dst="data_and_model/$1" tmp="data_and_model/.tmp/$1"
   if [[ -e "$dst" ]]; then
-    echo "$1 exists, skipping..."
+    echo "✅ $1 exists, skipping..."
   else
     rm -rf "$tmp"
     python src/nexus_align/utils/download.py "$1" --dir data_and_model/.tmp
     mkdir -p "$(dirname "$dst")"
     mv "$tmp" "$dst"
-    echo "Prepared $1"
+    echo "💾 Prepared $1"
   fi
 }
 DATA=${EXP}
 REWARD=${EXP}
 MODEL=sd3_5_medium
 ALGORITHM=flow_grpo
-MODEL_ARGS=(model.attn_backend=fa3)  # FlashAttention-3, ~12% faster for Flow-GRPO
+MODEL_ARGS=(model.attn_backend=fa3)  # FlashAttention-3 if installed, ~12% faster
 prepare stabilityai/stable-diffusion-3.5-medium
 prepare yifan123/flow_grpo
 case "$EXP" in
@@ -81,7 +78,7 @@ case "$EXP" in
 esac
 
 # --------------------------------------------------------------------------------
-# Start the reward server of this node; stop it when training ends.
+# Start the reward server of this node, and stop it when the training ends.
 # --------------------------------------------------------------------------------
 if [[ "$REWARD" == "ocr" || "$REWARD" == "geneval" ]]; then
   bash scripts/tools/reward_server.sh ${REWARD}
@@ -89,7 +86,7 @@ if [[ "$REWARD" == "ocr" || "$REWARD" == "geneval" ]]; then
 fi
 
 # --------------------------------------------------------------------------------
-# Start training.
+# Start the training.
 # --------------------------------------------------------------------------------
 torchrun \
     --nnodes ${NNODES} \

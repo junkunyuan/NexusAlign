@@ -1,4 +1,4 @@
-"""Base algorithm: shared training config, forward and sample interfaces."""
+"""Base algorithm: runtime model binding, and the forward and sample interfaces."""
 
 from abc import ABC, abstractmethod
 
@@ -6,13 +6,12 @@ from abc import ABC, abstractmethod
 class BaseAlgorithm(ABC):
     """Base algorithm interface."""
 
-    def __init__(self, cfg_algorithm) -> None:
-        self.cfg_algorithm = cfg_algorithm
+    def __init__(self) -> None:
         self.model = None
         self.device = None
 
     def prepare(self, model, device) -> None:
-        """Bind runtime model and device owned by the trainer."""
+        """Bind the runtime model and device that the trainer owns."""
         self.model = model
         self.device = device
 

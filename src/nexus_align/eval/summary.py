@@ -1,14 +1,13 @@
 """Evaluation summary: aggregate per-checkpoint metrics into a JSON file and curves."""
 
 import json
-import math
 import os
 
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 
 from nexus_align.utils.plot import (
-    FIGURE_DIR, LINE_COLOR, BEST_COLOR, X_AXES, set_plot_style, save_figure
+    FIGURE_DIR, LINE_COLOR, BEST_COLOR, X_AXES, set_plot_style, grid_figure, save_figure
 )
 
 
@@ -19,11 +18,9 @@ METRIC_PLOTS = (
      "lower_is_better": False},
 )
 
-MAX_COLS = 3  # sub-figures per row of a combined figure
-
 
 def fid_is_result(metrics: dict) -> dict | None:
-    """Map the FID/IS metrics of one checkpoint to result keys; None without FID."""
+    """Return the FID/IS result keys of one checkpoint, or None if it has no FID."""
     if metrics.get("frechet_inception_distance") is None:
         return None
     return {
@@ -77,7 +74,7 @@ def draw_metric(ax, results: list[dict], spec: dict, axis: dict) -> None:
                         [v + s for v, s in zip(values, stds)],
                         color=LINE_COLOR, alpha=0.15, linewidth=0, label="± std")
 
-    # Label a thinned subset when the points get dense, keeping the best and the last one.
+    # If the points are dense, label only some of them, but always the best and the last.
     pick = min if spec["lower_is_better"] else max
     best = pick(range(len(values)), key=lambda i: values[i])
     stride = max(1, round(len(values) / 10))
@@ -107,7 +104,7 @@ def plot_metric(results: list[dict], out_dir: str, spec: dict, axis: dict) -> st
 
 
 def axis_results(results: list[dict], axis: dict) -> list[dict]:
-    """Keep the results carrying this x value; epochs only take end-of-epoch checkpoints."""
+    """Keep the results with this x value. Epochs use only end-of-epoch checkpoints."""
     return [r for r in results if r.get(axis["key"]) is not None
             and (axis["key"] != "epoch" or r.get("step") == 0)]
 
@@ -121,14 +118,9 @@ def plot_axis(
     if not specs:
         return []
 
-    cols = min(len(specs), MAX_COLS)
-    rows = math.ceil(len(specs) / cols)
-    fig = Figure(figsize=(8 * cols, 5 * rows))
-    axes = fig.subplots(rows, cols, squeeze=False).flatten()
+    fig, axes = grid_figure(len(specs), 8, 5)
     for ax, spec in zip(axes, specs):
         draw_metric(ax, points, spec, axis)
-    for ax in axes[len(specs):]:  # empty cells of the last row
-        ax.set_axis_off()
 
     paths = [save_figure(fig, out_dir, f"{axis['name']}.png")]
     return paths + [plot_metric(points, out_dir, spec, axis) for spec in specs]

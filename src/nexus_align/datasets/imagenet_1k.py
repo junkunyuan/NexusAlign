@@ -1,4 +1,12 @@
-"""ImageNet-1K dataset: parquet reader and cached VAE-latent loader."""
+"""
+ImageNet-1K dataset: parquet reader and cached VAE-latent loader.
+
+References:
+    - ADM:
+        - Paper: Diffusion Models Beat GANs on Image Synthesis (NeurIPS 2021)
+        - Official code: https://github.com/openai/guided-diffusion
+            - guided_diffusion/image_datasets.py: center_crop_arr
+"""
 
 import io
 import os
@@ -6,6 +14,7 @@ import glob
 import json
 import time
 import bisect
+import random
 from typing import Any
 from collections.abc import Callable
 
@@ -17,14 +26,14 @@ from safetensors import safe_open
 
 import torch
 import torch.distributed as dist
+from torch.utils.data import Dataset
 
 from nexus_align.utils.progress import TqdmBar
-from nexus_align.datasets.base_dataset import BaseTextImageDataset
 
 NUM_CLASSES = 1000
 
 
-class ImageNet1K(BaseTextImageDataset):
+class ImageNet1K(Dataset):
     """
     ImageNet-1K dataset with raw and latent modes.
 
@@ -34,58 +43,78 @@ class ImageNet1K(BaseTextImageDataset):
       test 28 (100000).
     - Columns: image struct<bytes: binary, path: string> holding the raw JPEG
       bytes and the original filename, and label int64 in [0, 1000) (-1 for the
-      unlabeled test split). Images vary in size and mode, so they are decoded
-      and converted to RGB.
+      unlabeled test split). Images have different sizes and modes, so the dataset
+      decodes them and converts them to RGB.
 
-    - Raw mode decodes JPEGs from parquet shards when cache_dir is unset.
+    - Raw mode decodes JPEGs from the parquet shards if cache_dir is not set.
     - Latent mode reads precomputed VAE latents from safetensors shards.
-    - Latent mode builds the cache on first use when the manifest is missing or
-      the cache was built with a different VAE or image size.
-    - Each image is cached once, flipped with flip_prob, to halve the cache size.
+    - Latent mode builds the cache on first use, if the manifest is missing or the
+      cache has a different VAE or image size.
+    - The cache holds each image once, flipped with flip_prob, to halve its size.
     - __getitem__ returns raw sample dicts in raw mode and (latent, label) in
-      latent mode, where the latent is sampled and normalized by the VAE scale
-      and bias.
+      latent mode. It samples the latent from the VAE posterior and normalizes it
+      with vae_scale, vae_mean, and vae_std.
     """
 
     def __init__(self, cfg_data) -> None:
-        super().__init__(
-            name=cfg_data.get("name", "dataset"),
-            cache_dir=cfg_data.get("cache_dir", ""),
-            image_transform=None,
-            text_transform=None,
-            sample_ratio=cfg_data.get("sample_ratio", 1.0),
-            sample_seed=cfg_data.get("seed", 42),
-        )
+        self.name = cfg_data.name
+        self.sample_ratio = cfg_data.sample_ratio
+        self.sample_seed = cfg_data.get("seed", 42)
         self.path = cfg_data.path
-        self.split = cfg_data.get("split", "train")
-        self.img_size = cfg_data.get("img_size", 256)
-        self.flip_prob = cfg_data.get("flip_prob", 0.)
-        self.shared_cache = cfg_data.get("shared_cache", False)
+        self.split = cfg_data.split
+        self.img_size = cfg_data.img_size
+        self.flip_prob = cfg_data.flip_prob
+        self.shared_cache = cfg_data.shared_cache
+        self.cache_dir = cfg_data.cache_dir
         if self.cache_dir is not None:
             self.cache_dir = resolve_cache_dir(self.cache_dir, self.shared_cache)
 
-        # Get data files.
+        # Get the data files.
         search_file = os.path.join(self.path, "data", f"{self.split}-*.parquet")
         self.files = sorted(glob.glob(search_file))
 
-        # Get classes.
+        # Get the class texts.
         self.class_text = load_class_text(self.path)
 
-        # VAE latent normalization, applied to every latent returned by this dataset.
-        self.vae_scale = cfg_data.get("vae_scale", 0.18215)
-        self.vae_bias = cfg_data.get("vae_bias", 0.)
+        # Normalization for every VAE latent that this dataset returns.
+        self.vae_scale = cfg_data.vae_scale
+        self.vae_mean = torch.tensor(cfg_data.vae_mean).view(-1, 1, 1)
+        self.vae_std = torch.tensor(cfg_data.vae_std).view(-1, 1, 1)
 
-        # VAE-latent preprocessing knobs, only used when the cache is built on the fly.
-        self.vae = cfg_data.get("vae")
-        self.read_batch = cfg_data.get("read_batch", 256)
-        self.vae_batch = cfg_data.get("vae_batch", 256)
-        self.shard_size = cfg_data.get("shard_size", 8192)
-        self.preprocess_workers = cfg_data.get("preprocess_workers", 8)
+        # Settings to preprocess the VAE latents, only for a cache build at first use.
+        self.vae = cfg_data.vae
+        self.read_batch = cfg_data.read_batch
+        self.vae_batch = cfg_data.vae_batch
+        self.shard_size = cfg_data.shard_size
+        self.preprocess_workers = cfg_data.preprocess_workers
 
         if self.cache_dir is not None:
             self._init_latent_mode()
         else:
             self._init_raw_mode()
+
+    def build_indices(self, num_items: int) -> None:
+        """Build the active index by sampling, and print the dataset information."""
+        # A sample_ratio <= 0 keeps all items, < 1.1 samples a fraction, and larger
+        # values sample a count.
+        indices = list(range(num_items))
+        ratio = self.sample_ratio
+        if ratio > 0 and num_items > 0:
+            k = min(int(num_items * ratio if ratio < 1.1 else ratio), num_items)
+            indices = random.Random(self.sample_seed).sample(indices, k)
+        self._indices = indices
+
+        info = ["\n📚 Dataset:"]
+        info += [f"    dataset: {self.name}"]
+        info += [f"    sample_count: {len(self)}"]
+        if self.sample_ratio != 1.:
+            info += [f"    sample_ratio: {self.sample_ratio}"]
+        if self.cache_dir:
+            info += [f"    cache_dir: {self.cache_dir}"]
+        print("\n".join(info))
+
+    def __len__(self) -> int:
+        return len(self._indices)
 
     # --------------------------------------------------------------------------------
     # Raw mode: return (image: Image, label text: str, label: int).
@@ -93,9 +122,10 @@ class ImageNet1K(BaseTextImageDataset):
     def _init_raw_mode(self) -> None:
         self.mode = "raw"
 
-        # Global index -> (file, row_group) via row-group boundaries (metadata only).
-        self._rg_starts: list[int] = []  # start index of row-group
-        self._rg_loc: list[tuple[int, int]] = []  # (file index, in-file row-group index) of row group
+        # Map a global index to (file, row_group) with the row-group boundaries. This
+        # reads only the metadata.
+        self._rg_starts: list[int] = []  # start index of each row group
+        self._rg_loc: list[tuple[int, int]] = []  # (file index, in-file row-group index) of each row group
         start = 0
         for fi, f in enumerate(self.files):
             meta = pq.ParquetFile(f).metadata
@@ -105,7 +135,8 @@ class ImageNet1K(BaseTextImageDataset):
                 start += meta.row_group(rg).num_rows
         self.num_sample = start
 
-        # Per-worker lazy caches (kept empty here so they survive DataLoader fork).
+        # Lazy caches for each worker. Keep them empty here, so that they survive the
+        # DataLoader fork.
         self._pf_cache: dict[int, pq.ParquetFile] = {}
         self._rg_key: tuple[int, int] | None = None
         self._rg_table: pa.Table | None = None
@@ -113,7 +144,7 @@ class ImageNet1K(BaseTextImageDataset):
         self.build_indices(self.num_sample)
 
     def _row_group(self, file_idx: int, rg_idx: int) -> pa.Table:
-        """Read a parquet row group, caching the most recent one per worker."""
+        """Read a parquet row group. Each worker caches the most recent one."""
         key = (file_idx, rg_idx)
         if self._rg_key != key:
             pf = self._pf_cache.get(file_idx)
@@ -125,7 +156,7 @@ class ImageNet1K(BaseTextImageDataset):
         return self._rg_table
 
     def get_raw(self, index: int) -> dict[str, Any]:
-        """Load raw data in raw mode."""
+        """Load the raw sample at a global index in raw mode."""
         if self.mode != "raw":
             raise RuntimeError("❌ get_raw is only available in raw mode (cache_dir unset)")
         rg = bisect.bisect_right(self._rg_starts, index) - 1  # find the row group index
@@ -148,7 +179,7 @@ class ImageNet1K(BaseTextImageDataset):
     def _init_latent_mode(self) -> None:
         self.mode = "latent"
         if self._load_manifest() is None:
-            self._build_cache()  # build cache if current cache is empty or incomplete
+            self._build_cache()  # build the cache if it is empty or incomplete
         manifest = self._load_manifest()
         if manifest is None:
             raise RuntimeError(f"❌ Latent cache build incomplete at {self.cache_dir}")
@@ -161,7 +192,7 @@ class ImageNet1K(BaseTextImageDataset):
             start += s["num_samples"]
         self.num_sample = start
         self._shard_starts = [shard_start for _, shard_start in self.shards]
-        self._handles: dict[str, Any] = {}  # per-worker lazy safe_open handles
+        self._handles: dict[str, Any] = {}  # lazy safe_open handles of each worker
         self.build_indices(start)
 
     def _load_manifest(self) -> dict[str, Any] | None:
@@ -181,14 +212,14 @@ class ImageNet1K(BaseTextImageDataset):
         return manifest
 
     def _verify_shared_cache(self, cache: str, run_id: str) -> bool:
-        """Probe whether cache lives on a filesystem visible to every rank/node."""
+        """Check whether every rank and node can see the cache filesystem."""
         if not (dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1):
-            return False  # single process: a "shared" cache is identical to a local one
+            return False  # with one process, a "shared" cache is a local cache
         probe = os.path.join(cache, f".probe-{run_id}")
         if dist.get_rank() == 0:
             open(probe, "w").close()
         dist.barrier()
-        # A shared FS may lag slightly behind the writer; poll briefly before giving up.
+        # A shared filesystem can show a new file late, so poll for a short time.
         seen = False
         for _ in range(15):
             if os.path.exists(probe):
@@ -205,13 +236,13 @@ class ImageNet1K(BaseTextImageDataset):
         """
         Encode the parquet data to VAE latents and write a shard manifest.
 
-        Two layouts, selected by self.shared_cache:
-        - shared: all ranks across all nodes cooperate to build one cache on the
-          shared path; global rank 0 writes the manifest.
-        - local:  each node builds a complete cache on its own disk using that
-          node's GPUs; each node's local rank 0 writes the manifest.
-        If shared_cache is requested but the path is not visible to all nodes, it
-        falls back to the local layout.
+        self.shared_cache selects one of two layouts:
+        - shared: all ranks on all nodes build one cache on the shared path together.
+          The global rank 0 writes the manifest.
+        - local:  each node builds a complete cache on its own disk with its own GPUs.
+          The local rank 0 of each node writes the manifest.
+        If shared_cache is true but some nodes cannot see the path, the build uses the
+        local layout.
         """
         from diffusers.models import AutoencoderKL
         from safetensors.torch import save_file
@@ -221,7 +252,7 @@ class ImageNet1K(BaseTextImageDataset):
         cache = self.cache_dir
         os.makedirs(cache, exist_ok=True)
 
-        # Resolve the build-group layout: who cooperates on this cache directory.
+        # Select the layout, that is, the ranks that build this cache directory.
         shared = self.shared_cache and self._verify_shared_cache(cache, run_id)
         if self.shared_cache and not shared:
             print("⚠️ shared_cache requested but the path is not visible to all nodes; "
@@ -238,7 +269,7 @@ class ImageNet1K(BaseTextImageDataset):
         done_flag = os.path.join(cache, f".done-{self.split}-{run_id}-{rank:03d}")
         done_glob = os.path.join(cache, f".done-{self.split}-{run_id}-*")
 
-        # Clean incomplete files.
+        # Remove the incomplete files.
         if rank == 0:
             print(f"💾 Building latent cache at {cache} ...")
             for pat in (f"latents-{self.split}-*.safetensors", f".done-{self.split}-*", f".clean-{self.split}-*"):
@@ -250,19 +281,19 @@ class ImageNet1K(BaseTextImageDataset):
         else:
             _wait_for(lambda: os.path.exists(clean_flag))
 
-        # Load VAE.
+        # Load the VAE.
         if self.vae is None:
             raise ValueError("❌ data.vae must be set to build the latent cache")
         vae = AutoencoderKL.from_pretrained(self.vae).to(device).eval()
 
-        # Dataloader for parquet files.
+        # Make a dataloader for the parquet files.
         files = self.files[rank::world]
         stream = _ParquetImageStream(files, self.img_size, self.read_batch)
         loader = torch.utils.data.DataLoader(
             stream, batch_size=self.vae_batch, num_workers=self.preprocess_workers, pin_memory=True
         )
 
-        # One progress bar per build group (driven by rank 0, tracking its own samples).
+        # The first GPU of each node shows a progress bar for its own samples.
         num_local = sum(pq.ParquetFile(f).metadata.num_rows for f in files)
         bar = TqdmBar(num_local, "🚀 Encoding latents", "img", mininterval=30)
 
@@ -282,7 +313,7 @@ class ImageNet1K(BaseTextImageDataset):
             state["count"] = 0
             state["shard"] += 1
 
-        # Start encoding latents; flip each image with flip_prob and cache it once.
+        # Encode the latents. Flip each image with flip_prob, and cache it once.
         for imgs, labels in loader:
             imgs = imgs.to(device, non_blocking=True)
             flip = torch.rand(imgs.shape[0], device=device) < self.flip_prob
@@ -299,7 +330,8 @@ class ImageNet1K(BaseTextImageDataset):
         del vae
         torch.cuda.empty_cache()
 
-        # Mark this rank done; local rank 0 waits for all ranks, then writes the manifest.
+        # Mark this rank as done. Rank 0 of the group waits for all ranks, then writes
+        # the manifest.
         open(done_flag, "w").close()
         if rank == 0:
             _wait_for(lambda: len(glob.glob(done_glob)) >= world)
@@ -311,7 +343,7 @@ class ImageNet1K(BaseTextImageDataset):
             _wait_for(lambda: os.path.exists(manifest_path))
 
     def _get_latent(self, index: int) -> tuple[torch.Tensor, int]:
-        index = self._indices[index]  # map filtered index back to the raw sample
+        index = self._indices[index]  # map the sampled index back to the raw sample
         si = bisect.bisect_right(self._shard_starts, index) - 1
         path, start = self.shards[si]
         local = index - start
@@ -323,24 +355,24 @@ class ImageNet1K(BaseTextImageDataset):
 
         label = int(f.get_slice("label")[local].item())
 
-        # Sample the latent from its VAE posterior and normalize it here, so the
-        # algorithm receives ready-to-use latents.
+        # Sample the latent from its VAE posterior and normalize it here, so that the
+        # algorithm gets latents that it can use directly.
         mean, logvar = f.get_slice("moments")[local].float().chunk(2, dim=0)
         std = torch.exp(0.5 * logvar.clamp(-30., 20.))
         latent = mean + std * torch.randn_like(mean)
-        return latent * self.vae_scale + self.vae_bias, label
+        return (latent * self.vae_scale - self.vae_mean) / self.vae_std, label
 
     def __getitem__(self, index: int) -> dict[str, Any] | tuple[torch.Tensor, int]:
         if self.mode == "latent":
             return self._get_latent(index)
-        return super().__getitem__(index)
+        return self.get_raw(self._indices[index])
 
 
 # --------------------------------------------------------------------------------
 # Helpers.
 # --------------------------------------------------------------------------------
 def resolve_cache_dir(cache_dir: str, shared_cache: bool) -> str:
-    """Return the effective cache dir for shared or node-local cache mode."""
+    """Return the cache directory for the shared or node-local cache mode."""
     local_world = torch.cuda.device_count()
     if shared_cache or dist.get_world_size() <= local_world:
         print(f"📌 Use shared latent cache path: <{cache_dir}>")
@@ -352,7 +384,7 @@ def resolve_cache_dir(cache_dir: str, shared_cache: bool) -> str:
 
 
 def load_class_text(root: str) -> list[str] | None:
-    """Load index->class-text list from the dataset's classes.py, or None."""
+    """Return the class texts in index order from classes.py in root, or None."""
     path = os.path.join(root, "classes.py")
     if not os.path.exists(path):
         return None
@@ -363,7 +395,7 @@ def load_class_text(root: str) -> list[str] | None:
 
 
 def _wait_for(condition: Callable[[], bool], timeout: float = 7200.0, interval: float = 2.0) -> None:
-    """Poll until condition() is true, raising after timeout seconds."""
+    """Poll until condition() is true, and raise an error after timeout seconds."""
     start = time.monotonic()
     while not condition():
         if time.monotonic() - start > timeout:
@@ -372,7 +404,7 @@ def _wait_for(condition: Callable[[], bool], timeout: float = 7200.0, interval: 
 
 
 def _center_crop_arr(pil_image: Image.Image, image_size: int) -> Image.Image:
-    """Center-crop a PIL image to a square of image_size (DiT/MeanFlow style)."""
+    """Center-crop a PIL image to a square of image_size, as ADM does."""
     while min(*pil_image.size) >= 2 * image_size:
         pil_image = pil_image.resize(tuple(x // 2 for x in pil_image.size), resample=Image.BOX)
     scale = image_size / min(*pil_image.size)
@@ -393,13 +425,13 @@ def _build_transform(img_size: int) -> Callable:
 
 
 def _shard_num_samples(path: str) -> int:
-    """Number of samples stored in a latent shard file."""
+    """Return the number of samples in a latent shard file."""
     with safe_open(path, framework="pt") as f:
         return f.get_slice("label").get_shape()[0]
 
 
 def _write_manifest(cache_dir: str, split: str, img_size: int, vae_name: str) -> None:
-    """Scan written shards and atomically write manifest-{split}.json."""
+    """Scan the written shards, and atomically write manifest-{split}.json."""
     shard_files = sorted(glob.glob(os.path.join(cache_dir, f"latents-{split}-*.safetensors")))
     shards: list[dict[str, Any]] = []
     total = 0
@@ -422,10 +454,10 @@ def _write_manifest(cache_dir: str, split: str, img_size: int, vae_name: str) ->
 
 class _ParquetImageStream(torch.utils.data.IterableDataset):
     """
-    Iterable parquet image stream for latent-cache building.
+    Iterable stream of parquet images to build the latent cache.
 
-    - Splits files across DataLoader workers.
-    - Decodes JPEGs and applies transforms in worker processes.
+    - Splits the files across the DataLoader workers.
+    - Decodes JPEGs and applies transforms in the worker processes.
     - Yields (image_tensor, label) tuples for VAE encoding.
     """
 
