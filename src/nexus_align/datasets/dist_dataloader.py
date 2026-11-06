@@ -31,6 +31,10 @@ class DistributedGroupSampler(Sampler):
     Every batch draws world_size * batch_size / group_size prompts, repeats each one
     group_size times, shuffles them, and gives each rank its slice of batch_size.
     The seed of batch i in epoch e is seed + e * num_batches + i, so all ranks agree.
+
+    If num_windows > 1, the batches make num_windows equal windows. Batch i of each
+    window holds group_size / num_windows copies of the same prompts, so each window
+    gets an equal part of every group.
     """
 
     def __init__(
@@ -40,17 +44,23 @@ class DistributedGroupSampler(Sampler):
         group_size: int,
         num_batches: int,
         seed: int = 0,
+        num_windows: int = 1,
     ) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
         self.group_size = group_size
         self.num_batches = num_batches
         self.seed = seed
+        self.num_windows = num_windows
         self.rank = dist.get_rank()
         self.world_size = dist.get_world_size()
-        total = self.world_size * batch_size
-        assert total % group_size == 0, (
-            f"❌ group_size {group_size} must divide world_size * batch_size {total}"
+        total = self.world_size * batch_size * num_windows
+        assert total % group_size == 0 and group_size % num_windows == 0, (
+            f"❌ group_size {group_size} must divide world_size * batch_size * "
+            f"num_windows {total}, and num_windows {num_windows} must divide group_size"
+        )
+        assert num_batches % num_windows == 0, (
+            f"❌ num_windows {num_windows} must divide num_batches {num_batches}"
         )
         self.num_groups = total // group_size
         self.epoch = 0
@@ -59,25 +69,30 @@ class DistributedGroupSampler(Sampler):
         return self.num_batches
 
     def __iter__(self):
-        for i in range(self.num_batches):
+        per_window = self.num_batches // self.num_windows
+        copies = self.group_size // self.num_windows
+        batches = [None] * self.num_batches
+        for i in range(per_window):
             # Make sure the sample order is the same across ranks.
             g = torch.Generator()
             g.manual_seed(self.seed + self.epoch * self.num_batches + i)
 
             # Pick the first num_groups samples, for example ["dog", "sun", "car"].
             indices = torch.randperm(len(self.dataset), generator=g)[:self.num_groups]
-            
-            # Repeat the samples to make groups, for example
-            # ["dog", "dog", "sun", "sun", "car", "car"].
-            repeated = [idx for idx in indices.tolist() for _ in range(self.group_size)]
 
-            # Shuffle the samples.
-            order = torch.randperm(len(repeated), generator=g).tolist()  # shuffle order
-            shuffled = [repeated[k] for k in order]  # global list, same on all ranks
+            for w in range(self.num_windows):
+                # Repeat the samples to make groups, for example
+                # ["dog", "dog", "sun", "sun", "car", "car"].
+                repeated = [idx for idx in indices.tolist() for _ in range(copies)]
 
-            # Yield the samples of this rank.
-            start = self.rank * self.batch_size  # this rank's slice
-            yield shuffled[start: start + self.batch_size]  # batch_size prompt indices
+                # Shuffle the samples into a global list, the same on all ranks.
+                order = torch.randperm(len(repeated), generator=g).tolist()
+                shuffled = [repeated[k] for k in order]
+
+                # Keep the samples of this rank.
+                start = self.rank * self.batch_size  # this rank's slice
+                batches[w * per_window + i] = shuffled[start: start + self.batch_size]
+        yield from batches  # batch_size prompt indices per batch
 
     def set_epoch(self, epoch: int) -> None:
         self.epoch = epoch

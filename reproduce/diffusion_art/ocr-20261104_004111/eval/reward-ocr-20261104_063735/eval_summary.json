@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.13191964998851327
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_50-step_0-total_step_100",
+    "ocr": 0.961523889653334
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_100-step_0-total_step_200",
+    "ocr": 0.968084607645309
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_150-step_0-total_step_300",
+    "ocr": 0.9687090022927474
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_200-step_0-total_step_400",
+    "ocr": 0.957116175178047
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_250-step_0-total_step_500",
+    "ocr": 0.9544778905309991
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_300-step_0-total_step_600",
+    "ocr": 0.9627535771175935
+  },
+  {
+    "epoch": 350,
+    "step": 0,
+    "total_step": 700,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_350-step_0-total_step_700",
+    "ocr": 0.9667851620275215
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 800,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_400-step_0-total_step_800",
+    "ocr": 0.9719639520291382
+  },
+  {
+    "epoch": 450,
+    "step": 0,
+    "total_step": 900,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_450-step_0-total_step_900",
+    "ocr": 0.9694735426211433
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/diffusion_art_ocr_reproduce-20261104_004111/checkpoints/epoch_500-step_0-total_step_1000",
+    "ocr": 0.9769758235764622
+  }
+]

@@ -3,6 +3,7 @@
 from nexus_align.registry import registry
 
 # Visual generation post-training.
+from nexus_align.algorithms.diffusion_art import DiffusionART
 from nexus_align.algorithms.diffusion_nft import DiffusionNFT
 from nexus_align.algorithms.flow_grpo import FlowGRPO
 from nexus_align.algorithms.refl import ReFL
@@ -13,6 +14,7 @@ from nexus_align.algorithms.meanflow import MeanFlow
 
 
 # Visual generation post-training.
+registry.register("algorithm", "diffusion_art", DiffusionART)
 registry.register("algorithm", "diffusion_nft", DiffusionNFT)
 registry.register("algorithm", "flow_grpo", FlowGRPO)
 registry.register("algorithm", "refl", ReFL)

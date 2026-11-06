@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.13191964998851327
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_50-step_0-total_step_100",
+    "ocr": 0.4110856187086951
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_100-step_0-total_step_200",
+    "ocr": 0.4011123403707009
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_150-step_0-total_step_300",
+    "ocr": 0.4390576134515922
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_200-step_0-total_step_400",
+    "ocr": 0.428173780428859
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_250-step_0-total_step_500",
+    "ocr": 0.42533803839744777
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_300-step_0-total_step_600",
+    "ocr": 0.4503924176050052
+  },
+  {
+    "epoch": 350,
+    "step": 0,
+    "total_step": 700,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_350-step_0-total_step_700",
+    "ocr": 0.5110045145649631
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 800,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_400-step_0-total_step_800",
+    "ocr": 0.4182895791776863
+  },
+  {
+    "epoch": 450,
+    "step": 0,
+    "total_step": 900,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_450-step_0-total_step_900",
+    "ocr": 0.4228037631269523
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/diffusion_art_geneval_reproduce-20261104_032911/checkpoints/epoch_500-step_0-total_step_1000",
+    "ocr": 0.4610071705916
+  }
+]

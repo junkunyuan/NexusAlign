@@ -1,0 +1,23 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: diffusion_art  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Sampling configs.
+# --------------------------------------------------------------------------------
+resolution: 512  # image resolution
+num_steps: 10  # rollout sampling steps of the Euler ODE
+max_sequence_length: 128  # T5 prompt tokens
+autocast_dtype: fp16  # transformer compute dtype
+
+# --------------------------------------------------------------------------------
+# Guidance configs.
+# --------------------------------------------------------------------------------
+group_size: 24  # images per prompt, K
+
+# --------------------------------------------------------------------------------
+# Trust-region mask configs.
+# --------------------------------------------------------------------------------
+mask_noise_level: 0.8  # noise level nu of the reference SDE; see paper Appendix C.2
+mask_threshold: 1.0e-5  # drift threshold delta; see paper Eq. 8

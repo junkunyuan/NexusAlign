@@ -47,6 +47,8 @@ class GRPOTrainer(BaseTrainer):
       optimizer step accumulates grad_accu_step batches, so an epoch has
       updates_per_epoch steps.
     - If ema_every_batch is True, the trainer calls ema_step after every batch.
+    - If split_groups is True, each optimizer step of an epoch gets an equal part of
+      every prompt group. Then set shuffle to False, to keep these parts.
 
     The algorithm provides:
     - group_size: the responses per prompt.
@@ -62,6 +64,7 @@ class GRPOTrainer(BaseTrainer):
     """
 
     ema_every_batch = True  # if False, call ema_step only after an optimizer step
+    split_groups = False  # if True, each optimizer step gets a part of every group
 
     def __init__(
         self,
@@ -84,6 +87,8 @@ class GRPOTrainer(BaseTrainer):
                 f"batches of world_size * sample_batch_size ({samples_per_round}), and "
                 f"their number into updates_per_epoch ({updates})"
             )
+        if self.split_groups and cfg_trainer["shuffle"]:
+            raise ValueError("❌ split_groups needs shuffle: false, to keep the parts")
         if cfg_trainer.get("save_ckpt_every_n_steps") is not None:
             raise ValueError(
                 "❌ GRPO saves only end-of-epoch checkpoints; use save_ckpt_every_n_epochs"
@@ -134,6 +139,7 @@ class GRPOTrainer(BaseTrainer):
             group_size=self.group_size,
             num_batches=self.num_batches_per_epoch,
             seed=self.seed,
+            num_windows=self.updates_per_epoch if self.split_groups else 1,
         )
         return DataLoader(dataset, batch_sampler=sampler, collate_fn=dataset.collate_fn)
 

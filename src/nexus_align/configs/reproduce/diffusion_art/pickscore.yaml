@@ -1,0 +1,15 @@
+# @package _global_
+# Reproduce DiffusionART on human preference alignment with SD3.5-M, CFG-free.
+# The args follow configs/paper/image/sd3_pickscore_art.yaml of the official code.
+# The training steps follow Fig. 5 of the paper.
+# Launch with: EXP=pickscore bash scripts/reproduce/diffusion_art_train.sh
+exp_info: diffusion_art_pickscore_reproduce  # experiment name
+
+model:
+  ema_enabled: false  # if true, use an EMA model; it tracks only the LoRA weights
+
+algorithm:
+  group_size: 18  # images per prompt, K
+
+trainer:
+  groups_per_epoch: 64  # prompts sampled per epoch
