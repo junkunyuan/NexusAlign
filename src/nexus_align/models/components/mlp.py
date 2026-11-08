@@ -12,11 +12,13 @@ import torch.nn as nn
 
 
 class Mlp(nn.Module):
-    """Two-layer MLP with tanh-approximated GELU, adapted from timm."""
-    def __init__(self, hidden_size: int, mlp_hidden_dim: int) -> None:
+    """Two-layer MLP with GELU, adapted from timm. By default, GELU uses tanh."""
+    def __init__(
+        self, hidden_size: int, mlp_hidden_dim: int, approximate: str = "tanh"
+    ) -> None:
         super().__init__()
         self.fc1 = nn.Linear(hidden_size, mlp_hidden_dim)
-        self.act = nn.GELU(approximate="tanh")
+        self.act = nn.GELU(approximate=approximate)
         self.fc2 = nn.Linear(mlp_hidden_dim, hidden_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

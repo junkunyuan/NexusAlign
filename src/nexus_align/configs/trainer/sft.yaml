@@ -19,6 +19,7 @@ drop_last: true  # drop the last incomplete batch
 # Training configs.
 # --------------------------------------------------------------------------------
 epochs: 100  # training epochs
+optimizer_type: adam  # adam, or muon: Muon for linear weights, Adam for the rest
 learning_rate: 2.8e-4  # Adam learning rate
 warmup_epochs: 0  # linear LR warmup from 0 over N epochs, then constant; 0 disables it
 adam_beta1: 0.9  # Adam beta1
@@ -31,6 +32,7 @@ max_grad_norm: 1.0  # max gradient norm for clipping
 # EMA configs.
 # --------------------------------------------------------------------------------
 ema_decay: 0.9999  # EMA decay
+ema_halflife_kimg: null  # EDM EMA half-life in kimg; null uses ema_decay
 
 # --------------------------------------------------------------------------------
 # Logging configs.

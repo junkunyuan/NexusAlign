@@ -52,6 +52,7 @@ class IMeanFlowDiT(nn.Module):
         depth: int = 12,
         num_heads: int = 12,
         mlp_ratio: float = 8 / 3,
+        mlp_multiple: int = 1,
         head_depth: int = 8,
         num_class_tokens: int = 8,
         num_time_tokens: int = 4,
@@ -95,7 +96,8 @@ class IMeanFlowDiT(nn.Module):
 
         def blocks(n):
             return nn.ModuleList([
-                IMeanFlowDiTBlock(hidden_size, num_heads, mlp_ratio) for _ in range(n)
+                IMeanFlowDiTBlock(hidden_size, num_heads, mlp_ratio, mlp_multiple)
+                for _ in range(n)
             ])
         self.shared_blocks = blocks(depth - head_depth)
         self.u_blocks = blocks(head_depth)
@@ -137,6 +139,37 @@ class IMeanFlowDiT(nn.Module):
             nn.init.constant_(final_layer.linear.weight, 0)
             nn.init.constant_(final_layer.linear.bias, 0)
 
+    def embed(
+        self,
+        x: torch.Tensor,
+        r: torch.Tensor,
+        t: torch.Tensor,
+        omega: torch.Tensor,
+        t_min: torch.Tensor,
+        t_max: torch.Tensor,
+        y: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Embed the patches and the conditions; see forward for the arguments.
+
+        return x: (B, P + N, D) with the P condition tokens before the N patch tokens
+        """
+        x = self.x_embedder(x)  # (B, N, D), where N = gh * gw
+        # Condition only on the interval length t - r, not on t (official code).
+        h_embed = self.h_embedder(t - r)  # (B, D)
+        omega_embed = self.omega_embedder(1 - 1 / omega)  # (B, D)
+        t_min_embed = self.t_min_embedder(t_min)  # (B, D)
+        t_max_embed = self.t_max_embedder(t_max)  # (B, D)
+        y_embed = self.y_embedder(y)  # (B, D)
+        return torch.cat([
+            self.class_tokens + y_embed.unsqueeze(1),
+            self.omega_tokens + omega_embed.unsqueeze(1),
+            self.t_min_tokens + t_min_embed.unsqueeze(1),
+            self.t_max_tokens + t_max_embed.unsqueeze(1),
+            self.time_tokens + h_embed.unsqueeze(1),
+            x,
+        ], dim=1)  # (B, P + N, D)
+
     def forward(
         self,
         x: torch.Tensor,
@@ -160,21 +193,7 @@ class IMeanFlowDiT(nn.Module):
         predict_u, predict_v: if false, skip that head and return None in its place
         return (u, v): mean velocity over [r, t] and instantaneous velocity at t
         """
-        x = self.x_embedder(x)  # (B, N, D), where N = gh * gw
-        # Condition only on the interval length t - r, not on t (official code).
-        h_embed = self.h_embedder(t - r)  # (B, D)
-        omega_embed = self.omega_embedder(1 - 1 / omega)  # (B, D)
-        t_min_embed = self.t_min_embedder(t_min)  # (B, D)
-        t_max_embed = self.t_max_embedder(t_max)  # (B, D)
-        y_embed = self.y_embedder(y)  # (B, D)
-        x = torch.cat([
-            self.class_tokens + y_embed.unsqueeze(1),
-            self.omega_tokens + omega_embed.unsqueeze(1),
-            self.t_min_tokens + t_min_embed.unsqueeze(1),
-            self.t_max_tokens + t_max_embed.unsqueeze(1),
-            self.time_tokens + h_embed.unsqueeze(1),
-            x,
-        ], dim=1)  # (B, P + N, D)
+        x = self.embed(x, r, t, omega, t_min, t_max, y)  # (B, P + N, D)
 
         rope = (self.rope_cos, self.rope_sin)
         for block in self.shared_blocks:
@@ -248,15 +267,18 @@ class RoPEAttention(nn.Module):
 
 
 class SwiGLUMlp(nn.Module):
-    """MLP with a Swish-gated linear unit (SwiGLU), and no biases."""
-    def __init__(self, hidden_size: int, mlp_hidden_dim: int) -> None:
+    """MLP with a Swish-gated linear unit (SwiGLU), no biases, and an inner dropout."""
+    def __init__(
+        self, hidden_size: int, mlp_hidden_dim: int, drop: float = 0.0
+    ) -> None:
         super().__init__()
         self.w1 = nn.Linear(hidden_size, mlp_hidden_dim, bias=False)
         self.w3 = nn.Linear(hidden_size, mlp_hidden_dim, bias=False)
         self.w2 = nn.Linear(mlp_hidden_dim, hidden_size, bias=False)
+        self.ffn_dropout = nn.Dropout(drop)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.w2(F.silu(self.w1(x)) * self.w3(x))
+        return self.w2(self.ffn_dropout(F.silu(self.w1(x)) * self.w3(x)))
 
 
 class IMeanFlowDiTBlock(nn.Module):
@@ -264,17 +286,24 @@ class IMeanFlowDiTBlock(nn.Module):
     Pre-norm transformer block without adaLN.
 
     - RMSNorm, RoPE attention, and SwiGLU MLP.
+    - The MLP width int(hidden_size * mlp_ratio) rounds up to a multiple of
+      mlp_multiple.
     - A zero-initialized per-channel scale gates each residual branch, so the block
       starts as an identity mapping.
     """
     def __init__(
-        self, hidden_size: int, num_heads: int, mlp_ratio: float = 8 / 3
+        self,
+        hidden_size: int,
+        num_heads: int,
+        mlp_ratio: float = 8 / 3,
+        mlp_multiple: int = 1,
     ) -> None:
         super().__init__()
         self.norm1 = nn.RMSNorm(hidden_size, eps=1e-6)
         self.attn = RoPEAttention(hidden_size, num_heads)
         self.norm2 = nn.RMSNorm(hidden_size, eps=1e-6)
-        self.mlp = SwiGLUMlp(hidden_size, int(hidden_size * mlp_ratio))
+        mlp_hidden_dim = -(-int(hidden_size * mlp_ratio) // mlp_multiple) * mlp_multiple
+        self.mlp = SwiGLUMlp(hidden_size, mlp_hidden_dim)
         self.attn_scale = nn.Parameter(torch.zeros(hidden_size))
         self.mlp_scale = nn.Parameter(torch.zeros(hidden_size))
 

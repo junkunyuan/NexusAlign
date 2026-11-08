@@ -1,0 +1,25 @@
+# @package _global_
+# Reproduce the first 160 epochs of PixelDiT-XL with the setting in Table 7 of the
+# paper. Then continue the run with xl16_ep320.
+# The other args follow the official c2i/configs/pix256_xl.yaml and src/diffusion.py.
+# Launch with: +reproduce=pixeldit/xl16_ep160
+# Evaluate with: CFG_SCALE=3.25 CFG_MIN_T=0.1 CFG_MAX_T=1.0 (paper Table 7, 80 epochs)
+exp_info: pixeldit_xl16_ep160_reproduce  # experiment name
+
+# Cache the uint8 center crops. The official training does not flip them.
+data:
+  vae: null  # VAE model path
+  cache_dir: ${data_and_model_dir}/ILSVRC/imagenet-1k/pixels_256  # cache directory
+
+model:
+  name: pixeldit_xl_16  # pixeldit_{b,l,xl}_16
+
+trainer:
+  epochs: 160  # training epochs
+  train_batch_size: 256  # total batch size of one optimizer step over all ranks
+  learning_rate: 1.0e-4  # Adam learning rate
+  adam_beta2: 0.999  # Adam beta2
+  max_grad_norm: 1.0  # max gradient norm for clipping
+  save_ckpt_every_n_epochs: 10  # save every N epochs; null disables it
+  save_ckpt_keep_last_n_epochs: 100  # keep only the last N epoch checkpoints
+  log_every_n_steps: 100  # print and track the metrics every N total steps

@@ -60,20 +60,23 @@ class FIDISEvaluator(BaseEvaluator):
             self.eval_model = torch.compile(self.eval_model)
         self.algorithm.prepare(self.eval_model, self.device)
 
-        # Get the VAE decoder and the latent normalization tensors.
-        self.vae = AutoencoderKL.from_pretrained(self.vae_path).to(self.device)
-        if self.compile:
-            self.vae.decoder = torch.compile(self.vae.decoder)
-        self.latents_scale = torch.full((1, 4, 1, 1), self.vae_scale, device=self.device)
-        self.latents_mean = torch.tensor(self.vae_mean).view(-1, 1, 1).to(self.device)
-        self.latents_std = torch.tensor(self.vae_std).view(-1, 1, 1).to(self.device)
+        # Get the VAE decoder and the latent normalization tensors. Without a VAE, the
+        # model generates pixels in [-1, 1].
+        self.vae = None
+        if self.vae_path is not None:
+            self.vae = AutoencoderKL.from_pretrained(self.vae_path).to(self.device)
+            if self.compile:
+                self.vae.decoder = torch.compile(self.vae.decoder)
+            self.latents_scale = torch.full((1, 4, 1, 1), self.vae_scale, device=self.device)
+            self.latents_mean = torch.tensor(self.vae_mean).view(-1, 1, 1).to(self.device)
+            self.latents_std = torch.tensor(self.vae_std).view(-1, 1, 1).to(self.device)
 
         # Round the sample count up to a whole distributed batch.
         self.global_batch_size = self.per_proc_batch_size * self.world_size
         self.iterations = math.ceil(self.num_fid_samples / self.global_batch_size)
 
         # Check the metric requirements once, before sampling any checkpoint.
-        if self.resolution != 256:
+        if self.resolution not in (256, 512):
             raise NotImplementedError(f"❌ Unsupported evaluation resolution: {self.resolution}")
         assert os.path.exists(self.fid_stats), f"❌ FID statistics not found: {self.fid_stats}"
 
@@ -141,8 +144,10 @@ class FIDISEvaluator(BaseEvaluator):
                     "cfg_max_t": self.cfg_max_t,
                     "num_steps": self.num_steps,
                 }).to(torch.float32)
-                latents = samples * self.latents_std + self.latents_mean
-                images = self.vae.decode(latents / self.latents_scale).sample
+                images = samples
+                if self.vae is not None:
+                    latents = samples * self.latents_std + self.latents_mean
+                    images = self.vae.decode(latents / self.latents_scale).sample
                 images = torch.clamp(127.5 * images + 128.0, 0, 255)  # +128 so uint8 truncation rounds
                 if self.save_images:
                     # The pool encodes the images during the sampling of the next batch.

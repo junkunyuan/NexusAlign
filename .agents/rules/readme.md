@@ -5,28 +5,39 @@ paths:
 
 # README
 
-Follow these conventions to keep the top-level `README.md` short and current.
+Follow these conventions in the top-level `README.md`. They add to
+[common-readme](common-readme.md).
 
-1. **Keep only these sections:** what the project is, a table of contents, Updates,
-   Algorithms, Installation, Quick Start, and Citation. Keep the table of contents the
-   same as the `##` sections, with the same emoji.
-2. **Updates:** one dated line per user-facing milestone, newest first, such as a newly
-   reproduced paper or a new feature. Write the date as `**[YYYY-MM-DD]**` in US Pacific
-   time.
-3. **Algorithms:** each reproduced paper, linked to its README under `reproduce/`,
-   with no result numbers. Put Paradigms first and Post-Training last, and order the
-   papers of each category newest first. `Released` is the date of the first arXiv
-   version, as `YYYY-MM-DD`. If a paper has no arXiv version, use the date when it
-   first became public, for example in the proceedings. Each domain has its own `###`
-   heading and table (for example, Visual Generation). The category does not repeat
-   the domain (for example, Post-Training). When we reproduce a new paper, add a row.
-   Keep the tables in `reproduce/README.md` the same.
-4. **Quick Start:** one short train, evaluate, and kill example (MeanFlow-B/2).
-5. **Edit only when needed.** Update the README only when a user-facing change makes it
-   wrong or incomplete, for example a new dataset, model, algorithm, or command. Never
-   add implementation details, changelogs, or per-experiment notes.
-6. **Edit an existing line if you can,** and do not add a new section.
-7. **Keep each date and category on one line.** Put a word joiner (U+2060) on each
-   side of each hyphen in a date or a category, for example `Post-Training`. Then a
-   narrow table does not break it. The joiner is invisible, so add it with code, for
-   example in Python: `"\u2060-\u2060".join(text.split("-"))`.
+1. **Sections:** put the Algorithms section after Updates. A newly reproduced paper
+   gets an Updates line.
+2. **Algorithms:** one HTML table of the reproduced papers, with the columns Algorithm,
+   Paper, Released, and Ours / Paper. Keep the table in `reproduce/README.md` the same.
+   Write the HTML as [common-markdown](common-markdown.md) says.
+   - **Groups:** one bold cell across all columns starts each group of a domain and a
+     category:
+     `<td colspan="4" align="center"><b>Visual Generation - Paradigms</b></td>`.
+   - **Order:** in each domain, put the Paradigms group first and the Post-Training
+     group last. Order the papers of each group by the Released date, newest first.
+   - **Algorithm and Paper:** the Algorithm cell links the name to the paper's README
+     under `reproduce/`. The Paper cell cites the paper as
+     [common-markdown](common-markdown.md) says, in HTML:
+     ```html
+     <td nowrap><a href="meanflow">MeanFlow</a></td>
+     <td>
+       <i>Mean Flows for One-step Generative Modeling</i>
+       (<a href="https://arxiv.org/abs/2505.13447">NeurIPS 2025</a>)
+     </td>
+     ```
+   - **Released:** the date when the paper first became public, as `YYYY-MM-DD`. This
+     is its first arXiv version, or its venue if that is earlier. It is not the date
+     of our reproduction.
+   - **Ours / Paper:** one to three main results, one per line with `<br>`, for
+     example `B/2 FID: 6.26 / 6.17` or `GenEval: 0.95 / 0.98`. Use the main metric of
+     the paper, and the rows of the paper table in its order. Prefer our runs at the
+     paper setting. If the table has more rows, keep the largest models or the first
+     tasks. Copy both numbers from the same column of the Results table of the paper
+     README. Write `-` for a value that the paper does not report.
+   - **One line:** give the Algorithm, Released, and Ours / Paper cells the `nowrap`
+     attribute.
+   - **New paper:** add its row after we record its first run.
+3. **Quick Start:** one short train, evaluate, and kill example (MeanFlow-B/2).

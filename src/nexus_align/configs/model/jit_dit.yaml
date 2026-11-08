@@ -1,0 +1,20 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: jitdit_b_16  # jitdit_{b,l,h}_16; _32 for 512x512 images
+input_size: 256  # input size (image size)
+num_classes: 1000  # number of classes, for example 1000 for ImageNet-1K
+dtype: fp32  # model weight dtype
+ema_enabled: true  # if true, use an EMA model
+
+# --------------------------------------------------------------------------------
+# FSDP configs.
+# --------------------------------------------------------------------------------
+fsdp:
+  replicate: -1  # fsdp replicate
+  shard: 1  # fsdp shard
+  strategy: full_shard  # full_shard or shard_grad_op
+  cpu_offload: false  # offload the parameters and gradients to the CPU
+  param_dtype: fp32  # model parameter dtype
+  reduce_dtype: fp32  # gradient reduction dtype
+  activation_ckpt: true  # activation checkpointing

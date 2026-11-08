@@ -1,0 +1,42 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: pmeanflow  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Timestep configs.
+# --------------------------------------------------------------------------------
+time_mu: 0.8  # logit_normal mean
+time_sigma: 0.8  # logit_normal std
+ratio_r_not_equal_t: 0.5  # fraction of samples with r != t
+
+# --------------------------------------------------------------------------------
+# CFG configs.
+# --------------------------------------------------------------------------------
+cfg_prob: 0.1  # probability to drop the class label for CFG
+cfg_omega_max: 8.0  # sample omega from [1, cfg_omega_max]
+cfg_beta: 1.0  # omega ~ p(omega) ∝ omega^-beta
+cfg_min_t_range: [0.0, 0.5]  # lowest timestep for CFG; t_min ~ U(range)
+cfg_max_t_range: [0.5, 1.0]  # highest timestep for CFG; t_max ~ U(range)
+
+# --------------------------------------------------------------------------------
+# Loss weighting configs.
+# --------------------------------------------------------------------------------
+adaptive_p: 1.0  # power p of the adaptive weight
+adaptive_eps: 0.01  # constant c added to the loss inside the adaptive weight
+
+# --------------------------------------------------------------------------------
+# Noise configs.
+# --------------------------------------------------------------------------------
+noise_scale: 1.0  # noise std; image_size / 256 in paper Table 8
+uniform_time_prob: 0.0  # probability to sample r and t uniformly
+
+# --------------------------------------------------------------------------------
+# Perceptual loss configs.
+# --------------------------------------------------------------------------------
+lpips_weight: 0.4  # weight of the LPIPS loss; 0 disables it
+convnext_weight: 0.1  # weight of the ConvNeXt-V2 loss; 0 disables it
+perceptual_max_t: 0.8  # use the perceptual losses only for t < perceptual_max_t
+vgg_path: ${data_and_model_dir}/torchvision/vgg16-397923af.pth  # VGG16 weights of LPIPS
+lpips_path: ${data_and_model_dir}/lpips/v0.1/vgg.pth  # LPIPS v0.1 linear weights of VGG16
+convnext_path: ${data_and_model_dir}/facebook/convnextv2-base-22k-224  # ConvNeXt-V2 model path

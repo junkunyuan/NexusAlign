@@ -41,5 +41,6 @@ Follow these steps in order.
    official code. Record the sources and each deviation in the `Implementation` part
    of the paper README's `Introduction`.
 
-**Conventions:** these steps rely on [configs](../../rules/configs.md),
-[reproduce](../../rules/reproduce.md), and [code-style](../../rules/code-style.md).
+**Conventions:** these steps rely on [common-workflow](../../rules/common-workflow.md),
+[configs](../../rules/configs.md), [reproduce](../../rules/reproduce.md), and
+[code-style](../../rules/code-style.md).

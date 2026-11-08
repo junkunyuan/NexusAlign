@@ -1,0 +1,39 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: pixeldit2  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Timestep configs.
+# t = 0 is the noise and t = 1 is the clean image, as in the paper.
+# --------------------------------------------------------------------------------
+time_mu: -0.8  # logit_normal mean; see paper Table 10
+time_sigma: 0.8  # logit_normal std
+t_eps: 0.05  # lower clip of 1 - t in the velocity division
+
+# --------------------------------------------------------------------------------
+# Noise configs.
+# --------------------------------------------------------------------------------
+noise_scale: 1.0  # noise std; image_size / 256 in paper Table 10
+
+# --------------------------------------------------------------------------------
+# CFG configs.
+# --------------------------------------------------------------------------------
+cfg_prob: 0.1  # probability to drop the class label for CFG
+
+# --------------------------------------------------------------------------------
+# Precision configs.
+# --------------------------------------------------------------------------------
+autocast_dtype: bf16  # model compute dtype
+
+# --------------------------------------------------------------------------------
+# Grounding dropout configs.
+# --------------------------------------------------------------------------------
+grounding_drop_prob: 0.1  # probability to drop the grounding tokens for CFG
+joint_drop_prob: 0.0  # probability to drop both the label and the grounding tokens
+
+# --------------------------------------------------------------------------------
+# REPA configs.
+# --------------------------------------------------------------------------------
+repa_weight: 0.5  # weight of the REPA loss
+repa_encoder_path: ${data_and_model_dir}/timm/vit_base_patch14_dinov2.lvd142m  # DINOv2 path of the REPA targets

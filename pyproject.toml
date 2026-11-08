@@ -31,6 +31,7 @@ dependencies = [
     "transformers>=5.19.0",
     "peft>=0.21.2",
     "accelerate>=1.13",  # fast weight loading in diffusers and transformers
+    "timm==1.0.25",  # DINOv2 and DINOv3 of PixelDiT and PixelDiT2; the official version
     # Configs
     "hydra-core>=1.3.0",
     "omegaconf>=2.3",

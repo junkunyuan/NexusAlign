@@ -67,6 +67,63 @@ ASSETS = {
         "source": "url",
         "url": "https://huggingface.co/Lyy0725/iMF/resolve/main/imagenet_256_fid_stats.npz",
     },
+    "fid_stats/pmf_jax_in512_stats.npz": {  # pMeanFlow's JAX reference statistics of ImageNet 512x512
+        "kind": "others",
+        "source": "url",
+        "url": "https://huggingface.co/Lyy0725/pMF/resolve/main/imagenet_512_fid_stats.npz",
+    },
+    "fid_stats/VIRTUAL_imagenet256_labeled.npz": {  # ADM's reference batch of ImageNet 256x256
+        "kind": "others",
+        "source": "url",
+        "url": "https://openaipublic.blob.core.windows.net/diffusion/jul-2021/ref_batches/imagenet/256/VIRTUAL_imagenet256_labeled.npz",
+    },
+    "fid_stats/VIRTUAL_imagenet512.npz": {  # ADM's reference batch of ImageNet 512x512
+        "kind": "others",
+        "source": "url",
+        "url": "https://openaipublic.blob.core.windows.net/diffusion/jul-2021/ref_batches/imagenet/512/VIRTUAL_imagenet512.npz",
+    },
+    "fid_stats/jit_in256_stats.npz": {  # JiT's reference statistics of ImageNet 256x256
+        "kind": "others",
+        "source": "url",
+        "url": "https://raw.githubusercontent.com/LTH14/JiT/cbc743a2ada5e9762697da2c83f8c4f8379e8c17/fid_stats/jit_in256_stats.npz",
+    },
+    "fid_stats/jit_in512_stats.npz": {  # JiT's reference statistics of ImageNet 512x512
+        "kind": "others",
+        "source": "url",
+        "url": "https://raw.githubusercontent.com/LTH14/JiT/cbc743a2ada5e9762697da2c83f8c4f8379e8c17/fid_stats/jit_in512_stats.npz",
+    },
+    # Perceptual losses of pMeanFlow.
+    "torchvision/vgg16-397923af.pth": {
+        "kind": "models",
+        "source": "url",
+        "url": "https://download.pytorch.org/models/vgg16-397923af.pth",
+    },
+    "lpips/v0.1/vgg.pth": {
+        "kind": "models",
+        "source": "url",
+        "url": "https://raw.githubusercontent.com/richzhang/PerceptualSimilarity/082bb24f84c091ea94de2867d34c4544f68e0963/lpips/weights/v0.1/vgg.pth",
+    },
+    "facebook/convnextv2-base-22k-224": {
+        "kind": "models",
+        "source": "hf",
+        "include": ["config.json", "model.safetensors"],
+    },
+    # REPA and grounding encoders of PixelDiT and PixelDiT2.
+    "timm/vit_base_patch14_dinov2.lvd142m": {
+        "kind": "models",
+        "source": "hf",
+        "include": ["config.json", "model.safetensors"],
+    },
+    "timm/vit_small_patch16_dinov3_qkvb.lvd1689m": {
+        "kind": "models",
+        "source": "hf",
+        "include": ["config.json", "model.safetensors"],
+    },
+    "timm/vit_base_patch16_dinov3_qkvb.lvd1689m": {
+        "kind": "models",
+        "source": "hf",
+        "include": ["config.json", "model.safetensors"],
+    },
     "paddleocr/whl/det/en/en_PP-OCRv3_det_infer": {
         "kind": "others",
         "source": "url",
@@ -182,6 +239,37 @@ PRESETS = {
         "ILSVRC/imagenet-1k",
         "torch_fidelity/weights-inception-2015-12-05-6726825d.pth",
         "fid_stats/imf_jax_in256_stats.npz",
+    ],
+    "pmeanflow": [
+        "ILSVRC/imagenet-1k",
+        "torchvision/vgg16-397923af.pth",
+        "lpips/v0.1/vgg.pth",
+        "facebook/convnextv2-base-22k-224",
+        "torch_fidelity/weights-inception-2015-12-05-6726825d.pth",
+        "fid_stats/imf_jax_in256_stats.npz",  # the same file as pMeanFlow's 256x256 statistics
+        "fid_stats/pmf_jax_in512_stats.npz",
+    ],
+    "jit": [
+        "ILSVRC/imagenet-1k",
+        "torch_fidelity/weights-inception-2015-12-05-6726825d.pth",
+        "fid_stats/jit_in256_stats.npz",
+        "fid_stats/jit_in512_stats.npz",
+    ],
+    "pixeldit": [
+        "ILSVRC/imagenet-1k",
+        "timm/vit_base_patch14_dinov2.lvd142m",
+        "torch_fidelity/weights-inception-2015-12-05-6726825d.pth",
+        "fid_stats/VIRTUAL_imagenet256_labeled.npz",
+        "fid_stats/VIRTUAL_imagenet512.npz",
+    ],
+    "pixeldit2": [
+        "ILSVRC/imagenet-1k",
+        "timm/vit_base_patch14_dinov2.lvd142m",
+        "timm/vit_small_patch16_dinov3_qkvb.lvd1689m",
+        "timm/vit_base_patch16_dinov3_qkvb.lvd1689m",
+        "torch_fidelity/weights-inception-2015-12-05-6726825d.pth",
+        "fid_stats/jit_in256_stats.npz",
+        "fid_stats/jit_in512_stats.npz",
     ],
     "flow_grpo": [
         "stabilityai/stable-diffusion-3.5-medium",

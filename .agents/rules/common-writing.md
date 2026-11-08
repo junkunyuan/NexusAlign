@@ -3,7 +3,7 @@ paths:
   - "**/*"
 ---
 
-# Writing
+# Common Writing
 
 Write all comments, docstrings, config comments, and docs in ASD-STE100 Simplified
 Technical English (STE). STE makes the text easy to read, also for readers who are not
@@ -13,10 +13,10 @@ native English speakers.
    "get", not "obtain"; "make sure", not "ensure"; "with" or "through", not "via".
    Use one word for one thing: always "checkpoint", never "ckpt" or "snapshot".
 2. **Keep technical names as they are,** such as FSDP, EMA, LoRA, and timestep, and
-   names from the code, such as `cfg_omega`. Use an "-ing" word only as a technical
-   name, such as "training" or "sampling".
-3. **Do not use more than three words in a noun cluster.** Write "the CFG weight of
-   the mean velocity", not "mean velocity CFG weight".
+   names from the code, such as `learning_rate`. Use an "-ing" word only as a
+   technical name, such as "training" or "sampling".
+3. **Do not use more than three words in a noun cluster.** Write "the warmup steps of
+   the text encoder", not "text encoder warmup steps".
 4. **Use the active voice and simple tenses.** Write "the trainer saves a checkpoint",
    not "a checkpoint is saved".
 5. **Write one topic per sentence.** Use not more than 20 words in an instruction and

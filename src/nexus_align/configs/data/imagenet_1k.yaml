@@ -15,6 +15,7 @@ flip_prob: 0.0  # horizontal flip probability
 # --------------------------------------------------------------------------------
 # VAE-latent configs.
 # To use raw images and not VAE latents, set cache_dir to null.
+# To cache the uint8 pixels and not VAE latents, set vae to null, as pMeanFlow does.
 # Latents are the default, as MeanFlow and iMeanFlow train on them.
 # The dataset normalizes each latent as (latent * vae_scale - vae_mean) / vae_std,
 # where vae_mean and vae_std are one value or one value per channel.
@@ -27,5 +28,5 @@ read_batch: 256  # batch size to read the parquet files
 vae_batch: 256  # batch size for VAE encoding
 shard_size: 8192  # number of items in each cache shard
 preprocess_workers: 8  # number of workers to preprocess the data
-cache_dir: ${data_and_model_dir}/ILSVRC/imagenet-1k/latents  # latent cache directory
+cache_dir: ${data_and_model_dir}/ILSVRC/imagenet-1k/latents  # cache directory
 shared_cache: false  # if false, multi-node runs use one cache subdirectory per node

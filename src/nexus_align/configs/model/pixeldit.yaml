@@ -1,0 +1,21 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: pixeldit_xl_16  # pixeldit_{b,l,xl}_16
+input_size: 256  # input size (image size)
+num_classes: 1000  # number of classes, for example 1000 for ImageNet-1K
+repa_dim: 768  # feature dim of the REPA encoder
+dtype: fp32  # model weight dtype
+ema_enabled: true  # if true, use an EMA model
+
+# --------------------------------------------------------------------------------
+# FSDP configs.
+# --------------------------------------------------------------------------------
+fsdp:
+  replicate: -1  # fsdp replicate
+  shard: 1  # fsdp shard
+  strategy: full_shard  # full_shard or shard_grad_op
+  cpu_offload: false  # offload the parameters and gradients to the CPU
+  param_dtype: fp32  # model parameter dtype
+  reduce_dtype: fp32  # gradient reduction dtype
+  activation_ckpt: false  # activation checkpointing

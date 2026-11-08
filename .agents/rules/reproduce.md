@@ -52,8 +52,9 @@ Strip private info from the copied configs:
 4. **Add a column for the training length or the GPU count only if necessary:**
    `#Iter` (for example, 1k) or `#GPU` (the run's `world_size`). Add it only if the
    rows of one task differ in it.
-5. **Write `Introduction` as `Paper`, `Summary`, and `Implementation`.**
-   `Implementation` is one sentence that names and links the repo that we follow,
+5. **Write `Introduction` as `Paper`, `Summary`, and `Implementation`.** `Paper`
+   cites the paper as `**Paper:** *Title* ([Venue Year](arxiv))`. `Implementation`
+   is one sentence that names and links the repo that we follow,
    with no file names or file links. This is usually the official repo. If another
    repo is better, for example with a newer model or with results that we can compare
    with, follow it. Then the sentence also says why, and names and links the official
@@ -70,7 +71,8 @@ Strip private info from the copied configs:
    cites DiT for the DiT blocks, not every algorithm that copied them. General code,
    such as `sft_trainer.py`, cites nothing. Check every entry against the source code
    first.
-7. **Keep `reproduce/README.md` brief:** it lists the papers, never results, in the
-   same table as the Algorithms table of `README.md`. Its links are relative to
+7. **Keep `reproduce/README.md` brief:** it lists the papers in the same table as the
+   Algorithms table of `README.md`, with the same results. Its links are relative to
    `reproduce/`. Its `TODO` section lists the planned runs as task items, for example a
-   rerun after a fix. When you record a run, remove its item.
+   rerun after a fix. When you record a run, remove its item. If the run changes a
+   result in the Algorithms tables, update both tables.

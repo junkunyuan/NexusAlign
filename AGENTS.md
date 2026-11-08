@@ -37,18 +37,11 @@ bash scripts/tools/kill_jobs.sh
 
 ## Workflow
 
-- **Explore:** Explore the relevant files and understand the existing code before you
-  make changes.
-- **Simplicity:** Always keep the code as simple as possible, when you add a feature
-  and when you change code. Reuse an existing helper, and do not copy code. Do not add
-  an option or abstraction that nothing uses yet. Remove the code that a change leaves
-  unused. Avoid unnecessary changes and unnecessary comments.
-- **Style:** Strictly follow the project's existing code style when you write new code
-  and comments.
-- **Comments:** Always keep comments and docstrings up to date with the code. If a
-  change makes one wrong (for example, a removed feature, a renamed key, or a new
-  default), update it in the same change. This includes the trailing comments in
-  configs and the docs.
+Follow [common-workflow](.agents/rules/common-workflow.md): understand the request
+and ask early, explore first, keep the code simple, follow the existing style, keep
+the comments current, and ask before you change a `common-*.md` rule. In this repo,
+also:
+
 - **Reproducibility:** When you add code or features, make sure that you can still
   reproduce every method that `reproduce/` records. It is easy to break a shared
   default. For example, a change to a default in `configs/trainer/sft.yaml` can silently
@@ -66,7 +59,9 @@ bash scripts/tools/kill_jobs.sh
 
 - **[`.agents/rules/`](.agents/rules/):** conventions. Each rule applies to the files
   that its `paths:` frontmatter names. Some tools load the rules automatically. In all
-  tools, read the rules that cover a path before you edit it.
+  tools, read the rules that cover a path before you edit it. The `common-*.md` rules
+  do not depend on this repo, so other projects can use them unchanged. The other
+  rules add to them.
 - **[`.agents/skills/`](.agents/skills/):** step-by-step guides for frequent tasks,
   such as how to add an algorithm.
 

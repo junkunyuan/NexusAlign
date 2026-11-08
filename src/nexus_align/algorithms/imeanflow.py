@@ -56,9 +56,31 @@ class IMeanFlow(BaseAlgorithm):
         t_max = torch.where(full_mask, 1.0, uniform(*self.cfg_max_t_range))
         return t_min, t_max
 
+    def sample_r_t(self, batch_size):
+        """Sample the time steps (r, t), with r = t for the first samples."""
+        return sample_time_steps(
+            batch_size, "logit_normal", self.time_mu, self.time_sigma,
+            self.ratio_r_not_equal_t, self.device,
+        )
+
+    def add_noise(self, z_0, t):
+        """Return the noised latent z_t and the conditional velocity at t."""
+        t = t.view(-1, 1, 1, 1)
+        noises = torch.randn_like(z_0)
+        z_t = (1 - t) * z_0 + t * noises
+        return z_t, noises - z_0
+
+    def aux_loss(self, z_0, z_t, t, u):
+        """Return the auxiliary loss of each sample and its metrics. iMeanFlow has none."""
+        return torch.zeros_like(t), {}
+
     def adaptive_loss(self, error):
         """Weight the squared error of each sample adaptively; see MeanFlow Eq. 22."""
         loss = error.square().flatten(1).sum(dim=1)
+        return self.adaptive_weight(loss)
+
+    def adaptive_weight(self, loss):
+        """Divide the loss of each sample by (loss + c)^p, without gradient."""
         return loss / (loss.detach() + self.adaptive_eps).pow(self.adaptive_p)
 
     def forward(self, data):
@@ -70,10 +92,7 @@ class IMeanFlow(BaseAlgorithm):
         bs = z_0.shape[0]
 
         # 2. Sample timesteps r and t.
-        r, t = sample_time_steps(
-            bs, "logit_normal", self.time_mu, self.time_sigma,
-            self.ratio_r_not_equal_t, self.device,
-        )
+        r, t = self.sample_r_t(bs)
         time_diff = (t - r).view(-1, 1, 1, 1)
 
         # 3. Sample the guidance scale and the guidance interval.
@@ -81,10 +100,7 @@ class IMeanFlow(BaseAlgorithm):
         cfg_min_t, cfg_max_t = self.sample_cfg_interval(bs, r == t)
 
         # 4. Sample the noise, then make the noised latent and the velocity at t.
-        t_ = t.view(-1, 1, 1, 1)
-        noises = torch.randn_like(z_0)
-        z_t = (1 - t_) * z_0 + t_ * noises  # noised latent
-        v_t = noises - z_0  # conditional instantaneous velocity
+        z_t, v_t = self.add_noise(z_0, t)
 
         # 5. Drop the class labels of the first samples for CFG.
         null_labels = torch.full_like(labels, self.model.num_classes)
@@ -133,7 +149,8 @@ class IMeanFlow(BaseAlgorithm):
         error_v = v - v_target
         loss_u = self.adaptive_loss(error_u)
         loss_v = self.adaptive_loss(error_v)
-        loss = (loss_u + loss_v).mean()
+        loss_aux, aux_metrics = self.aux_loss(z_0, z_t, t, u)
+        loss = (loss_u + loss_v + loss_aux).mean()
 
         # Log the raw squared errors of the u head and the auxiliary v head for r = t
         # (flow matching) and r != t (MeanFlow). Only training uses the v head.
@@ -151,6 +168,7 @@ class IMeanFlow(BaseAlgorithm):
                 "loss_raw_v": loss_raw_v.mean(),
                 "loss_raw_v_r_eq_t": loss_raw_v[~r_ne_t].mean(),
                 "loss_raw_v_r_ne_t": loss_raw_v[r_ne_t].mean(),
+                **aux_metrics,
             },
         }
 

@@ -48,12 +48,14 @@ class ImageNet1K(Dataset):
 
     - Raw mode decodes JPEGs from the parquet shards if cache_dir is not set.
     - Latent mode reads precomputed VAE latents from safetensors shards.
-    - Latent mode builds the cache on first use, if the manifest is missing or the
+    - Pixel mode does the same with the uint8 center crops, if vae is not set.
+    - Both modes build the cache on first use, if the manifest is missing or the
       cache has a different VAE or image size.
-    - The cache holds each image once, flipped with flip_prob, to halve its size.
-    - __getitem__ returns raw sample dicts in raw mode and (latent, label) in
-      latent mode. It samples the latent from the VAE posterior and normalizes it
-      with vae_scale, vae_mean, and vae_std.
+    - The latent cache holds each image once, flipped with flip_prob, to halve its
+      size. Pixel mode flips each image with flip_prob at each load instead.
+    - __getitem__ returns raw sample dicts in raw mode, (latent, label) in latent
+      mode, and (image in [-1, 1], label) in pixel mode. It samples the latent from
+      the VAE posterior and normalizes it with vae_scale, vae_mean, and vae_std.
     """
 
     def __init__(self, cfg_data) -> None:
@@ -175,9 +177,10 @@ class ImageNet1K(Dataset):
 
     # --------------------------------------------------------------------------------
     # Latent mode: return (image VAE latent: float, label: int).
+    # Pixel mode: return (image: float in [-1, 1], label: int).
     # --------------------------------------------------------------------------------
     def _init_latent_mode(self) -> None:
-        self.mode = "latent"
+        self.mode = "latent" if self.vae is not None else "pixel"
         if self._load_manifest() is None:
             self._build_cache()  # build the cache if it is empty or incomplete
         manifest = self._load_manifest()
@@ -202,7 +205,9 @@ class ImageNet1K(Dataset):
             return None
         with open(manifest_path) as f:
             manifest = json.load(f)
-        same_vae = os.path.basename(os.path.normpath(manifest["vae"])) == os.path.basename(os.path.normpath(self.vae))
+        def vae_name(vae):
+            return None if vae is None else os.path.basename(os.path.normpath(vae))
+        same_vae = vae_name(manifest["vae"]) == vae_name(self.vae)
         if not same_vae or manifest["img_size"] != self.img_size:
             print(f"⚠️ Latent cache at {self.cache_dir} was built with another VAE or image size; rebuilding")
             return None
@@ -236,6 +241,8 @@ class ImageNet1K(Dataset):
         """
         Encode the parquet data to VAE latents and write a shard manifest.
 
+        In pixel mode, store the uint8 center crops instead of the latents.
+
         self.shared_cache selects one of two layouts:
         - shared: all ranks on all nodes build one cache on the shared path together.
           The global rank 0 writes the manifest.
@@ -268,11 +275,12 @@ class ImageNet1K(Dataset):
         clean_flag = os.path.join(cache, f".clean-{self.split}-{run_id}")
         done_flag = os.path.join(cache, f".done-{self.split}-{run_id}-{rank:03d}")
         done_glob = os.path.join(cache, f".done-{self.split}-{run_id}-*")
+        prefix = _shard_prefix(self.vae)
 
         # Remove the incomplete files.
         if rank == 0:
-            print(f"💾 Building latent cache at {cache} ...")
-            for pat in (f"latents-{self.split}-*.safetensors", f".done-{self.split}-*", f".clean-{self.split}-*"):
+            print(f"💾 Building {self.mode} cache at {cache} ...")
+            for pat in (f"{prefix}-{self.split}-*.safetensors", f".done-{self.split}-*", f".clean-{self.split}-*"):
                 for p in glob.glob(os.path.join(cache, pat)):
                     os.remove(p)
             if os.path.exists(manifest_path):
@@ -282,9 +290,9 @@ class ImageNet1K(Dataset):
             _wait_for(lambda: os.path.exists(clean_flag))
 
         # Load the VAE.
-        if self.vae is None:
-            raise ValueError("❌ data.vae must be set to build the latent cache")
-        vae = AutoencoderKL.from_pretrained(self.vae).to(device).eval()
+        vae = None
+        if self.vae is not None:
+            vae = AutoencoderKL.from_pretrained(self.vae).to(device).eval()
 
         # Make a dataloader for the parquet files.
         files = self.files[rank::world]
@@ -295,7 +303,7 @@ class ImageNet1K(Dataset):
 
         # The first GPU of each node shows a progress bar for its own samples.
         num_local = sum(pq.ParquetFile(f).metadata.num_rows for f in files)
-        bar = TqdmBar(num_local, "🚀 Encoding latents", "img", mininterval=30)
+        bar = TqdmBar(num_local, f"🚀 Caching {self.mode}s", "img", mininterval=30)
 
         out_m, out_l = [], []
         state = {"count": 0, "shard": 0}
@@ -303,23 +311,29 @@ class ImageNet1K(Dataset):
         def write_shard() -> None:
             if not out_m:
                 return
+            key = "moments" if self.vae is not None else "pixels"
             tensors = {
-                "moments": torch.cat(out_m).contiguous(),
+                key: torch.cat(out_m).contiguous(),
                 "label": torch.cat(out_l).contiguous(),
             }
-            path = os.path.join(cache, f"latents-{self.split}-{rank:03d}-{state['shard']:05d}.safetensors")
-            save_file(tensors, path, metadata={"img_size": str(self.img_size), "vae": self.vae})
+            path = os.path.join(cache, f"{prefix}-{self.split}-{rank:03d}-{state['shard']:05d}.safetensors")
+            save_file(tensors, path, metadata={"img_size": str(self.img_size), "vae": str(self.vae)})
             out_m.clear(); out_l.clear()
             state["count"] = 0
             state["shard"] += 1
 
-        # Encode the latents. Flip each image with flip_prob, and cache it once.
+        # Keep the pixels, or encode the latents. A latent cache holds each image once,
+        # flipped with flip_prob.
         for imgs, labels in loader:
             imgs = imgs.to(device, non_blocking=True)
-            flip = torch.rand(imgs.shape[0], device=device) < self.flip_prob
-            imgs[flip] = imgs[flip].flip(dims=[3])
-            with torch.no_grad():
-                out_m.append(vae.encode(imgs).latent_dist.parameters.cpu().half())
+            if vae is None:
+                # Undo the [-1, 1] normalization. Rounding gives back the exact uint8.
+                out_m.append(((imgs + 1) * 127.5).round().to(torch.uint8).cpu())
+            else:
+                flip = torch.rand(imgs.shape[0], device=device) < self.flip_prob
+                imgs[flip] = imgs[flip].flip(dims=[3])
+                with torch.no_grad():
+                    out_m.append(vae.encode(imgs).latent_dist.parameters.cpu().half())
             out_l.append(labels.to(torch.int16))
             state["count"] += imgs.shape[0]
             bar.update(imgs.shape[0])
@@ -355,6 +369,14 @@ class ImageNet1K(Dataset):
 
         label = int(f.get_slice("label")[local].item())
 
+        # Normalize the pixels to [-1, 1], as the official process_image_on_tpu of
+        # pMeanFlow does. Flip each image at each load, as RandomHorizontalFlip does.
+        if self.mode == "pixel":
+            image = f.get_slice("pixels")[local].float() / 255.0
+            if self.flip_prob > 0 and torch.rand(()) < self.flip_prob:
+                image = image.flip(dims=[2])
+            return (image - 0.5) / 0.5, label
+
         # Sample the latent from its VAE posterior and normalize it here, so that the
         # algorithm gets latents that it can use directly.
         mean, logvar = f.get_slice("moments")[local].float().chunk(2, dim=0)
@@ -363,7 +385,7 @@ class ImageNet1K(Dataset):
         return (latent * self.vae_scale - self.vae_mean) / self.vae_std, label
 
     def __getitem__(self, index: int) -> dict[str, Any] | tuple[torch.Tensor, int]:
-        if self.mode == "latent":
+        if self.mode in ("latent", "pixel"):
             return self._get_latent(index)
         return self.get_raw(self._indices[index])
 
@@ -430,19 +452,31 @@ def _shard_num_samples(path: str) -> int:
         return f.get_slice("label").get_shape()[0]
 
 
-def _write_manifest(cache_dir: str, split: str, img_size: int, vae_name: str) -> None:
+def _shard_prefix(vae_name: str | None) -> str:
+    """Return the file prefix of the cache shards: latents, or pixels without a VAE."""
+    return "latents" if vae_name is not None else "pixels"
+
+
+def _write_manifest(
+    cache_dir: str, split: str, img_size: int, vae_name: str | None
+) -> None:
     """Scan the written shards, and atomically write manifest-{split}.json."""
-    shard_files = sorted(glob.glob(os.path.join(cache_dir, f"latents-{split}-*.safetensors")))
+    prefix = _shard_prefix(vae_name)
+    shard_files = sorted(glob.glob(os.path.join(cache_dir, f"{prefix}-{split}-*.safetensors")))
     shards: list[dict[str, Any]] = []
     total = 0
     for path in shard_files:
         n = _shard_num_samples(path)
         shards.append({"file": os.path.basename(path), "num_samples": n})
         total += n
+    if vae_name is not None:
+        shape = [8, img_size // 8, img_size // 8]
+    else:
+        shape = [3, img_size, img_size]
     manifest = {
         "dataset": "imagenet-1k", "split": split, "img_size": img_size,
         "vae": vae_name, "num_classes": NUM_CLASSES, "num_samples": total,
-        "latent_shape": [8, img_size // 8, img_size // 8], "shards": shards,
+        "latent_shape": shape, "shards": shards,
     }
     path = os.path.join(cache_dir, f"manifest-{split}.json")
     tmp = path + ".tmp"

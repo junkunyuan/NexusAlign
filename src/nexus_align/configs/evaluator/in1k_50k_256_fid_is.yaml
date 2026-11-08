@@ -23,7 +23,7 @@ new_run: false  # if True, evaluate in a new directory, not in the latest one
 # --------------------------------------------------------------------------------
 # Data and model paths.
 # --------------------------------------------------------------------------------
-vae_path: ${data.vae}  # VAE model path; the data config defines it
+vae_path: ${data.vae}  # VAE model path from the data config; null for pixel models
 vae_scale: ${data.vae_scale}  # VAE latent scale; the data config defines it
 vae_mean: ${data.vae_mean}  # VAE latent mean; the data config defines it
 vae_std: ${data.vae_std}  # VAE latent std; the data config defines it
