@@ -1,5 +1,5 @@
 # General configs.
-name: cofiti
+name: twintilt  # registry key
 
 # Sampling configs.
 solver: euler  # rollout solver: euler or sa

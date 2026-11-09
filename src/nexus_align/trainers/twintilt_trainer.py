@@ -1,4 +1,4 @@
-"""CoFiTi epochs: complete groups, frozen targets, all-sample slot accumulation."""
+"""TwinTilt epochs: complete groups, frozen targets, all-sample slot accumulation."""
 
 from contextlib import contextmanager, nullcontext
 import copy
@@ -13,7 +13,7 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 
-from nexus_align.datasets.cofiti import (
+from nexus_align.datasets.twintilt import (
     PromptBatchPlan, PromptDataLoader,
 )
 from nexus_align.engine.checkpoint import CheckpointManager
@@ -76,7 +76,8 @@ def semantic_config(config):
 
 
 def resume_signature(trainer):
-    """Identify effective training semantics, allowing relocated resources.
+    """
+    Identify effective training semantics, allowing relocated resources.
 
     Optimizer hyperparameters come from the checkpoint. Epoch limits, logging,
     save intervals, and train microbatch partitioning may change on restoration.
@@ -96,7 +97,7 @@ def resume_signature(trainer):
         "seed", "deterministic", "groups_per_epoch", "updates_per_epoch",
         "sample_batch_size", "max_batch_size", "max_grad_norm",
         "scale_pickscore_reward_for_training", "reward_std_epsilon",
-        "reward_clip_max", "use_ema", "rollout_ema_decay",
+        "use_ema", "rollout_ema_decay",
         "rollout_ema_start_decay", "rollout_ema_warmup_rate",
     )
     return {
@@ -205,9 +206,9 @@ class RolloutRuntime:
             local["dataset"] != trainer.train_dataset.dataset_fingerprint
             for local in state["ranks"]
         ):
-            raise ValueError("CoFiTi resume requires the same prompt dataset")
+            raise ValueError("TwinTilt resume requires the same prompt dataset")
         if int(state["world_size"]) != trainer.world_size:
-            raise ValueError("CoFiTi resume requires the same world size")
+            raise ValueError("TwinTilt resume requires the same world size")
         local = state["ranks"][trainer.rank]
         trainer.train_dataloader.load_state_dict(local["dataloader"])
         trainer.buffer = local["buffer"]
@@ -216,8 +217,9 @@ class RolloutRuntime:
         trainer.pending_rng = local["rng"]
 
 
-class CoFiTiTrainer(BaseTrainer):
-    """Keep source epoch semantics while using NexusAlign tracking/checkpoints.
+class TwinTiltTrainer(BaseTrainer):
+    """
+    Keep source epoch semantics while using NexusAlign tracking/checkpoints.
 
     Targets are constructed before global slot shuffling. Each update averages
     all member/time slots, including those with zero correction.
@@ -247,7 +249,6 @@ class CoFiTiTrainer(BaseTrainer):
             'offload_text_encoders',
             'plot_every_n_seconds',
             'resume_path',
-            'reward_clip_max',
             'reward_std_epsilon',
             'rollout_ema_decay',
             'rollout_ema_start_decay',
@@ -265,7 +266,7 @@ class CoFiTiTrainer(BaseTrainer):
         }
         unknown = set(cfg_trainer) - allowed
         if unknown:
-            raise ValueError(f"Unsupported CoFiTi trainer fields: {sorted(unknown)}")
+            raise ValueError(f"Unsupported TwinTilt trainer fields: {sorted(unknown)}")
         for key, value in cfg_trainer.items():
             setattr(self, key, value)
         self.train_dataset = train_dataset
@@ -352,7 +353,7 @@ class CoFiTiTrainer(BaseTrainer):
             log_dir, self.plot_every_n_seconds, self.log_tensorboard,
         )
         print(
-            f"📌 CoFiTi: {self.groups_per_epoch} groups x "
+            f"📌 TwinTilt: {self.groups_per_epoch} groups x "
             f"{algorithm.group_size} members x {algorithm.num_steps} times, "
             f"{self.steps_per_epoch} updates/epoch, "
             f"{self.train_batch_size} slots/microbatch"
@@ -360,7 +361,7 @@ class CoFiTiTrainer(BaseTrainer):
 
     def state_dict(self):
         return {
-            "method": "cofiti", "format_version": 1,
+            "method": "twintilt", "format_version": 1,
             "target_format": "group_projection_displacement_v1",
             "epoch": self.epoch, "step": self.step, "total_step": self.total_step,
             "steps_per_epoch": self.steps_per_epoch,
@@ -373,7 +374,7 @@ class CoFiTiTrainer(BaseTrainer):
 
     def load_state_dict(self, state):
         for key, expected in (
-            ("method", "cofiti"), ("format_version", 1),
+            ("method", "twintilt"), ("format_version", 1),
             ("target_format", "group_projection_displacement_v1"),
             ("world_size", self.world_size),
             ("steps_per_epoch", self.steps_per_epoch),
@@ -382,15 +383,15 @@ class CoFiTiTrainer(BaseTrainer):
             ("num_steps", self.algorithm.num_steps),
         ):
             if state.get(key) != expected:
-                raise ValueError(f"Incompatible CoFiTi checkpoint: {key}")
+                raise ValueError(f"Incompatible TwinTilt checkpoint: {key}")
         if "resume_signature" not in state:
-            raise ValueError("CoFiTi checkpoint requires a resume_signature")
+            raise ValueError("TwinTilt checkpoint requires a resume_signature")
         changes = signature_differences(
             state["resume_signature"], resume_signature(self)
         )
         if changes:
             raise ValueError(
-                "CoFiTi resume changes training semantics: " + ", ".join(changes)
+                "TwinTilt resume changes training semantics: " + ", ".join(changes)
             )
         for key in ("epoch", "step", "total_step"):
             value = state.get(key)
@@ -543,7 +544,7 @@ class CoFiTiTrainer(BaseTrainer):
                         (grouped - grouped.mean(1, keepdim=True))
                         / (grouped.std(1, unbiased=False, keepdim=True)
                            + self.reward_std_epsilon)
-                    ).clamp(-self.reward_clip_max, self.reward_clip_max).flatten()
+                    ).flatten()
                 sentinels = getattr(self.reward, "metric_sentinels", {})
                 for key, values in scored.items():
                     values = torch.as_tensor(values, dtype=torch.float32)

@@ -1,0 +1,42 @@
+name: twintilt  # registry key
+# Epoch and optimizer configs.
+seed: 6  # base seed for training and prompt streams
+deterministic: false  # preserve the source's backend settings
+groups_per_epoch: 48  # global prompt/group draws, not pairs of images
+updates_per_epoch: 1  # optimizer updates per epoch
+epochs: 500  # number of training epochs
+max_batch_size: 28  # source prompt/slot batch upper bound
+sample_batch_size: null  # largest divisor of local groups below the upper bound
+train_batch_size: null  # largest divisor of local members/update below the bound
+learning_rate: 3.0e-4  # AdamW learning rate
+adam_beta1: 0.9  # AdamW first-moment decay
+adam_beta2: 0.999  # AdamW second-moment decay
+adam_weight_decay: 1.0e-4  # AdamW weight decay
+adam_epsilon: 1.0e-8  # AdamW epsilon
+max_grad_norm: 1.0  # maximum gradient norm
+offload_text_encoders: true  # move text encoders to CPU after encoding
+
+# Reward preprocessing.
+scale_pickscore_reward_for_training: true  # /26 and unclipped group z-score
+reward_std_epsilon: 1.0e-4  # epsilon added to the population standard deviation
+
+# Only the training rollout EMA exists.
+use_ema: true  # use rollout EMA weights
+rollout_ema_decay: 0.9  # maximum rollout EMA decay
+rollout_ema_start_decay: null  # null starts decay at the warmup rate
+rollout_ema_warmup_rate: 0.01  # decay increment per successful update
+
+# Checkpoint intervals are independent of the total training length.
+save_ckpt_every_n_epochs: 1  # null disables epoch-triggered saves
+save_ckpt_every_n_steps: 1  # null disables optimizer-step-triggered saves
+save_ckpt_keep_last_n_epochs: null  # null keeps all checkpoints
+save_ckpt_keep_last_n_steps: null  # null keeps all checkpoints
+resume_path: null  # checkpoint directory for ordinary resume
+
+# Native tracking.
+debug: false  # enable debug console logging
+log_every_n_steps: 1  # optimizer-step interval for metrics
+log_window_size: 2  # number of updates in the metric window
+log_hardware: true  # record hardware metrics
+log_tensorboard: false  # write TensorBoard scalars
+plot_every_n_seconds: 60  # minimum interval between plot refreshes

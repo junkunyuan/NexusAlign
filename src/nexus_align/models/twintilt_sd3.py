@@ -9,15 +9,16 @@ from torch.nn.parallel import DistributedDataParallel
 from nexus_align.models.sd3 import SD3Model
 
 
-class CoFiTiSD3Model(SD3Model):
-    """Reuse SD3 conditioning with BF16 frozen weights and FP32 student LoRA.
+class TwinTiltSD3Model(SD3Model):
+    """
+    Reuse SD3 conditioning with BF16 frozen weights and FP32 student LoRA.
 
     The only EMA is the trainer's small LoRA shadow, not a second transformer.
     """
 
     def __init__(self, cfg_model, build_keys=("model",)):
         if tuple(build_keys) != ("model",):
-            raise ValueError("CoFiTi evaluation uses model_key=model")
+            raise ValueError("TwinTilt evaluation uses model_key=model")
         self.cfg_model = cfg_model
         self.device = torch.device("cuda", torch.cuda.current_device())
         pipeline = StableDiffusion3Pipeline.from_pretrained(
@@ -55,7 +56,7 @@ class CoFiTiSD3Model(SD3Model):
         self.ema = None
         self._eval_pipeline = None
         self.save_trainable_only = True
-        print("📦 Prepared CoFiTi SD3.5 with DDP and FP32 student LoRA")
+        print("📦 Prepared TwinTilt SD3.5 with DDP and FP32 student LoRA")
 
     @property
     def transformer(self):

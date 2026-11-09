@@ -3,9 +3,9 @@
 from nexus_align.registry import registry
 from nexus_align.datasets.imagenet_1k import ImageNet1K
 from nexus_align.datasets.text_dataset import TextDataset
-from nexus_align.datasets.cofiti import CoFiTiPromptDataset
+from nexus_align.datasets.twintilt import TwinTiltPromptDataset
 
 registry.register("dataset", "imagenet_1k", ImageNet1K)
-registry.register("dataset", "cofiti", CoFiTiPromptDataset)
+registry.register("dataset", "twintilt", TwinTiltPromptDataset)
 for _name in ("geneval", "ocr", "pickscore", "drawbench"):
     registry.register("dataset", _name, TextDataset)

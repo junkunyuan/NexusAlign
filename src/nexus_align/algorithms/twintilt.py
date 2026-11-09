@@ -4,7 +4,8 @@
 # Portions adapted from the local finite-difference-flow-optimization source.
 # Licensed under the NVIDIA Source Code License v1 (Non-Commercial).
 # See licenses/FDFO-LICENSE.txt for the full license.
-"""CoFiTi: group preference projection and endpoint-copy velocity MSE.
+"""
+TwinTilt: group preference projection and endpoint-copy velocity MSE.
 
 The fixed nonlinear projection and churn sampling are local FDFO extensions.
 Source: fdfo/exact_projection.py, fdfo/sampling.py, and fdfo/sa_solver.py.
@@ -17,8 +18,8 @@ import math
 import torch
 
 from nexus_align.algorithms.base_algorithm import BaseAlgorithm
-from nexus_align.algorithms.components.cofiti_sampling import sample_euler, sample_sa
-from nexus_align.algorithms.components.cofiti_projection import (
+from nexus_align.algorithms.components.twintilt_sampling import sample_euler, sample_sa
+from nexus_align.algorithms.components.twintilt_projection import (
     solve_fixed_exact_projection,
 )
 
@@ -28,11 +29,12 @@ def require_finite(name, value):
         raise ValueError(f"{name} must be finite")
 
 
-class CoFiTi(BaseAlgorithm):
+class TwinTilt(BaseAlgorithm):
     """One group projection, one frozen endpoint-copy target, all-sample MSE."""
 
     def __init__(self, cfg_algorithm):
-        super().__init__(cfg_algorithm)
+        super().__init__()
+        self.cfg_algorithm = cfg_algorithm
         cfg = cfg_algorithm
 
         # Sampling configs.
@@ -91,7 +93,7 @@ class CoFiTi(BaseAlgorithm):
         unknown = set(cfg) - allowed
         if unknown:
             raise ValueError(
-                f"Unsupported CoFiTi configuration fields: {sorted(unknown)}"
+                f"Unsupported TwinTilt configuration fields: {sorted(unknown)}"
             )
         if self.eta is None:
             self.eta = 1.0 / self.group_size
@@ -101,7 +103,7 @@ class CoFiTi(BaseAlgorithm):
 
     def validate_config(self):
         if self.solver not in {"euler", "sa"}:
-            raise ValueError("CoFiTi solver must be euler or sa")
+            raise ValueError("TwinTilt solver must be euler or sa")
         if self.optimization_level not in {"trajectory", "distribution"}:
             raise ValueError("optimization_level must be trajectory or distribution")
         for name in ("group_size", "num_steps", "exact_projection_iterations",
@@ -111,7 +113,7 @@ class CoFiTi(BaseAlgorithm):
             if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
                 raise ValueError(f"{name} must be an integer >= {minimum}")
         if self.solver == "sa" and self.num_steps < 2:
-            raise ValueError("CoFiTi solver=sa requires num_steps >= 2")
+            raise ValueError("TwinTilt solver=sa requires num_steps >= 2")
         if self.resolution < 8 or self.resolution % 8:
             raise ValueError("resolution must be a positive multiple of eight")
         for name in ("ridge_scale", "kl_weight", "churn_weight", "guidance_scale"):

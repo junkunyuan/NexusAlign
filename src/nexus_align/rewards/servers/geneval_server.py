@@ -74,7 +74,7 @@ def create_app(
 
 def create_local_app():
     """Use the parent project's existing resources without downloading weights."""
-    root = Path(os.environ["COFITI_RESOURCE_ROOT"])
+    root = Path(os.environ["TWINTILT_RESOURCE_ROOT"])
     reward_dir = Path(os.environ.get(
         "GENEVAL_REWARD_SERVER_DIR",
         root / "third_party/advantage_weighted_matching/reward-server",

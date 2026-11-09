@@ -14,8 +14,8 @@ import torch
 from nexus_align.registry import registry
 
 
-class CoFiTiMultiReward:
-    """Report the fixed four-score sum; train on weighted component z-scores."""
+class TwinTiltMultiReward:
+    """Report the fixed score sum; train on an unclipped weighted mean of z-scores."""
 
     components = ("pickscore", "hpsv2", "clipscore", "geneval")
     scales = (1.0 / 26.0, 1.0, 1.0 / 30.0, 1.0)
@@ -26,7 +26,7 @@ class CoFiTiMultiReward:
 
     def __init__(self, cfg_reward):
         unknown = set(cfg_reward) - {
-            "name", "weights", "std_epsilon", "clip_max", "rewards", "normalize",
+            "name", "weights", "std_epsilon", "rewards", "normalize",
         }
         if unknown:
             raise ValueError(f"Unsupported clip30 preset fields: {sorted(unknown)}")
@@ -37,14 +37,12 @@ class CoFiTiMultiReward:
         self.weights = {key: float(cfg_reward.weights[key]) for key in self.components}
         if not all(math.isfinite(w) for w in self.weights.values()):
             raise ValueError("Multi-reward weights must be finite")
-        if not any(self.weights.values()):
-            raise ValueError("At least one multi-reward weight must be nonzero")
+        self.weight_sum = sum(self.weights.values())
+        if not math.isfinite(self.weight_sum) or self.weight_sum == 0:
+            raise ValueError("Multi-reward weight sum must be finite and nonzero")
         self.std_epsilon = float(cfg_reward.std_epsilon)
-        self.clip_max = float(cfg_reward.clip_max)
-        if not all(
-            math.isfinite(v) and v > 0 for v in (self.std_epsilon, self.clip_max)
-        ):
-            raise ValueError("Reward epsilon and clip must be finite and positive")
+        if not math.isfinite(self.std_epsilon) or self.std_epsilon <= 0:
+            raise ValueError("Reward epsilon must be finite and positive")
         if set(cfg_reward.rewards) != set(self.components):
             raise ValueError("The preset requires PickScore, HPSv2, CLIP and GenEval")
         if cfg_reward.rewards.pickscore.normalize:
@@ -91,7 +89,7 @@ class CoFiTiMultiReward:
         return results
 
     def training_rewards(self, scores, group_size, device):
-        """Normalize each calibrated component, then sum without a final z-score."""
+        """Standardize each group and take a weighted mean, without clipping."""
         count = len(scores[self.name])
         if group_size < 2 or count == 0 or count % group_size:
             raise ValueError("Multi-reward normalization requires complete groups")
@@ -104,9 +102,10 @@ class CoFiTiMultiReward:
             advantage = (
                 (grouped - grouped.mean(1, keepdim=True))
                 / (grouped.std(1, unbiased=False, keepdim=True) + self.std_epsilon)
-            ).clamp(-self.clip_max, self.clip_max).flatten()
+            ).flatten()
             total = total + self.weights[key] * advantage
             scores[key + "_group_zscore"] = advantage.tolist()
+        total = total / self.weight_sum
         self.checked_scores(total, count, device)
         scores["training_reward"] = total.tolist()
         return total

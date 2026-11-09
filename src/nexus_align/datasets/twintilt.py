@@ -26,7 +26,7 @@ class PromptBatch:
     canonical_prompt_ids: list[int] | None = None
 
 
-class CoFiTiPromptDataset(Dataset):
+class TwinTiltPromptDataset(Dataset):
     """Keep source row order and duplicate prompts, with isolated metadata copies."""
 
     def __init__(self, cfg_data, split: str | None = None) -> None:

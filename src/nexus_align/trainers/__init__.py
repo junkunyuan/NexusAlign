@@ -1,7 +1,7 @@
 """Trainer registry: register built-in trainers by name on import."""
 
 from nexus_align.registry import registry
-from nexus_align.trainers.cofiti_trainer import CoFiTiTrainer
+from nexus_align.trainers.twintilt_trainer import TwinTiltTrainer
 from nexus_align.trainers.sft_trainer import SFTTrainer
 from nexus_align.trainers.grpo_trainer import GRPOTrainer
 from nexus_align.trainers.nft_trainer import NFTTrainer
@@ -15,4 +15,4 @@ registry.register("trainer", "nft", NFTTrainer)
 registry.register("trainer", "refl", ReFLTrainer)
 registry.register("trainer", "art", ARTTrainer)
 
-registry.register("trainer", "cofiti", CoFiTiTrainer)
+registry.register("trainer", "twintilt", TwinTiltTrainer)

@@ -1,0 +1,2 @@
+name: twintilt_hpsv2  # registry key
+checkpoint_path: ${data_and_model_dir}/xswu/HPSv2/HPS_v2.1_compressed.pt  # local weights

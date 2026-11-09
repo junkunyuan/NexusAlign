@@ -8,7 +8,7 @@ from nexus_align.models.jit_dit import JiTDiTModelNames, JiTDiTModel
 from nexus_align.models.pixeldit import PixelDiTModelNames, PixelDiTModel
 from nexus_align.models.pixeldit2 import PixelDiT2ModelNames, PixelDiT2Model
 from nexus_align.models.sd3 import SD3Model
-from nexus_align.models.cofiti_sd3 import CoFiTiSD3Model
+from nexus_align.models.twintilt_sd3 import TwinTiltSD3Model
 
 for _name in MeanFlowDiTModelNames:
     registry.register("model", _name, MeanFlowDiTModel)
@@ -23,4 +23,4 @@ for _name in PixelDiTModelNames:
 for _name in PixelDiT2ModelNames:
     registry.register("model", _name, PixelDiT2Model)
 registry.register("model", "sd3_5_medium", SD3Model)
-registry.register("model", "cofiti_sd3", CoFiTiSD3Model)
+registry.register("model", "twintilt_sd3", TwinTiltSD3Model)

@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # Run the existing local GenEval/OCR scorer in the parent project's environment.
-# Usage: cofiti_reward_server.sh geneval|ocr [serve|check|wait]
+# Usage: twintilt_reward_server.sh geneval|ocr [serve|check|wait]
 # Serve stays in the foreground; the training launcher owns and cleans up its PID.
 set -euo pipefail
 
-NAME=${1:?Usage: cofiti_reward_server.sh geneval|ocr [serve|check|wait]}
+NAME=${1:?Usage: twintilt_reward_server.sh geneval|ocr [serve|check|wait]}
 ACTION=${2:-serve}
 case "$NAME" in
   geneval) DEFAULT_PORT=18085 ;;
   ocr) DEFAULT_PORT=18087 ;;
-  *) echo "❌ Unknown CoFiTi reward server: $NAME" >&2; exit 2 ;;
+  *) echo "❌ Unknown TwinTilt reward server: $NAME" >&2; exit 2 ;;
 esac
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-export COFITI_RESOURCE_ROOT="${COFITI_RESOURCE_ROOT:-$(dirname "$PROJECT_DIR")}"
+export TWINTILT_RESOURCE_ROOT="${TWINTILT_RESOURCE_ROOT:-$(dirname "$PROJECT_DIR")}"
 PYTHON="$(dirname "$PROJECT_DIR")/.venv/bin/python"
 PORT=${REWARD_SERVER_PORT:-$DEFAULT_PORT}
 TIMEOUT=${REWARD_SERVER_TIMEOUT:-900}

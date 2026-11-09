@@ -1,4 +1,189 @@
-# CoFiTi migration validation
+# TwinTilt validation
+
+## Current TwinTilt checks — 2026-11-10
+
+Validated on two NVIDIA A100 80 GB PCIe GPUs with the existing parent environment:
+Python 3.12, PyTorch 2.6.0+cu124, Diffusers 0.37.1, Transformers 4.57.6,
+PEFT 0.19.1, and Hydra 1.3.2. No packages or FA3 were installed.
+
+**Upstream base:** `3f964169a0b556ce30ca177ed9c1b366dcfdf75e`.
+The original migration was preserved on the local
+`backup/cofiti-before-twintilt` branch before integration.
+The working method, configuration, scripts, classes, and state identifiers now
+use TwinTilt. Old registry keys and checkpoints have no compatibility alias.
+
+**Changed reward formulas:** Single PickScore uses `/26` and an unclipped group
+z-score. Multi-reward scales components by `(1/26, 1, 1/30, 1)`, computes their
+unclipped group z-scores, then divides their weighted sum by the weight sum.
+It does not standardize the aggregate again. The fixed report score remains
+`P/26 + H + C/30 + G`. These are deliberate changes from the earlier clipped,
+weighted-sum migration. Historical reward results below do not validate them.
+
+### Numerical and interface checks
+
+The local evidence directory is `logs/twintilt_validation_20261110/`.
+Its JSON files and logs remain local artifacts; they are excluded from the PR.
+
+| Check | Result |
+|---|---|
+| Euler/SA versus the preserved migration | 36 cases; states, endpoints, velocities, actual call times, and RNG match exactly |
+| Group projection | 10 cases covering ordinary, duplicate, rank-deficient, identical endpoints and zero rewards; error 0 |
+| Projection failures | Nonfinite endpoints/rewards and invalid ridge settings rejected |
+| Target scale | `eta=0.7` and `eta=null` agree with the source projection followed only by `u_scale`; error 0 |
+| MSE and base regularizer | Zero/nonzero corrections, full-sample loss and gradients match the fixed formula; error 0 |
+| Unclipped rewards | A 64-member outlier gives z-score `7.930859088897705`; single and multi paths retain it |
+| Multi weights | Default, zero and negative weights match the weighted mean; zero/nonfinite sums rejected |
+| Constant rewards | Finite zero advantages, without a policy activity mask |
+| Removed interfaces | 25 fields and 6 old registry keys rejected; explicit Hydra `+algorithm` injection also rejected |
+| Task configurations | Four tasks × train/eval routes and both training solvers checked |
+| Upstream configurations | All 40 reproduce jobs match a clean upstream archive, using each formal launcher's actual arguments |
+
+**GPU reward comparisons:** Float-input PickScore matches the preserved migration
+exactly at 256 and 512 pixels, with and without `/26`. The shared PIL path matches
+latest upstream exactly. ReFL's differentiable PickScore path retains finite,
+nonzero image gradients; its score error is 0 and maximum gradient difference is
+`5.122274160385132e-9` in sequential CUDA backward runs. Raw CLIP scores match the
+local source exactly, and the shared divisor-100 behavior remains unchanged.
+The upstream comparison adapts only the installed Transformers feature-return
+wrapper; it uses the same weights and numeric operators.
+
+**Evidence files:** `numerics.json`, `reward_gpu_checks.json`,
+`final_interface_audit.json`, and `upstream_config_audit.json` record the cases,
+errors, resolved arguments, and comparison hashes.
+
+### Real training and checkpoint checks
+
+Each run used 8 groups, group size 4, 256 pixels, 3 model calls, and one optimizer
+update per epoch: 32 images and 96 member/time slots. All other method defaults,
+including `eta=1`, `u_scale=0.1`, churn `0.04`, and KL weight `0.004`, were retained.
+
+| Task | GPUs | Solver / noise | First-update loss | Update / EMA |
+|---|---:|---|---:|---:|
+| PickScore | 1 | Euler / trajectory | 2.4846376181 | 1 / 1 |
+| GenEval | 1 | Euler / distribution | 0.00000364205 | 1 / 1 |
+| OCR | 1 | SA / trajectory | 0.00000619700 | 1 / 1 |
+| Multi-reward | 2 | SA / distribution | 0.1380303788 | 1 / 1 |
+
+**Actual saved state:** All four checkpoints contain exactly the six documented
+files. Each student and rollout EMA contains 382 finite FP32 LoRA tensors.
+AdamW step and EMA count are 1. Rank-local dataloader state matches replay from
+`seed + rank`: cursor 8 for single-rank runs, and cursors 4/4 for the dual-rank run.
+The method/format and resume signature contain no removed reward-clip fields.
+
+**Mid-epoch restoration:** CPU fixtures use the actual trainer, runtime, and
+GradScaler methods with toy predictions. Saved-buffer continuation matches the
+uninterrupted student, EMA, metrics, RNG, and next prompt batch; weight error is 0.
+It does not resample. A missing mid-epoch buffer is rejected. Finite → infinite →
+finite gradients advance EMA counts `1 → 1 → 2`; the skipped update preserves
+student and EMA weights.
+
+**Save and cache checks:** Independent epoch/step triggers, coincident-trigger
+deduplication, null intervals, unlimited and finite retention, and EMA-disabled
+five-file checkpoints pass. Old format, missing signature, and changed signature
+are rejected even when metrics already exist. Generic upstream evaluators still
+accept algorithms without `cfg_algorithm`. Three dataset formats retain duplicate
+rows and independent nested metadata. Wrong rank, world size, and fingerprint
+states are rejected.
+
+**Evidence files:** `checkpoint_cpu_checks.json` and
+`runtime_checkpoint_inspection.json` separate actual checkpoint inspections from
+CPU fixtures with mocked distributed collectives. This is not a real FSDP training
+test or a rerun of all upstream methods.
+
+### Real resume and student evaluation
+
+All four epoch-1 checkpoints were resumed through one additional update using the
+same task, solver, noise mode, and world size. Every launcher exited 0, restored
+all six components, and saved epoch/global-step/EMA count 2.
+
+| Task | Resumed loss | Student epoch-1 evaluation score | Eval directory suffix |
+|---|---:|---:|---|
+| PickScore | 3.3584794203 | 16.5458774567, raw PickScore | `20261110_061709` |
+| GenEval | 0.00001895965 | 0, partial/accuracy/strict accuracy | `20261110_062147` |
+| OCR | 0.0029392103 | 0 | `20261110_061747` |
+| Multi-reward | 0.0892900291 | 1.3772042990, fixed calibrated sum | `20261110_061940` |
+
+**Evaluation artifacts:** Each task used two test prompts, one image per prompt,
+256 pixels, three native Flow Euler steps, CFG 1, T5 length 256, and no churn.
+Each fresh directory contains two valid PNGs, `samples.json` with the TwinTilt
+signature, `metrics.json`, `config_eval.yaml`, `eval_summary.json`, and figures.
+All evaluate student epoch-1 weights, including the dual-rank multi-reward run.
+Directories are under each run's `eval/reward-twintilt-<suffix>/`.
+
+**Multi-reward evaluation:** Raw means are PickScore `18.4860134125`,
+HPSv2 `0.1018066406`, CLIPScore `16.9319124222`, and GenEval `0`.
+The fixed report agrees with `P/26 + H + C/30 + G` within `6.18e-8`, from FP32
+rounding. It is not divided by four. Evaluation emits no `training_reward` or
+component group z-score metrics. Missing GenEval categories are `null`; zero
+main scores are valid results. These samples do not establish model quality.
+
+**Service lifecycle:** The launchers started only their required services.
+Their owned ports 18195, 18196, and 18197 were closed after completion.
+Both GPUs returned to 16 MiB allocated by the driver. Results and complete
+commands are retained in `single_gpu_followup.json`, `root_gpu_followup.json`,
+`service_cleanup.json`, and the corresponding training/evaluation logs.
+
+**Validation interruption:** The first GenEval and OCR training processes completed
+their updates and checkpoints, but their shell wrappers exited 127 after a header
+edit changed a running script's read offset. No training state was lost. The final
+unchanged launchers were then exercised through successful resume and evaluation,
+all with exit 0. The initial logs retain this failure instead of hiding it.
+
+### Commands and cleanup
+
+Run the following template from the repository with the task-specific settings
+in the table. The original job names are
+`twintilt_validation_<task>_20261110`; both service ports and torchrun master ports
+were isolated for concurrent tests.
+
+| Task | `NPROC_PER_NODE` | `algorithm.solver` | `algorithm.optimization_level` |
+|---|---:|---|---|
+| `pickscore` | 1 | `euler` | `trajectory` |
+| `geneval` | 1 | `euler` | `distribution` |
+| `ocr` | 1 | `sa` | `trajectory` |
+| `multi_reward_geneval_clip30` | 2 | `sa` | `distribution` |
+
+```bash
+# Example: the dual-rank training case, 32 images and one update.
+CUDA_VISIBLE_DEVICES=0,1 EXP=multi_reward_geneval_clip30 NPROC_PER_NODE=2 \
+MASTER_PORT=29674 REWARD_SERVER_PORT=18196 \
+  bash scripts/reproduce/twintilt_train.sh \
+  exp_info=twintilt_validation_multi_reward_geneval_clip30_20261110 timestamp=false \
+  trainer.groups_per_epoch=8 trainer.epochs=1 algorithm.group_size=4 \
+  algorithm.resolution=256 algorithm.num_steps=3 algorithm.solver=sa \
+  algorithm.optimization_level=distribution trainer.log_hardware=false
+
+# Resume: retain the same small-run overrides, set epochs=2 and add:
+# trainer.resume_path=<run>/checkpoints/epoch_1-step_0-total_step_1
+
+# Example: evaluate only epoch 1, in a new directory.
+CUDA_VISIBLE_DEVICES=1 EXP=multi_reward_geneval_clip30 NPROC_PER_NODE=1 \
+EXP_NAME=twintilt_validation_multi_reward_geneval_clip30_20261110 \
+MASTER_PORT=29679 REWARD_SERVER_PORT=18196 \
+  bash scripts/reproduce/twintilt_eval.sh \
+  "evaluator.ckpts=[$PWD/logs/twintilt_validation_multi_reward_geneval_clip30_20261110/checkpoints/epoch_1-step_0-total_step_1]" \
+  evaluator.new_run=true evaluator.num_prompts=2 evaluator.num_repeats=1 \
+  evaluator.num_steps=3 evaluator.resolution=256
+```
+
+**Cleanup:** Temporary numerical, interface, checkpoint, and GPU drivers were
+deleted after their results were recorded. Old method bytecode caches were removed.
+The repository contains no migration-specific verification or test scripts.
+Formal training, evaluation, and reward-service scripts remain. Local JSON,
+logs, images, and checkpoints are retained and excluded from the PR, along with
+models, datasets, the virtual environment, and ZIP packages.
+
+**Final checks:** Python parsing, shell syntax, configuration routes, and the final
+shared-interface review passed. Final docstring/line wrapping changes preserve
+the executable AST. No full 500-epoch experiment, FA3 installation, or paper
+reproduction was attempted. The upstream dependency versions were not installed
+or upgraded; the tests use the existing environment listed above.
+
+**History:** The sections below retain the pre-rename CoFiTi commands, names, and
+artifact paths on the original upstream base. They do not validate the current
+reward formulas or latest upstream integration.
+
+# Historical CoFiTi migration validation
 
 Validated locally on 2026-11-09 with the parent project virtual environment and
 2 NVIDIA A100 80 GB GPUs. These are implementation checks and short training runs,

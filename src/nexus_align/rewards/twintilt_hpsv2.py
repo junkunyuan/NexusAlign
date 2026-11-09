@@ -12,7 +12,7 @@ import torch
 import torch.nn.functional as F
 
 
-class CoFiTiHPSv2:
+class TwinTiltHPSv2:
     """Score normalized feature similarity without quantizing training images."""
 
     metrics = ("hpsv2",)

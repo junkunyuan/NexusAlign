@@ -1,10 +1,10 @@
-name: cofiti_sd3
-path: ${data_and_model_dir}/stabilityai/stable-diffusion-3.5-medium
+name: twintilt_sd3  # registry key
+path: ${data_and_model_dir}/stabilityai/stable-diffusion-3.5-medium  # local SD3.5
 activation_ckpt: false  # optional training activation checkpointing
 lora:
-  rank: 32
-  alpha: 64
-  init: gaussian
+  rank: 32  # LoRA rank
+  alpha: 64  # LoRA alpha
+  init: gaussian  # LoRA initialization
   target_modules:
     - attn.add_k_proj
     - attn.add_q_proj

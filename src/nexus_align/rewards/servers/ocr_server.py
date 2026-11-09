@@ -93,7 +93,7 @@ def create_app(
 
 def create_local_app() -> Flask:
     """Use the three existing PaddleOCR model directories, without downloads."""
-    root = Path(os.environ["COFITI_RESOURCE_ROOT"])
+    root = Path(os.environ["TWINTILT_RESOURCE_ROOT"])
     model_dir = root / "models/PaddleOCR/PP-OCRv4"
     paths = {
         "det_model_dir": Path(os.environ.get(

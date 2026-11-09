@@ -17,8 +17,7 @@
 
 ## 🔥 Updates
 
-- **[2026-11-10]** Add [TwinTilt](TWINTILT.md) training and evaluation for PickScore, GenEval, OCR, and multi-reward. See the [Chinese guide](TWINTILT_CONFIG_ZH.md).
-
+- **[2026⁠-⁠11⁠-⁠10]** Add [TwinTilt](TWINTILT.md) training and evaluation for PickScore, GenEval, OCR, and multi-reward. See the [Chinese guide](TWINTILT_CONFIG_ZH.md).
 - **[2026⁠-⁠11⁠-⁠04]** Add [DiffusionART](reproduce/diffusion_art) on SD3.5-M with GenEval, OCR, and PickScore rewards.
 - **[2026⁠-⁠11⁠-⁠03]** Add [ReFL](reproduce/refl) on SD3.5-M with the PickScore reward.
 - **[2026⁠-⁠10⁠-⁠18]** Add [DiffusionNFT](reproduce/diffusion_nft) on SD3.5-M with GenEval, OCR, and PickScore rewards.

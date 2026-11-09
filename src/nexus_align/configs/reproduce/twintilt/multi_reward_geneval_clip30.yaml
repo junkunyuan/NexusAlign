@@ -1,0 +1,4 @@
+# @package _global_
+exp_info: twintilt_multi_reward_geneval_clip30  # experiment name
+trainer:
+  scale_pickscore_reward_for_training: false  # /26 and unclipped group z-score

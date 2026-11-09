@@ -1,4 +1,4 @@
 defaults:
   - clipscore
 score_divisor: 1.0  # return raw logits; the multi-reward preset multiplies by 1/30
-local_files_only: true
+local_files_only: true  # load only local model assets

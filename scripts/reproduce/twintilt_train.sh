@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# EXP=pickscore|geneval|ocr|multi_reward_geneval_clip30 NPROC_PER_NODE=2 bash ...
+# TwinTilt local extension: group projection with Euler or SA rollouts.
+# EXP=pickscore|geneval|ocr|multi_reward_geneval_clip30
+# EXP=pickscore NPROC_PER_NODE=2 bash scripts/reproduce/twintilt_train.sh
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RESOURCE_ROOT="${COFITI_RESOURCE_ROOT:-$(dirname "$REPO_ROOT")}"
+RESOURCE_ROOT="${TWINTILT_RESOURCE_ROOT:-$(dirname "$REPO_ROOT")}"
 PYTHON="$(dirname "$REPO_ROOT")/.venv/bin/python"
 EXP="${EXP:-pickscore}"
 DATA_EXP="$EXP"
@@ -16,7 +18,7 @@ case "$EXP" in
 esac
 [[ -x "$PYTHON" ]] || { echo "❌ Missing project interpreter: $PYTHON"; exit 1; }
 cd "$REPO_ROOT"
-export COFITI_RESOURCE_ROOT="$RESOURCE_ROOT"
+export TWINTILT_RESOURCE_ROOT="$RESOURCE_ROOT"
 export PYTHONPATH="$REPO_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
@@ -40,7 +42,7 @@ stop_server() {
 }
 trap stop_server EXIT
 if [[ -n "$SERVER_NAME" && "${START_REWARD_SERVER:-1}" == 1 ]]; then
-  SERVER_SCRIPT=scripts/tools/cofiti_reward_server.sh
+  SERVER_SCRIPT=scripts/tools/twintilt_reward_server.sh
   if ! bash "$SERVER_SCRIPT" "$SERVER_NAME" check; then
     mkdir -p logs/reward-servers
     bash "$SERVER_SCRIPT" "$SERVER_NAME" serve >"logs/reward-servers/$SERVER_NAME.log" 2>&1 &
@@ -50,11 +52,11 @@ if [[ -n "$SERVER_NAME" && "${START_REWARD_SERVER:-1}" == 1 ]]; then
 fi
 
 NPROC_PER_NODE="${NPROC_PER_NODE:-2}"
-echo "🚀 CoFiTi training: $EXP, $NPROC_PER_NODE processes per node"
+echo "🚀 TwinTilt training: $EXP, $NPROC_PER_NODE processes per node"
 "$PYTHON" -m torch.distributed.run \
   --nnodes="${NNODES:-1}" --node_rank="${NODE_RANK:-0}" \
   --nproc_per_node="$NPROC_PER_NODE" \
   --master_addr="${MASTER_ADDR:-127.0.0.1}" --master_port="${MASTER_PORT:-29500}" \
-  -m nexus_align.cli.main --config-name cofiti \
-  "data=cofiti_$DATA_EXP" "reward=cofiti_$EXP" \
-  "+reproduce/cofiti=$EXP" "${REWARD_ARGS[@]}" "$@"
+  -m nexus_align.cli.main --config-name twintilt \
+  "data=twintilt_$DATA_EXP" "reward=twintilt_$EXP" \
+  "+reproduce/twintilt=$EXP" "${REWARD_ARGS[@]}" "$@"

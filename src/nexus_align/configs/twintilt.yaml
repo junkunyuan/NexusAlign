@@ -1,0 +1,28 @@
+defaults:
+  - main
+  - override data: twintilt_pickscore
+  - override model: twintilt_sd3
+  - override algorithm: twintilt
+  - override trainer: twintilt
+  - override reward: twintilt_pickscore
+  - override evaluator: reward
+  - _self_
+
+resource_root: ${oc.env:TWINTILT_RESOURCE_ROOT,${hydra:runtime.cwd}/..}  # asset root
+data_root: ${resource_root}/data  # prompt dataset root
+data_and_model_dir: ${resource_root}/models  # model and reward asset root
+twintilt_format_version: 1  # TwinTilt experiment format
+exp_info: twintilt  # experiment name
+algorithm:
+  max_batch_size: ${trainer.max_batch_size}  # forward batch ceiling
+evaluator:
+  model_key: model  # evaluate student weights
+  num_steps: 40  # source independent evaluation defaults, separate from training
+  guidance_scale: 1.0  # classifier-free guidance
+  resolution: 512  # image resolution
+  max_sequence_length: 256  # T5 tokens
+  global_seed: 0  # source image_seed; each image uses global_seed + repeat_index
+  num_repeats: 1  # images generated per prompt
+  num_prompts: null  # null evaluates the full split in its original order
+  prompt_seed: 0  # shuffle before selecting num_prompts, as in the source
+  per_proc_batch_size: 4  # evaluation images per process batch

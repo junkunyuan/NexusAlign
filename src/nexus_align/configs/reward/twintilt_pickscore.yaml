@@ -1,0 +1,5 @@
+defaults:
+  - pickscore
+normalize: ${trainer.scale_pickscore_reward_for_training}
+image_input: tensor  # use float image preprocessing
+local_files_only: true  # load only local model assets

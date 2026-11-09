@@ -4,7 +4,8 @@
 # Portions adapted from the local finite-difference-flow-optimization source.
 # Licensed under the NVIDIA Source Code License v1 (Non-Commercial).
 # See licenses/FDFO-LICENSE.txt for the full license.
-"""Euler and AWM 2/2 PEC SA rollouts with source arithmetic and RNG ordering.
+"""
+Euler and AWM 2/2 PEC SA rollouts with source arithmetic and RNG ordering.
 
 Adapted from fdfo/sampling.py and fdfo/sa_solver.py. The SA implementation
 is derived from advantage_weighted_matching (Apache-2.0). See
@@ -101,7 +102,8 @@ def sa_tau_from_noise_std(
     *,
     representability_tolerance: float = 1e-10,
 ) -> torch.Tensor:
-    """Solve for SA ``tau`` that realizes an absolute target noise std.
+    """
+    Solve for SA ``tau`` that realizes an absolute target noise std.
 
     For ``h = lambda(next_sigma) - lambda(current_sigma)``, SA adds noise
     with standard deviation ``next_sigma * sqrt(1 - exp(-2*tau**2*h))``.
@@ -232,7 +234,9 @@ class _SASolver:
         if order == 0:
             return [[1]]
         if order != 1 or len(lambda_list) != 2:
-            raise ValueError("CoFiTi SA-Solver only supports predictor orders 1 and 2")
+            raise ValueError(
+                "TwinTilt SA-Solver only supports predictor orders 1 and 2"
+            )
         denominator = lambda_list[0] - lambda_list[1]
         return [
             [1.0 / denominator, -lambda_list[1] / denominator],
@@ -248,7 +252,9 @@ class _SASolver:
         tau: torch.Tensor,
     ) -> list[torch.Tensor]:
         if order not in (1, 2) or order != len(lambda_list):
-            raise ValueError("CoFiTi SA-Solver only supports integration orders 1 and 2")
+            raise ValueError(
+                "TwinTilt SA-Solver only supports integration orders 1 and 2"
+            )
         lagrange = self.lagrange_polynomial_coefficient(order - 1, lambda_list)
         coefficients = []
         for i in range(order):
@@ -276,7 +282,7 @@ class _SASolver:
         t: torch.Tensor,
     ) -> torch.Tensor:
         if order not in (1, 2):
-            raise ValueError("CoFiTi SA-Solver predictor order must be 1 or 2")
+            raise ValueError("TwinTilt SA-Solver predictor order must be 1 or 2")
         tau = torch.as_tensor(tau, device=x.device, dtype=t.dtype)
         sigma_t = t
         lambda_t = _flow_lambda(t)
@@ -341,7 +347,7 @@ class _SASolver:
         t: torch.Tensor,
     ) -> torch.Tensor:
         if order not in (1, 2):
-            raise ValueError("CoFiTi SA-Solver corrector order must be 1 or 2")
+            raise ValueError("TwinTilt SA-Solver corrector order must be 1 or 2")
         tau = torch.as_tensor(tau, device=x.device, dtype=t.dtype)
         sigma_t = t
         lambda_t = _flow_lambda(t)

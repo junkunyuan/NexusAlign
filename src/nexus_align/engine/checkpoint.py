@@ -112,7 +112,7 @@ class CheckpointManager:
                 trainable_only = getattr(trainer.model, "save_trainable_only", False)
                 if trainable_only and isinstance(component, DistributedDataParallel):
                     component = component.module
-                if trainable_only and trainer.model.cfg_model.get("name") == "cofiti_sd3":
+                if trainable_only and trainer.model.cfg_model.get("name") == "twintilt_sd3":
                     error = None
                     if is_rank0:
                         expected = {
@@ -120,9 +120,9 @@ class CheckpointManager:
                             if p.requires_grad
                         }
                         if set(loaded_state_dict) != set(expected):
-                            error = "CoFiTi checkpoint LoRA parameter names differ"
+                            error = "TwinTilt checkpoint LoRA parameter names differ"
                         elif any(loaded_state_dict[n].shape != s for n, s in expected.items()):
-                            error = "CoFiTi checkpoint LoRA parameter shapes differ"
+                            error = "TwinTilt checkpoint LoRA parameter shapes differ"
                     error = broadcast_from_rank0(error)
                     if error is not None:
                         raise ValueError(error)

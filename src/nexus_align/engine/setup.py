@@ -35,13 +35,13 @@ def inherit_train_config(cfg) -> None:
         raise FileNotFoundError(f"❌ No training config at <{config_path}>")
     with open(config_path, "r", encoding="utf-8") as f:
         train_cfg = OmegaConf.create(yaml.safe_load(f))
-    if (cfg.get("algorithm") or {}).get("name") == "cofiti" and (
-        train_cfg.get("cofiti_format_version") != 1
-        or train_cfg.algorithm.name != "cofiti"
-        or train_cfg.model.name != "cofiti_sd3"
-        or train_cfg.trainer.name != "cofiti"
+    if (cfg.get("algorithm") or {}).get("name") == "twintilt" and (
+        train_cfg.get("twintilt_format_version") != 1
+        or train_cfg.algorithm.name != "twintilt"
+        or train_cfg.model.name != "twintilt_sd3"
+        or train_cfg.trainer.name != "twintilt"
     ):
-        raise ValueError("Evaluation requires a compatible CoFiTi experiment")
+        raise ValueError("Evaluation requires a compatible TwinTilt experiment")
     # Runs from before the naming cleanup saved display names, such as
     # "meanflowsit-b/2". Convert them to registry keys.
     train_cfg.model.name = train_cfg.model.name.replace("-", "_").replace("/", "_")
@@ -98,18 +98,18 @@ def prepare_env(cfg) -> None:
             names = [cfg.data.name, cfg.model.name, cfg.algorithm.name]
             cfg.exp_info = "-".join(names)
         ts = broadcast_from_rank0(datetime.now().strftime("%Y%m%d_%H%M%S"))
-        cofiti_resume = (
-            is_train and cfg.algorithm.name == "cofiti"
+        twintilt_resume = (
+            is_train and cfg.algorithm.name == "twintilt"
             and cfg.trainer.get("resume_path")
         )
-        if is_train and cfg.timestamp and not cofiti_resume:
+        if is_train and cfg.timestamp and not twintilt_resume:
             cfg.exp_info = f"{cfg.exp_info}-{ts}"
         cfg.project_path = os.getcwd()
         cfg.log_dir = os.path.abspath(os.path.join(cfg.log_dir, cfg.exp_info))
-        if cofiti_resume:
+        if twintilt_resume:
             checkpoint = Path(cfg.trainer.resume_path).resolve()
             if checkpoint.parent.name != "checkpoints":
-                raise ValueError("CoFiTi resume_path must be a checkpoint directory")
+                raise ValueError("TwinTilt resume_path must be a checkpoint directory")
             cfg.log_dir = str(checkpoint.parent.parent)
             cfg.exp_info = checkpoint.parent.parent.name
         if not is_train:
@@ -119,12 +119,12 @@ def prepare_env(cfg) -> None:
         cfg.rank = rank
         base_seed = int(cfg.trainer.seed)
         cfg.data.seed = base_seed
-        if cfg.get("cofiti_format_version") is not None and (
-            cfg.cofiti_format_version != 1 or cfg.algorithm.name != "cofiti"
-            or cfg.model.name != "cofiti_sd3" or cfg.trainer.name != "cofiti"
-            or cfg.data.name != "cofiti"
+        if cfg.get("twintilt_format_version") is not None and (
+            cfg.twintilt_format_version != 1 or cfg.algorithm.name != "twintilt"
+            or cfg.model.name != "twintilt_sd3" or cfg.trainer.name != "twintilt"
+            or cfg.data.name != "twintilt"
         ):
-            raise ValueError("The CoFiTi entrypoint requires its native components")
+            raise ValueError("The TwinTilt entrypoint requires its native components")
     
     # Initialize the logger and wandb.
     init_log(
@@ -144,11 +144,11 @@ def prepare_env(cfg) -> None:
 
     # Set the seed.
     runtime_seed = base_seed + rank if is_train else base_seed
-    if is_train and cfg.algorithm.name == "cofiti":
+    if is_train and cfg.algorithm.name == "twintilt":
         seed_bytes = json.dumps((base_seed, rank)).encode("utf-8")
         runtime_seed = int(hashlib.md5(seed_bytes).hexdigest()[:8], 16) % (1 << 31)
     set_seed(runtime_seed)
-    if cfg.algorithm.name == "cofiti" and not cfg.trainer.deterministic:
+    if cfg.algorithm.name == "twintilt" and not cfg.trainer.deterministic:
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = False
         torch.use_deterministic_algorithms(False)
@@ -156,7 +156,7 @@ def prepare_env(cfg) -> None:
         set_deterministic(cfg.trainer.deterministic)
 
     # Allow TF32 on matmul and cudnn for faster training on Ampere+ GPUs.
-    torch.backends.cuda.matmul.allow_tf32 = cfg.algorithm.name != "cofiti"
+    torch.backends.cuda.matmul.allow_tf32 = cfg.algorithm.name != "twintilt"
     torch.backends.cudnn.allow_tf32 = True
 
     # Record the provenance of the run (code, software, hardware) and save the configs.

@@ -1,5 +1,0 @@
-defaults:
-  - pickscore
-normalize: ${trainer.scale_pickscore_reward_for_training}
-image_input: tensor
-local_files_only: true

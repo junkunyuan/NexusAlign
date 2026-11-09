@@ -1,0 +1,17 @@
+defaults:
+  - /reward@rewards.pickscore: twintilt_pickscore
+  - /reward@rewards.hpsv2: twintilt_hpsv2
+  - /reward@rewards.clipscore: twintilt_clipscore
+  - /reward@rewards.geneval: twintilt_geneval
+  - _self_
+
+name: multi_reward_geneval_clip30  # registry key
+weights:
+  pickscore: 1.0  # PickScore training weight
+  hpsv2: 1.0  # HPSv2 training weight
+  clipscore: 1.0  # CLIPScore training weight
+  geneval: 1.0  # GenEval training weight
+std_epsilon: ${trainer.reward_std_epsilon}  # epsilon for component group z-scores
+rewards:
+  pickscore:
+    normalize: false  # the preset applies 1/26 once, before component z-scores

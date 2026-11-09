@@ -27,7 +27,7 @@ from nexus_align.evaluators.fid_is_evaluator import save_png, load_png
 
 # Configs that decide the generated images. Reuse saved images only if they match.
 SAMPLE_KEYS = ("split", "global_seed", "num_steps", "guidance_scale", "model_key")
-COFITI_SAMPLE_KEYS = (
+TWINTILT_SAMPLE_KEYS = (
     "resolution", "max_sequence_length", "num_repeats", "num_prompts", "prompt_seed",
 )
 
@@ -53,7 +53,7 @@ class RewardEvaluator(BaseEvaluator):
         rewards: dict,
         log_dir: str = "logs/temp",
     ) -> None:
-        self.is_cofiti = getattr(algorithm, "cfg_algorithm", {}).get("name") == "cofiti"
+        self.is_twintilt = getattr(algorithm, "cfg_algorithm", {}).get("name") == "twintilt"
         super().__init__(
             cfg_evaluator=cfg_evaluator,
             model=model,
@@ -61,31 +61,31 @@ class RewardEvaluator(BaseEvaluator):
             log_dir=log_dir
         )
         self.rewards = rewards
-        if self.is_cofiti and self.data.name != "cofiti":
-            raise ValueError("CoFiTi evaluation requires its metadata-aware dataset")
-        if self.is_cofiti:
+        if self.is_twintilt and self.data.name != "twintilt":
+            raise ValueError("TwinTilt evaluation requires its metadata-aware dataset")
+        if self.is_twintilt:
             for key in ("num_steps", "resolution", "max_sequence_length",
                         "num_repeats", "per_proc_batch_size"):
                 value = cfg_evaluator.get(key)
                 if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-                    raise ValueError(f"CoFiTi evaluator.{key} must be a positive integer")
+                    raise ValueError(f"TwinTilt evaluator.{key} must be a positive integer")
             limit = cfg_evaluator.get("num_prompts")
             if limit is not None and (
                 not isinstance(limit, int) or isinstance(limit, bool) or limit < 1
             ):
-                raise ValueError("CoFiTi evaluator.num_prompts must be positive or null")
-        self.num_repeats = cfg_evaluator.num_repeats if self.is_cofiti else 1
+                raise ValueError("TwinTilt evaluator.num_prompts must be positive or null")
+        self.num_repeats = cfg_evaluator.num_repeats if self.is_twintilt else 1
 
         self.algorithm.prepare(self.eval_model, self.device, model)
 
         # Test prompts; indices past the end pad every rank to the same count.
         dataset_type = (
-            registry.get("dataset", "cofiti")
-            if self.data.name == "cofiti" else TextDataset
+            registry.get("dataset", "twintilt")
+            if self.data.name == "twintilt" else TextDataset
         )
         dataset = dataset_type(self.data, split=self.split)
         self.prompts, self.metadatas = dataset.texts, dataset.metadatas
-        if self.is_cofiti and cfg_evaluator.num_prompts is not None:
+        if self.is_twintilt and cfg_evaluator.num_prompts is not None:
             selected = np.arange(len(self.prompts))
             np.random.RandomState(self.prompt_seed).shuffle(selected)
             selected = selected[:cfg_evaluator.num_prompts]
@@ -113,18 +113,18 @@ class RewardEvaluator(BaseEvaluator):
             "prompts_sha256": prompts_sha256,
             **{key: config[key] for key in SAMPLE_KEYS},
         }
-        if self.is_cofiti:
+        if self.is_twintilt:
             if self.model_key != "model":
-                raise ValueError("CoFiTi evaluation requires model_key=model")
+                raise ValueError("TwinTilt evaluation requires model_key=model")
             self.sample_config["dataset_fingerprint"] = dataset.dataset_fingerprint
-            self.sample_config["cofiti_sampling_signature"] = {
+            self.sample_config["twintilt_sampling_signature"] = {
                 "version": 2,
                 "sampler": "diffusers_flow_euler",
                 "churn_weight": 0,
                 "precision": "bf16_base_fp32_lora_without_autocast",
                 "seed_policy": "cpu_generator_image_seed_plus_repeat_index_mod_2p31",
                 "pixel_conversion": "multiply_255_add_half_clamp_uint8",
-                "evaluation": {key: config[key] for key in COFITI_SAMPLE_KEYS},
+                "evaluation": {key: config[key] for key in TWINTILT_SAMPLE_KEYS},
                 "model": OmegaConf.to_container(model.cfg_model, resolve=True),
                 "world_size": self.world_size,
                 "per_proc_batch_size": self.per_proc_batch_size,
@@ -133,9 +133,9 @@ class RewardEvaluator(BaseEvaluator):
     def check_config(self, saved_config: dict, config: dict) -> None:
         """Fail if a reused evaluation directory used other sampling configs."""
         super().check_config(saved_config, config)
-        keys = SAMPLE_KEYS + COFITI_SAMPLE_KEYS if self.is_cofiti else SAMPLE_KEYS
+        keys = SAMPLE_KEYS + TWINTILT_SAMPLE_KEYS if self.is_twintilt else SAMPLE_KEYS
         changed = [k for k in keys if saved_config.get(k) != config[k]]
-        if (self.is_cofiti and saved_config.get("data", {}).get("name")
+        if (self.is_twintilt and saved_config.get("data", {}).get("name")
                 != config["data"]["name"]):
             changed.append("data")
         if changed:
@@ -177,15 +177,15 @@ class RewardEvaluator(BaseEvaluator):
         }
 
     def is_evaluated(self, ckpt: str) -> bool:
-        if self.is_cofiti:
+        if self.is_twintilt:
             state_path = os.path.join(ckpt, "train_state.json")
             if not os.path.isfile(state_path):
-                raise ValueError("CoFiTi evaluation requires checkpoint train_state.json")
+                raise ValueError("TwinTilt evaluation requires checkpoint train_state.json")
             with open(state_path, encoding="utf-8") as source:
                 state = json.load(source)
-            if (state.get("method") != "cofiti" or state.get("format_version") != 1
+            if (state.get("method") != "twintilt" or state.get("format_version") != 1
                     or state.get("target_format") != "group_projection_displacement_v1"):
-                raise ValueError("Incompatible CoFiTi evaluation checkpoint")
+                raise ValueError("Incompatible TwinTilt evaluation checkpoint")
             samples_path = self.samples_path(ckpt)
             if os.path.exists(samples_path):
                 with open(samples_path, encoding="utf-8") as source:
@@ -194,12 +194,12 @@ class RewardEvaluator(BaseEvaluator):
                            if saved.get(key) != value]
                 if changed:
                     raise ValueError(
-                        f"CoFiTi evaluation cache differs or lacks {changed}; "
+                        f"TwinTilt evaluation cache differs or lacks {changed}; "
                         "set evaluator.new_run=true"
                     )
             elif os.path.exists(self.metrics_path(ckpt)):
                 raise ValueError(
-                    "CoFiTi metrics have no sampling signature; "
+                    "TwinTilt metrics have no sampling signature; "
                     "set evaluator.new_run=true"
                 )
         return not self.pending_rewards(ckpt)
@@ -232,9 +232,6 @@ class RewardEvaluator(BaseEvaluator):
                 metric_plots=metric_plots,
             )
         dist.barrier()
-
-    def is_evaluated(self, ckpt: str) -> bool:
-        return not self.pending_rewards(ckpt)
 
     def find_samples(self, ckpt: str) -> bool:
         """Return True if all images of the checkpoint exist with these configs."""
@@ -273,7 +270,7 @@ class RewardEvaluator(BaseEvaluator):
         os.makedirs(self.ckpt_eval_dir(ckpt), exist_ok=True)
 
         # Every checkpoint starts from the same noise.
-        if not self.is_cofiti:
+        if not self.is_twintilt:
             set_seed(self.global_seed + self.rank)
         print(f"⏳ Sampling {self.num_samples} images for {self.num_prompts} test prompts")
         pbar = TqdmBar(total=len(self.batches), desc="Sampling", unit="batch")
@@ -282,7 +279,7 @@ class RewardEvaluator(BaseEvaluator):
             for indices in self.batches:
                 prompts = [self.prompts[i] for i in self.prompt_indices(indices)]
                 kwargs = {}
-                if self.is_cofiti:
+                if self.is_twintilt:
                     kwargs = {
                         "seeds": [
                             self.global_seed + i % self.num_repeats for i in indices
@@ -296,7 +293,7 @@ class RewardEvaluator(BaseEvaluator):
                 if torch.is_tensor(response):
                     # Score the same uint8 pixels as the saved images, so reruns match.
                     response = (
-                        (response * 255 + 0.5).clamp(0, 255) if self.is_cofiti
+                        (response * 255 + 0.5).clamp(0, 255) if self.is_twintilt
                         else (response * 255).round().clamp(0, 255)
                     )
                     response = response.to("cpu", torch.uint8)

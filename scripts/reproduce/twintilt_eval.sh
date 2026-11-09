@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# Evaluate a saved CoFiTi experiment with one task's test dataset and rewards.
+# Evaluate a saved TwinTilt experiment with one task's test dataset and rewards.
 # EXP=pickscore|geneval|ocr|multi_reward_geneval_clip30
-# EXP_NAME=<training directory name under logs/> NPROC_PER_NODE=1 bash .../cofiti_eval.sh
-# Hydra overrides are forwarded unchanged, for example:
-#   evaluator.ckpts=[/absolute/path/to/checkpoint] evaluator.new_run=true
-#   evaluator.num_prompts=2 evaluator.num_repeats=1
-#   evaluator.num_steps=3 evaluator.resolution=256
-# Defaults: student, 40 Flow Euler steps, 512 px, CFG 1, T5 256, no churn.
+# EXP_NAME=<training directory name under logs/> NPROC_PER_NODE=1 bash .../twintilt_eval.sh
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-RESOURCE_ROOT="${COFITI_RESOURCE_ROOT:-$(dirname "$REPO_ROOT")}"
+RESOURCE_ROOT="${TWINTILT_RESOURCE_ROOT:-$(dirname "$REPO_ROOT")}"
 PYTHON="$(dirname "$REPO_ROOT")/.venv/bin/python"
 EXP="${EXP:-pickscore}"
 DATA_EXP="$EXP"
@@ -27,7 +22,7 @@ esac
   exit 1
 }
 cd "$REPO_ROOT"
-export COFITI_RESOURCE_ROOT="$RESOURCE_ROOT"
+export TWINTILT_RESOURCE_ROOT="$RESOURCE_ROOT"
 export PYTHONPATH="$REPO_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
@@ -44,9 +39,9 @@ elif [[ "$EXP" == ocr ]]; then
   REWARD_ARGS+=("rewards.$EXP.url=http://127.0.0.1:${REWARD_SERVER_PORT:-18087}")
 fi
 CLI_ARGS=(
-  --config-name cofiti
-  job_type=eval "exp_info=$EXP_NAME" "data=cofiti_$DATA_EXP"
-  "+reward@rewards.$EXP=cofiti_$EXP" "${REWARD_ARGS[@]}" "$@"
+  --config-name twintilt
+  job_type=eval "exp_info=$EXP_NAME" "data=twintilt_$DATA_EXP"
+  "+reward@rewards.$EXP=twintilt_$EXP" "${REWARD_ARGS[@]}" "$@"
 )
 
 # Hydra inspection commands need neither a saved experiment nor reward services.
@@ -71,12 +66,12 @@ repo_root = Path(sys.argv.pop(1))
 
 @hydra.main(
     config_path=str(repo_root / "src/nexus_align/configs"),
-    config_name="cofiti",
+    config_name="twintilt",
     version_base="1.3",
 )
 def validate_experiment(cfg):
     if cfg.job_type != "eval":
-        raise SystemExit("❌ cofiti_eval.sh requires job_type=eval")
+        raise SystemExit("❌ twintilt_eval.sh requires job_type=eval")
     experiment = Path(os.path.abspath(os.path.join(cfg.log_dir, cfg.exp_info)))
     if not experiment.is_dir():
         raise SystemExit(f"❌ Evaluation experiment directory not found: {experiment}")
@@ -97,7 +92,7 @@ stop_server() {
 }
 trap stop_server EXIT
 if [[ -n "$SERVER_NAME" && "${START_REWARD_SERVER:-1}" == 1 ]]; then
-  SERVER_SCRIPT=scripts/tools/cofiti_reward_server.sh
+  SERVER_SCRIPT=scripts/tools/twintilt_reward_server.sh
   if ! bash "$SERVER_SCRIPT" "$SERVER_NAME" check; then
     mkdir -p logs/reward-servers
     bash "$SERVER_SCRIPT" "$SERVER_NAME" serve >"logs/reward-servers/$SERVER_NAME.log" 2>&1 &

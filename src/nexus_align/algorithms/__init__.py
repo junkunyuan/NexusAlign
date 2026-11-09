@@ -1,7 +1,7 @@
 """Algorithm registry: register built-in algorithms by name on import."""
 
 from nexus_align.registry import registry
-from nexus_align.algorithms.cofiti import CoFiTi
+from nexus_align.algorithms.twintilt import TwinTilt
 
 # Visual generation post-training.
 from nexus_align.algorithms.diffusion_art import DiffusionART
@@ -32,4 +32,4 @@ registry.register("algorithm", "pmeanflow", PMeanFlow)
 registry.register("algorithm", "pixeldit", PixelDiT)
 registry.register("algorithm", "pixeldit2", PixelDiT2)
 
-registry.register("algorithm", "cofiti", CoFiTi)
+registry.register("algorithm", "twintilt", TwinTilt)
