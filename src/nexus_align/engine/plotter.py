@@ -75,7 +75,8 @@ def plot_axis(records: list[dict], out_dir: str, axis: dict) -> list[str]:
     for key in keys:
         fig = Figure(figsize=(8, 5))
         draw_metric(fig.subplots(), points, key, axis)
-        paths.append(save_figure(fig, out_dir, f"{key}_{axis['name']}.png"))
+        file_key = key.replace("/", "_")
+        paths.append(save_figure(fig, out_dir, f"{file_key}_{axis['name']}.png"))
     return paths
 
 

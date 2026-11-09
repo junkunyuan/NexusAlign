@@ -1,0 +1,4 @@
+# @package _global_
+exp_info: cofiti_multi_reward_geneval_clip30
+trainer:
+  scale_pickscore_reward_for_training: false

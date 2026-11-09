@@ -4,6 +4,7 @@ import os
 import json
 import math
 import hashlib
+import copy
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -26,11 +27,14 @@ from nexus_align.evaluators.fid_is_evaluator import save_png, load_png
 
 # Configs that decide the generated images. Reuse saved images only if they match.
 SAMPLE_KEYS = ("split", "global_seed", "num_steps", "guidance_scale", "model_key")
+COFITI_SAMPLE_KEYS = (
+    "resolution", "max_sequence_length", "num_repeats", "num_prompts", "prompt_seed",
+)
 
 
 class RewardEvaluator(BaseEvaluator):
     """
-    Generate one response per test prompt with the algorithm and score it with rewards.
+    Generate responses for test prompts and score them with rewards.
 
     - Every rank samples a strided shard of the prompts. The evaluator drops the
       padding later.
@@ -38,8 +42,7 @@ class RewardEvaluator(BaseEvaluator):
       run with other rewards then scores the saved images and does not sample again.
     - The evaluator scores only the rewards with missing metrics. It merges their
       metrics into the metrics file of each checkpoint.
-    - Each metric is the mean over the prompts that it applies to. The value -10
-      marks the other prompts.
+    - Metric means exclude only the sentinels declared by each reward model.
     """
 
     def __init__(
@@ -50,6 +53,7 @@ class RewardEvaluator(BaseEvaluator):
         rewards: dict,
         log_dir: str = "logs/temp",
     ) -> None:
+        self.is_cofiti = getattr(algorithm, "cfg_algorithm", {}).get("name") == "cofiti"
         super().__init__(
             cfg_evaluator=cfg_evaluator,
             model=model,
@@ -57,14 +61,44 @@ class RewardEvaluator(BaseEvaluator):
             log_dir=log_dir
         )
         self.rewards = rewards
+        if self.is_cofiti and self.data.name != "cofiti":
+            raise ValueError("CoFiTi evaluation requires its metadata-aware dataset")
+        if self.is_cofiti:
+            for key in ("num_steps", "resolution", "max_sequence_length",
+                        "num_repeats", "per_proc_batch_size"):
+                value = cfg_evaluator.get(key)
+                if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                    raise ValueError(f"CoFiTi evaluator.{key} must be a positive integer")
+            limit = cfg_evaluator.get("num_prompts")
+            if limit is not None and (
+                not isinstance(limit, int) or isinstance(limit, bool) or limit < 1
+            ):
+                raise ValueError("CoFiTi evaluator.num_prompts must be positive or null")
+        self.num_repeats = cfg_evaluator.num_repeats if self.is_cofiti else 1
+
         self.algorithm.prepare(self.eval_model, self.device, model)
 
-        # Get the test prompts. Indices past the end pad every rank to the same count.
-        dataset = TextDataset(self.data, split=self.split)
+        # Test prompts; indices past the end pad every rank to the same count.
+        dataset_type = (
+            registry.get("dataset", "cofiti")
+            if self.data.name == "cofiti" else TextDataset
+        )
+        dataset = dataset_type(self.data, split=self.split)
         self.prompts, self.metadatas = dataset.texts, dataset.metadatas
+        if self.is_cofiti and cfg_evaluator.num_prompts is not None:
+            selected = np.arange(len(self.prompts))
+            np.random.RandomState(self.prompt_seed).shuffle(selected)
+            selected = selected[:cfg_evaluator.num_prompts]
+            self.prompts = [self.prompts[i] for i in selected]
+            self.metadatas = [self.metadatas[i] for i in selected]
         self.num_prompts = len(self.prompts)
+        self.num_samples = self.num_prompts * self.num_repeats
         total = math.ceil(self.num_prompts / self.world_size) * self.world_size
-        self.indices = list(range(self.rank, total, self.world_size))
+        self.indices = [
+            i * self.num_repeats + repeat
+            for i in range(self.rank, total, self.world_size)
+            for repeat in range(self.num_repeats)
+        ]
         size = self.per_proc_batch_size
         self.batches = [
             self.indices[i: i + size] for i in range(0, len(self.indices), size)
@@ -79,11 +113,31 @@ class RewardEvaluator(BaseEvaluator):
             "prompts_sha256": prompts_sha256,
             **{key: config[key] for key in SAMPLE_KEYS},
         }
+        if self.is_cofiti:
+            if self.model_key != "model":
+                raise ValueError("CoFiTi evaluation requires model_key=model")
+            self.sample_config["dataset_fingerprint"] = dataset.dataset_fingerprint
+            self.sample_config["cofiti_sampling_signature"] = {
+                "version": 2,
+                "sampler": "diffusers_flow_euler",
+                "churn_weight": 0,
+                "precision": "bf16_base_fp32_lora_without_autocast",
+                "seed_policy": "cpu_generator_image_seed_plus_repeat_index_mod_2p31",
+                "pixel_conversion": "multiply_255_add_half_clamp_uint8",
+                "evaluation": {key: config[key] for key in COFITI_SAMPLE_KEYS},
+                "model": OmegaConf.to_container(model.cfg_model, resolve=True),
+                "world_size": self.world_size,
+                "per_proc_batch_size": self.per_proc_batch_size,
+            }
 
     def check_config(self, saved_config: dict, config: dict) -> None:
         """Fail if a reused evaluation directory used other sampling configs."""
         super().check_config(saved_config, config)
-        changed = [k for k in SAMPLE_KEYS if saved_config.get(k) != config[k]]
+        keys = SAMPLE_KEYS + COFITI_SAMPLE_KEYS if self.is_cofiti else SAMPLE_KEYS
+        changed = [k for k in keys if saved_config.get(k) != config[k]]
+        if (self.is_cofiti and saved_config.get("data", {}).get("name")
+                != config["data"]["name"]):
+            changed.append("data")
         if changed:
             raise ValueError(
                 f"❌ <{self.eval_dir}> was sampled with other configs {changed}; "
@@ -91,8 +145,15 @@ class RewardEvaluator(BaseEvaluator):
             )
 
     def unpad(self, indices: list[int]) -> list[int]:
-        """Map the padding indices to the last prompt."""
-        return [min(i, self.num_prompts - 1) for i in indices]
+        """Map padding to the same repeat of the last prompt."""
+        return [
+            min(i // self.num_repeats, self.num_prompts - 1) * self.num_repeats
+            + i % self.num_repeats for i in indices
+        ]
+
+    def prompt_indices(self, indices: list[int]) -> list[int]:
+        """Map image slots to their prompt; consecutive slots are its repeats."""
+        return [i // self.num_repeats for i in self.unpad(indices)]
 
     def samples_path(self, ckpt: str) -> str:
         """Return the sampling configs file, which sample() writes after the images."""
@@ -114,6 +175,34 @@ class RewardEvaluator(BaseEvaluator):
             name: reward for name, reward in self.rewards.items()
             if any(m not in metrics for m in reward.metrics)
         }
+
+    def is_evaluated(self, ckpt: str) -> bool:
+        if self.is_cofiti:
+            state_path = os.path.join(ckpt, "train_state.json")
+            if not os.path.isfile(state_path):
+                raise ValueError("CoFiTi evaluation requires checkpoint train_state.json")
+            with open(state_path, encoding="utf-8") as source:
+                state = json.load(source)
+            if (state.get("method") != "cofiti" or state.get("format_version") != 1
+                    or state.get("target_format") != "group_projection_displacement_v1"):
+                raise ValueError("Incompatible CoFiTi evaluation checkpoint")
+            samples_path = self.samples_path(ckpt)
+            if os.path.exists(samples_path):
+                with open(samples_path, encoding="utf-8") as source:
+                    saved = json.load(source)
+                changed = [key for key, value in self.sample_config.items()
+                           if saved.get(key) != value]
+                if changed:
+                    raise ValueError(
+                        f"CoFiTi evaluation cache differs or lacks {changed}; "
+                        "set evaluator.new_run=true"
+                    )
+            elif os.path.exists(self.metrics_path(ckpt)):
+                raise ValueError(
+                    "CoFiTi metrics have no sampling signature; "
+                    "set evaluator.new_run=true"
+                )
+        return not self.pending_rewards(ckpt)
 
     def metric_names(self, ckpts: list[str]) -> list[str]:
         """Return the headline metrics of all scored rewards, in the order of the runs."""
@@ -156,18 +245,18 @@ class RewardEvaluator(BaseEvaluator):
                 saved = json.load(f)
             changed = [k for k, v in self.sample_config.items() if saved.get(k) != v]
             missing = [
-                i for i in range(self.num_prompts)
+                i for i in range(self.num_samples)
                 if not os.path.exists(self.image_path(ckpt, i))
             ]
             if changed:
                 print(f"❌ Images in <{sample_dir}> were sampled with other configs")
             elif missing:
-                print(f"⚠️ WARNING: {len(missing)}/{self.num_prompts} images missing "
+                print(f"⚠️ WARNING: {len(missing)}/{self.num_samples} images missing "
                       f"in <{sample_dir}>, sampling again")
                 os.remove(self.samples_path(ckpt))
             else:
                 found = True
-                print(f"✅ Found {self.num_prompts} images in <{sample_dir}>, "
+                print(f"✅ Found {self.num_samples} images in <{sample_dir}>, "
                       "skipping sampling")
         found, changed = broadcast_from_rank0((found, changed))
         if changed:
@@ -184,24 +273,37 @@ class RewardEvaluator(BaseEvaluator):
         os.makedirs(self.ckpt_eval_dir(ckpt), exist_ok=True)
 
         # Every checkpoint starts from the same noise.
-        set_seed(self.global_seed + self.rank)
-        print(f"⏳ Sampling {self.num_prompts} test prompts")
+        if not self.is_cofiti:
+            set_seed(self.global_seed + self.rank)
+        print(f"⏳ Sampling {self.num_samples} images for {self.num_prompts} test prompts")
         pbar = TqdmBar(total=len(self.batches), desc="Sampling", unit="batch")
         responses, futures = [], []
         with ThreadPoolExecutor(self.num_workers) as pool:
             for indices in self.batches:
-                prompts = [self.prompts[i] for i in self.unpad(indices)]
+                prompts = [self.prompts[i] for i in self.prompt_indices(indices)]
+                kwargs = {}
+                if self.is_cofiti:
+                    kwargs = {
+                        "seeds": [
+                            self.global_seed + i % self.num_repeats for i in indices
+                        ],
+                        "resolution": self.resolution,
+                        "max_sequence_length": self.max_sequence_length,
+                    }
                 response = self.algorithm.generate(
-                    prompts, self.num_steps, self.guidance_scale
+                    prompts, self.num_steps, self.guidance_scale, **kwargs,
                 )
                 if torch.is_tensor(response):
                     # Score the same uint8 pixels as the saved images, so reruns match.
-                    response = (response * 255).round().clamp(0, 255)
+                    response = (
+                        (response * 255 + 0.5).clamp(0, 255) if self.is_cofiti
+                        else (response * 255).round().clamp(0, 255)
+                    )
                     response = response.to("cpu", torch.uint8)
                     os.makedirs(image_dir, exist_ok=True)
                     array = response.permute(0, 2, 3, 1).numpy()  # NCHW -> NHWC
                     for index, image in zip(indices, array):
-                        if index < self.num_prompts:
+                        if index < self.num_samples:
                             path = self.image_path(ckpt, index)
                             futures.append(pool.submit(save_png, image, path))
                 else:  # for example, videos with audio, which sample() does not save
@@ -220,7 +322,7 @@ class RewardEvaluator(BaseEvaluator):
         if self.rank == 0 and os.path.isdir(image_dir):
             with open(self.samples_path(ckpt), "w", encoding="utf-8") as f:
                 json.dump(self.sample_config, f, indent=4)
-            print(f"💾 Saved {self.num_prompts} images to <{image_dir}>")
+            print(f"💾 Saved {self.num_samples} images to <{image_dir}>")
         return responses
 
     def load_samples(self, ckpt: str) -> list:
@@ -249,8 +351,9 @@ class RewardEvaluator(BaseEvaluator):
         pbar = TqdmBar(total=len(responses), desc="Scoring", unit="batch")
         values = defaultdict(list)
         for indices, response in zip(self.batches, responses):
-            prompts = [self.prompts[i] for i in self.unpad(indices)]
-            metadatas = [self.metadatas[i] for i in self.unpad(indices)]
+            prompt_indices = self.prompt_indices(indices)
+            prompts = [self.prompts[i] for i in prompt_indices]
+            metadatas = [copy.deepcopy(self.metadatas[i]) for i in prompt_indices]
             if torch.is_tensor(response):
                 response = response.to(self.device, torch.float32) / 255
             for reward in rewards.values():
@@ -267,11 +370,16 @@ class RewardEvaluator(BaseEvaluator):
             tensor = torch.as_tensor(value, dtype=torch.float64, device=self.device)
             gathered[key] = gather_tensor(tensor).cpu()
         if self.rank == 0:
-            valid = gathered.pop("index") < self.num_prompts
+            valid = gathered.pop("index") < self.num_samples
             metrics = self.load_metrics(ckpt)
+            sentinels = {
+                key: value for reward in rewards.values()
+                for key, value in getattr(reward, "metric_sentinels", {}).items()
+            }
             for key, value in gathered.items():
                 value = value[valid]
-                value = value[value != -10]
+                if key in sentinels:
+                    value = value[value != sentinels[key]]
                 metrics[key] = value.mean().item() if len(value) else None
             with open(self.metrics_path(ckpt), "w", encoding="utf-8") as f:
                 json.dump(metrics, f, indent=4)

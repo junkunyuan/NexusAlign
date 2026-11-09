@@ -1,0 +1,18 @@
+defaults:
+  - /reward@rewards.pickscore: cofiti_pickscore
+  - /reward@rewards.hpsv2: cofiti_hpsv2
+  - /reward@rewards.clipscore: cofiti_clipscore
+  - /reward@rewards.geneval: cofiti_geneval
+  - _self_
+
+name: multi_reward_geneval_clip30
+weights:
+  pickscore: 1.0
+  hpsv2: 1.0
+  clipscore: 1.0
+  geneval: 1.0
+std_epsilon: ${trainer.reward_std_epsilon}
+clip_max: ${trainer.reward_clip_max}
+rewards:
+  pickscore:
+    normalize: false  # the preset applies 1/26 once, before component z-scores

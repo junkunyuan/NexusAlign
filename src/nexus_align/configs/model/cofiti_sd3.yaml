@@ -1,0 +1,16 @@
+name: cofiti_sd3
+path: ${data_and_model_dir}/stabilityai/stable-diffusion-3.5-medium
+activation_ckpt: false  # optional training activation checkpointing
+lora:
+  rank: 32
+  alpha: 64
+  init: gaussian
+  target_modules:
+    - attn.add_k_proj
+    - attn.add_q_proj
+    - attn.add_v_proj
+    - attn.to_add_out
+    - attn.to_k
+    - attn.to_out.0
+    - attn.to_q
+    - attn.to_v

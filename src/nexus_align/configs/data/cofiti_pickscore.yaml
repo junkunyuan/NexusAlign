@@ -1,0 +1,7 @@
+# --------------------------------------------------------------------------------
+# Local FDFO prompt data.
+# --------------------------------------------------------------------------------
+name: cofiti  # preserve source prompt records and ordering
+path: ${data_root}  # existing parent-project data directory
+split: train  # train or test
+file: "pickscore_{split}.txt"  # blank lines skipped; duplicates retained

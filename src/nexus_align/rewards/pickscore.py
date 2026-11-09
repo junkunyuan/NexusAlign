@@ -12,7 +12,7 @@ import torch
 from PIL import Image
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF
-from transformers import CLIPModel, CLIPProcessor
+from transformers import AutoProcessor, CLIPModel, CLIPProcessor
 
 from nexus_align.rewards.remote import to_uint8
 
@@ -31,20 +31,60 @@ class PickScore:
 
     def __init__(self, cfg_reward) -> None:
         self.name = cfg_reward.name
-        self.normalize = cfg_reward.normalize  # off for evaluation
+        self.normalize = cfg_reward.get("normalize", True)  # off for evaluation
+        self.image_input = cfg_reward.get("image_input", "pil")
+        if self.image_input not in ("pil", "tensor"):
+            raise ValueError("PickScore image_input must be pil or tensor")
         self.device = torch.device("cuda", torch.cuda.current_device())
-        # The PIL image processor matches Flow-GRPO's, but the torchvision one does not.
-        self.processor = CLIPProcessor.from_pretrained(
-            cfg_reward.processor_path, use_fast=False
+        local_files_only = cfg_reward.get("local_files_only", False)
+        processor = AutoProcessor if self.image_input == "tensor" else CLIPProcessor
+        kwargs = {} if self.image_input == "tensor" else {"use_fast": False}
+        self.processor = processor.from_pretrained(
+            cfg_reward.processor_path, local_files_only=local_files_only, **kwargs
         )
-        self.model = CLIPModel.from_pretrained(cfg_reward.model_path)
+        self.model = CLIPModel.from_pretrained(
+            cfg_reward.model_path, local_files_only=local_files_only
+        )
         self.model.to(self.device, dtype=torch.float32).eval().requires_grad_(False)
 
     @torch.no_grad()
     def __call__(self, images, prompts, metadatas, only_strict=True) -> dict[str, list]:
-        images = [Image.fromarray(image) for image in to_uint8(images)]
-        pixel_values = self.processor(images=images, return_tensors="pt").pixel_values
-        scores = self.score(pixel_values.to(self.device), self.embed_prompts(prompts))
+        if self.image_input == "pil":
+            images = [Image.fromarray(image) for image in to_uint8(images)]
+            pixels = self.processor(images=images, return_tensors="pt").pixel_values
+            scores = self.score(pixels.to(self.device), self.embed_prompts(prompts))
+            return {"pickscore": scores.tolist()}
+
+        # Float-input processing follows local fdfo/{rewards,pickscore}.py.
+        # Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES.
+        # See licenses/FDFO-LICENSE.txt (NVIDIA Source Code License v1).
+        image_inputs = self.processor(
+            images=images.to(torch.float32), padding=True, truncation=True,
+            max_length=77, images_kwargs={"do_rescale": False}, return_tensors="pt",
+        )
+        prompts = [str(prompt).strip() for prompt in prompts]
+        unique = list(dict.fromkeys(prompts))
+        lookup = {prompt: index for index, prompt in enumerate(unique)}
+        inverse = torch.tensor([lookup[p] for p in prompts], device=self.device)
+        text_inputs = self.processor(
+            text=unique, padding=True, truncation=True, max_length=77,
+            return_tensors="pt",
+        )
+        image_inputs = {
+            k: (torch.stack(v) if isinstance(v, list) else v).to(self.device)
+            for k, v in image_inputs.items()
+        }
+        text_inputs = {k: v.to(self.device) for k, v in text_inputs.items()}
+        image_embs = self.model.get_image_features(**image_inputs)
+        image_embs = getattr(image_embs, "pooler_output", image_embs).float()
+        image_embs = image_embs / image_embs.norm(p=2, dim=-1, keepdim=True)
+        text_embs = self.model.get_text_features(**text_inputs)
+        text_embs = getattr(text_embs, "pooler_output", text_embs).float()
+        text_embs = text_embs / text_embs.norm(p=2, dim=-1, keepdim=True)
+        scores = torch.linalg.vecdot(text_embs.index_select(0, inverse), image_embs)
+        scores = self.model.logit_scale.exp() * scores
+        if self.normalize:
+            scores = scores / 26
         return {"pickscore": scores.tolist()}
 
     @torch.no_grad()
@@ -58,7 +98,8 @@ class PickScore:
             return_tensors="pt",
         )
         text_inputs = {k: v.to(self.device) for k, v in text_inputs.items()}
-        text_embs = self.model.get_text_features(**text_inputs).pooler_output
+        text_embs = self.model.get_text_features(**text_inputs)
+        text_embs = getattr(text_embs, "pooler_output", text_embs)
         return text_embs / text_embs.norm(p=2, dim=-1, keepdim=True)
 
     def score(
@@ -66,7 +107,7 @@ class PickScore:
     ) -> torch.Tensor:
         """Score the preprocessed images with their normalized text embeddings."""
         image_embs = self.model.get_image_features(pixel_values=pixel_values)
-        image_embs = image_embs.pooler_output
+        image_embs = getattr(image_embs, "pooler_output", image_embs)
         image_embs = image_embs / image_embs.norm(p=2, dim=-1, keepdim=True)
         scores = self.model.logit_scale.exp() * (text_embs @ image_embs.T).diag()
         if self.normalize:

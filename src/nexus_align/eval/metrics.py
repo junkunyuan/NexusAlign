@@ -1,9 +1,6 @@
 """FID/IS metrics: compare Inception features with cached reference statistics."""
 
 import numpy as np
-from torch_fidelity.feature_extractor_inceptionv3 import FeatureExtractorInceptionV3
-from torch_fidelity.metric_fid import fid_features_to_statistics, fid_statistics_to_metric
-from torch_fidelity.metric_isc import isc_features_to_metric
 
 
 def build_feature_extractor(device, inception_weights_path=None):
@@ -13,6 +10,8 @@ def build_feature_extractor(device, inception_weights_path=None):
     It takes uint8 NCHW images in [0, 255]. It loads the local Inception weights
     from inception_weights_path, or downloads them if the path is None.
     """
+    from torch_fidelity.feature_extractor_inceptionv3 import FeatureExtractorInceptionV3
+
     return FeatureExtractorInceptionV3(
         "inception-v3-compat", ["2048", "logits_unbiased"],
         feature_extractor_weights_path=inception_weights_path,
@@ -28,6 +27,11 @@ def features_to_metrics(feats_2048, feats_logits, fid_stats_file):
     torch_fidelity. It does not use the installed calculate_metrics(), because
     that function has no fid_statistics_file argument.
     """
+    from torch_fidelity.metric_fid import (
+        fid_features_to_statistics, fid_statistics_to_metric,
+    )
+    from torch_fidelity.metric_isc import isc_features_to_metric
+
     is_dict = isc_features_to_metric(feats_logits)
 
     # The reference .npz is float64, so cast the generated statistics to match.

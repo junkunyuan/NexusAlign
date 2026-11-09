@@ -488,6 +488,8 @@ class WindowMeter:
 
     def _hardware_info(self) -> dict[str, list[str]]:
         """Summary groups (used/mean/peak[/total]) of every hardware device."""
+        if not self._hardware_monitoring:
+            return {}
         info = {}
         for device, specs in self.hardware_specs.items():
             groups = []

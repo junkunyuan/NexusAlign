@@ -31,6 +31,12 @@ class GenEval(RemoteReward):
     """
 
     metrics = ("accuracy", "strict_accuracy", "geneval")  # headline metrics to report
+    metric_sentinels = {
+        f"{tag}_{metric}": -10
+        for tag in ("single_object", "two_object", "counting", "colors", "position",
+                    "color_attr")
+        for metric in ("accuracy", "strict_accuracy")
+    }
 
     def __init__(self, cfg_reward) -> None:
         super().__init__(cfg_reward)

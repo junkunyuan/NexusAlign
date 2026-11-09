@@ -1,0 +1,4 @@
+defaults:
+  - geneval
+jpeg: false
+batch_size: 16

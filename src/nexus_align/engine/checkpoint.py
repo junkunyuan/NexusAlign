@@ -9,6 +9,8 @@ import torch
 import torch.distributed as dist
 
 from torch.distributed.fsdp import FSDPModule
+from torch.distributed.tensor import DTensor
+from torch.nn.parallel import DistributedDataParallel
 from torch.distributed.checkpoint.state_dict import (
     StateDictOptions,
     set_model_state_dict,
@@ -35,9 +37,9 @@ class CheckpointManager:
         save_ckpt_dir: str,
         load_ckpt_dir: str | None = None,
         save_ckpt_every_n_epochs: int | None = None,
-        save_ckpt_keep_last_n_epochs: int = 10,
+        save_ckpt_keep_last_n_epochs: int | None = 10,
         save_ckpt_every_n_steps: int | None = None,
-        save_ckpt_keep_last_n_steps: int = 10
+        save_ckpt_keep_last_n_steps: int | None = 10
     ) -> None:
         self.save_ckpt_dir = save_ckpt_dir
         self.load_ckpt_dir = load_ckpt_dir
@@ -108,6 +110,22 @@ class CheckpointManager:
                     if isinstance(module, FSDPModule):
                         module.reshard()
                 trainable_only = getattr(trainer.model, "save_trainable_only", False)
+                if trainable_only and isinstance(component, DistributedDataParallel):
+                    component = component.module
+                if trainable_only and trainer.model.cfg_model.get("name") == "cofiti_sd3":
+                    error = None
+                    if is_rank0:
+                        expected = {
+                            name: p.shape for name, p in component.named_parameters()
+                            if p.requires_grad
+                        }
+                        if set(loaded_state_dict) != set(expected):
+                            error = "CoFiTi checkpoint LoRA parameter names differ"
+                        elif any(loaded_state_dict[n].shape != s for n, s in expected.items()):
+                            error = "CoFiTi checkpoint LoRA parameter shapes differ"
+                    error = broadcast_from_rank0(error)
+                    if error is not None:
+                        raise ValueError(error)
                 options = StateDictOptions(
                     full_state_dict=True,
                     broadcast_from_rank0=True,
@@ -140,10 +158,11 @@ class CheckpointManager:
                     optim_state_dict=loaded_state_dict,
                     options=options
                 )
-                for group, group_hparams in zip(component.param_groups, hparams):
-                    group.update(group_hparams)
+                if not getattr(trainer, "restore_optimizer_hparams", False):
+                    for group, group_hparams in zip(component.param_groups, hparams):
+                        group.update(group_hparams)
                 print(f"✅ Loaded optimizer from <{path}>")
-            elif key in ["lr_scheduler", "scaler", "algorithm"]:
+            elif key in ["lr_scheduler", "scaler", "algorithm", "train_ema", "runtime"]:
                 component.load_state_dict(loaded_state_dict)
                 print(f"✅ Loaded {key} from <{path}>")
 
@@ -233,12 +252,17 @@ class CheckpointManager:
                 if getattr(trainer.model, "save_trainable_only", False):
                     # Select by the trainable names of the model, because the EMA
                     # parameters are frozen.
+                    train_model = trainer.model.model
+                    if isinstance(train_model, DistributedDataParallel):
+                        train_model = train_model.module
+                    if isinstance(component, DistributedDataParallel):
+                        component = component.module
                     names = {
-                        name for name, p in trainer.model.model.named_parameters()
+                        name for name, p in train_model.named_parameters()
                         if p.requires_grad
                     }
                     state_dict = {
-                        name: p.full_tensor().cpu()
+                        name: (p.full_tensor() if isinstance(p, DTensor) else p.detach()).cpu()
                         for name, p in component.named_parameters() if name in names
                     }
                 else:
@@ -267,7 +291,7 @@ class CheckpointManager:
         else:
             self.saved_step_paths.append(ckpt_dir)
             saved_paths, keep_last_n = self.saved_step_paths, self.save_ckpt_keep_last_n_steps
-        while len(saved_paths) > keep_last_n:
+        while keep_last_n is not None and len(saved_paths) > keep_last_n:
             if dist.get_rank() == 0:
                 shutil.rmtree(saved_paths[0], ignore_errors=True)
             saved_paths.pop(0)

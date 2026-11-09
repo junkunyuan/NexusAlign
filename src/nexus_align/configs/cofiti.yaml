@@ -1,0 +1,28 @@
+defaults:
+  - main
+  - override data: cofiti_pickscore
+  - override algorithm: cofiti
+  - override model: cofiti_sd3
+  - override trainer: cofiti
+  - override reward: cofiti_pickscore
+  - override evaluator: reward
+  - _self_
+
+resource_root: ${oc.env:COFITI_RESOURCE_ROOT,${hydra:runtime.cwd}/..}
+data_root: ${resource_root}/data
+data_and_model_dir: ${resource_root}/models
+cofiti_format_version: 1
+exp_info: cofiti
+algorithm:
+  max_batch_size: ${trainer.max_batch_size}
+evaluator:
+  model_key: model
+  num_steps: 40  # source independent evaluation defaults, separate from training
+  guidance_scale: 1.0
+  resolution: 512
+  max_sequence_length: 256
+  global_seed: 0  # source image_seed; each image uses global_seed + repeat_index
+  num_repeats: 1
+  num_prompts: null  # null evaluates the full split in its original order
+  prompt_seed: 0  # shuffle before selecting num_prompts, as in the source
+  per_proc_batch_size: 4

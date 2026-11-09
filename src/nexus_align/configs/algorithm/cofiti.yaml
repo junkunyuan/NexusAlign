@@ -1,0 +1,25 @@
+# General configs.
+name: cofiti
+
+# Sampling configs.
+solver: euler  # rollout solver: euler or sa
+optimization_level: trajectory  # trajectory or distribution initial noise
+resolution: 512  # image resolution
+num_steps: 10  # model evaluations; sa requires >= 2
+guidance_scale: 1.0  # classifier-free guidance
+churn_weight: 0.04  # rollout noise strength
+max_sequence_length: 128  # T5 tokens
+max_batch_size: 28  # forward batch ceiling
+vae_decode_chunk_size: 16  # VAE batch
+deduplicate_prompt_embeddings: true  # share embeddings within each prompt draw
+
+# Group projection configs.
+group_size: 24  # members per prompt draw
+eta: 1.0  # preference tilt; null means 1/group size
+u_scale: 0.1  # multiply the solved FP64 correction
+exact_projection_iterations: 5  # fixed Newton update count
+ridge_scale: 0.001  # mean Gram diagonal factor
+ridge_eps: 1e-06  # positive projection regularization floor
+
+# Training regularization configs.
+kl_weight: 0.004  # adapter-disabled velocity regularization

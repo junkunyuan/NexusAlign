@@ -11,6 +11,8 @@ from nexus_align.rewards.clipscore import ClipScore
 from nexus_align.rewards.pickscore import PickScore
 from nexus_align.rewards.imagereward import ImageReward
 from nexus_align.rewards.unifiedreward import UnifiedReward
+from nexus_align.rewards.cofiti_hpsv2 import CoFiTiHPSv2
+from nexus_align.rewards.cofiti_multi import CoFiTiMultiReward
 
 registry.register("reward", "pickscore", PickScore)
 registry.register("reward", "ocr", OCR)
@@ -22,3 +24,5 @@ registry.register("reward", "imagereward", ImageReward)
 registry.register("reward", "deqa", DeQA)
 registry.register("reward", "unifiedreward", UnifiedReward)
 registry.register("reward", "hpsv3", HPSv3)
+registry.register("reward", "cofiti_hpsv2", CoFiTiHPSv2)
+registry.register("reward", "multi_reward_geneval_clip30", CoFiTiMultiReward)

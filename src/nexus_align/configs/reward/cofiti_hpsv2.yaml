@@ -1,0 +1,2 @@
+name: cofiti_hpsv2
+checkpoint_path: ${data_and_model_dir}/xswu/HPSv2/HPS_v2.1_compressed.pt
