@@ -8,8 +8,7 @@ paths:
 Follow these conventions in the top-level `README.md`. They add to
 [common-readme](common-readme.md).
 
-1. **Sections:** put the Algorithms section after Updates. A newly reproduced paper
-   gets an Updates line.
+1. **Sections:** put the Algorithms section after the table of contents.
 2. **Algorithms:** one HTML table of the reproduced papers, with the columns Algorithm,
    Paper, Released, and Ours / Paper. Keep the table in `reproduce/README.md` the same.
    Write the HTML as [common-markdown](common-markdown.md) says.

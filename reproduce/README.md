@@ -16,6 +16,15 @@ column compares one main result of our reproduction with the paper.
     <td colspan="4" align="center"><b>Visual Generation - Paradigms</b></td>
   </tr>
   <tr>
+    <td nowrap><a href="pmeanflow">pMeanFlow</a></td>
+    <td>
+      <i>One-step Latent-free Image Generation with Pixel Mean Flows</i>
+      (<a href="https://arxiv.org/abs/2601.22158">arXiv 2026</a>)
+    </td>
+    <td nowrap>2026-01-29</td>
+    <td nowrap>B/16 FID: 3.43 / 3.12</td>
+  </tr>
+  <tr>
     <td nowrap><a href="imeanflow">iMeanFlow</a></td>
     <td>
       <i>Improved Mean Flows: On the Challenges of Fastforward Generative Models</i>
@@ -49,7 +58,7 @@ column compares one main result of our reproduction with the paper.
     </td>
     <td nowrap>2026-10-08</td>
     <td nowrap>
-      GenEval: 0.93 / -<br>
+      GenEval: 0.88 / -<br>
       OCR: 0.98 / -<br>
       PickScore: 23.38 / -
     </td>
@@ -94,8 +103,6 @@ column compares one main result of our reproduction with the paper.
 
 ## 📝 TODO
 
-- [ ] **Run pMeanFlow B/16** on ImageNet 256x256, and record the run. Then add
-  pMeanFlow to the Algorithms tables.
 - [ ] **Run JiT B/16** on ImageNet 256x256, and record the run. Then add JiT to the
   Algorithms tables.
 - [ ] **Run PixelDiT-XL and PixelDiT2-H/16** on ImageNet 256x256, and record the runs.

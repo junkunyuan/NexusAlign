@@ -13,7 +13,7 @@ unchanged. Each other rule adds to the common rule of the same topic.
 | [common-writing](rules/common-writing.md) | everywhere | ASD-STE100 Simplified Technical English: simple words, short sentences, active voice, short noun clusters |
 | [common-code-style](rules/common-code-style.md) | everywhere | English, line length 88, naming, emoji print messages, override order, equation citations, docstrings |
 | [common-markdown](rules/common-markdown.md) | `**/*.md` | bold leads, paper citations, HTML tables, dates on one line |
-| [common-readme](rules/common-readme.md) | `README.md` | the sections, Updates lines, and edits only for user-facing changes |
+| [common-readme](rules/common-readme.md) | `README.md` | the sections, and edits only for user-facing changes |
 | [code-style](rules/code-style.md) | everywhere | registry keys and run names, component and counter order, short script comments |
 | [configs](rules/configs.md) | `src/nexus_align/configs/**`, `src/nexus_align/algorithms/**` | algorithm configs mirror `__init__`; every arg has a trailing comment; reproduce configs stay minimal and copy each arg's comment; 8 to 16 checkpoints per run |
 | [reproduce](rules/reproduce.md) | `reproduce/**` | what a run record holds, how a paper README reports results, and how the code cites its sources |

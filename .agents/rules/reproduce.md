@@ -42,10 +42,11 @@ Strip private info from the copied configs:
    `reproduce/meanflow/README.md` does. Never add other sections, such as `Notes` or
    `Deviations`, or explanatory paragraphs.
 2. **Give each run one row,** with a link to its subfolder as
-   `[run](<exp>-<timestamp>)`. Each number is the best value of that metric over all
-   trained checkpoints (epoch 0 is the base model). Thus the numbers in one row can
-   come from different checkpoints. If a later code change affects the recorded runs,
-   add a `**Note:**` line below the table.
+   `[run](<exp>-<timestamp>)`. In a post-training paper, each number comes from the
+   final checkpoint, and the row of the base model uses epoch 0. In the other papers,
+   each number is the best value of that metric over all trained checkpoints. Thus
+   the numbers in one row can come from different checkpoints. If a later code change
+   affects the recorded runs, add a `**Note:**` line below the table.
 3. **Show every number as the paper does,** with the same scale and decimal places:
    paper GenEval 0.95 -> ours 0.96, not 0.955. For a metric that the paper does not
    report, follow a paper that does (DiffusionNFT for ClipScore and HPSv2.1).

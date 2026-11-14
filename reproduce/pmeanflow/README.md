@@ -19,6 +19,13 @@
 
 ## Results
 
+**Table 6 of the paper:** ImageNet 256x256, 1-NFE.
+
+| Model | FID | IS | Run |
+|---|---|---|---|
+| B/16 (paper) | 3.12 | 254.6 | - |
+| B/16 (ours) | 3.43 | 254.0 | [run](b16-20261106_193046) |
+
 ## Command
 
 ### Training

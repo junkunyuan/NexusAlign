@@ -9,19 +9,10 @@
 
 ## 📑 Table of Contents
 
-- [🔥 Updates](#-updates)
 - [📋 Algorithms](#-algorithms)
 - [📦 Installation](#-installation)
 - [🚀 Quick Start](#-quick-start)
 - [📚 Citation](#-citation)
-
-## 🔥 Updates
-
-- **[2026⁠-⁠11⁠-⁠04]** Add [DiffusionART](reproduce/diffusion_art) on SD3.5-M with GenEval, OCR, and PickScore rewards.
-- **[2026⁠-⁠11⁠-⁠03]** Add [ReFL](reproduce/refl) on SD3.5-M with the PickScore reward.
-- **[2026⁠-⁠10⁠-⁠18]** Add [DiffusionNFT](reproduce/diffusion_nft) on SD3.5-M with GenEval, OCR, and PickScore rewards.
-- **[2026⁠-⁠10⁠-⁠17]** Add [Flow-GRPO](reproduce/flow_grpo) on SD3.5-M with GenEval, OCR, and PickScore rewards.
-- **[2026⁠-⁠10⁠-⁠14]** Add [MeanFlow](reproduce/meanflow) and [iMeanFlow](reproduce/imeanflow) on DiT with ImageNet.
 
 ## 📋 Algorithms
 
@@ -37,6 +28,15 @@ column compares one main result of our reproduction with the paper.
   </tr>
   <tr>
     <td colspan="4" align="center"><b>Visual Generation - Paradigms</b></td>
+  </tr>
+  <tr>
+    <td nowrap><a href="reproduce/pmeanflow">pMeanFlow</a></td>
+    <td>
+      <i>One-step Latent-free Image Generation with Pixel Mean Flows</i>
+      (<a href="https://arxiv.org/abs/2601.22158">arXiv 2026</a>)
+    </td>
+    <td nowrap>2026-01-29</td>
+    <td nowrap>B/16 FID: 3.43 / 3.12</td>
   </tr>
   <tr>
     <td nowrap><a href="reproduce/imeanflow">iMeanFlow</a></td>
@@ -72,7 +72,7 @@ column compares one main result of our reproduction with the paper.
     </td>
     <td nowrap>2026-10-08</td>
     <td nowrap>
-      GenEval: 0.93 / -<br>
+      GenEval: 0.88 / -<br>
       OCR: 0.98 / -<br>
       PickScore: 23.38 / -
     </td>

@@ -25,7 +25,7 @@
 | SD3.5-M w/o CFG (paper) | - | - | - | 20.51 | 0.237 | 0.204 | 5.13 | -0.58 | - | 3.30 | -6.47 | - |
 | SD3.5-M w/o CFG (ours) | 0.24 | 0.13 | 19.82 | 20.54 | 0.238 | 0.207 | 5.17 | -0.58 | 2.03 | 3.37 | -1.01 | [run](pickscore-20261103_073350) |
 | PickScore (paper) | - | - | - | **23.92** | - | - | - | - | - | - | - | - |
-| PickScore (ours) | 0.34 | 0.41 | **24.07** | **23.93** | 0.261 | 0.295 | 6.26 | 1.04 | 3.22 | 3.94 | 11.21 | [run](pickscore-20261103_073350) |
+| PickScore (ours) | 0.27 | 0.38 | **24.07** | **23.93** | 0.259 | 0.292 | 6.16 | 1.02 | 3.20 | 3.73 | 10.96 | [run](pickscore-20261103_073350) |
 
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench.
 - **Bold:** in-domain results.
