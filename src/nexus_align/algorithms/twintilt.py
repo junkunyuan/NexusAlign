@@ -25,6 +25,10 @@ References:
               TwinTiltTrainer.sample_epoch
             - src/nexus_align/rewards/twintilt_multi.py:
               TwinTiltMultiReward.training_rewards
+    - AWM:
+        - Official code: https://github.com/scxue/advantage_weighted_matching
+            - advantage_weighted_matching/scripts/train_sd3_awm.py: the base KL with
+              CFG in the training loop of main
 """
 
 import math
@@ -192,9 +196,11 @@ class TwinTilt(BaseAlgorithm):
 
         # Policy loss configs.
         self.kl_weight = cfg_algorithm.get("kl_weight", 0.004)  # coefficient of the velocity KL to the base model
+        self.kl_cfg_scale = cfg_algorithm.get("kl_cfg_scale", 1.0)  # CFG scale of the base model in this KL; 1 gives no CFG
 
         self.pipeline = None
         self.scheduler = None
+        self.neg_embeds = None  # empty-prompt embeddings for CFG
         # Forward passes per training batch, one per sampling timestep.
         self.num_micro_steps = self.num_steps
 
@@ -228,14 +234,29 @@ class TwinTilt(BaseAlgorithm):
             velocity = uncond + guidance_scale * (cond - uncond)
         return velocity
 
+    @torch.no_grad()
+    def negative_first(self, embeds, pooled_embeds):
+        """Put the embeddings of the negative prompt "" first, as in diffusers."""
+        if self.neg_embeds is None:
+            self.neg_embeds = self.pipeline.encode_prompt([""], self.max_sequence_length)
+        neg_embeds, neg_pooled_embeds = self.neg_embeds
+        embeds = torch.cat([neg_embeds.expand_as(embeds), embeds])
+        pooled_embeds = torch.cat(
+            [neg_pooled_embeds.expand_as(pooled_embeds), pooled_embeds]
+        )
+        return embeds, pooled_embeds
+
     def forward(self, data):
         """Regress the velocity at the data["step"]-th timestep onto its target."""
         j = data["step"]
         args = (data["xs"][:, j], data["timesteps"][:, j])
         args += (data["prompt_embeds"], data["pooled_prompt_embeds"])
         pred = self.predict(self.model, *args)
+        # The base model can use CFG in the KL, as in AWM.
         with torch.no_grad(), self.model.disable_adapter():
-            base_pred = self.predict(self.model, *args)
+            if self.kl_cfg_scale > 1.0:
+                args = args[:2] + self.negative_first(*args[2:])
+            base_pred = self.predict(self.model, *args, self.kl_cfg_scale)
 
         # Every member and timestep of a group moves by the same correction.
         target = data["velocities"][:, j].float() - data["displacement"]
@@ -359,13 +380,8 @@ class TwinTilt(BaseAlgorithm):
         max_length = self.max_sequence_length
         embeds, pooled_embeds = self.pipeline.encode_prompt(prompts, max_length)
         latents = self.initial_noise(len(prompts), embeds.dtype)
-        if guidance_scale > 1.0:  # the negative prompt "" comes first, as in diffusers
-            negative = self.pipeline.encode_prompt([""], max_length)
-            neg_embeds, neg_pooled_embeds = negative
-            embeds = torch.cat([neg_embeds.expand_as(embeds), embeds])
-            pooled_embeds = torch.cat(
-                [neg_pooled_embeds.expand_as(pooled_embeds), pooled_embeds]
-            )
+        if guidance_scale > 1.0:
+            embeds, pooled_embeds = self.negative_first(embeds, pooled_embeds)
         out = self.sample({
             "latents": latents,
             "prompt_embeds": embeds,

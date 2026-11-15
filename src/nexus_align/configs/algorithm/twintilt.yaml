@@ -28,3 +28,4 @@ ridge_eps: 1.0e-6  # lowest ridge of the projection
 # Policy loss configs.
 # --------------------------------------------------------------------------------
 kl_weight: 0.004  # coefficient of the velocity KL to the base model
+kl_cfg_scale: 1.0  # CFG scale of the base model in this KL; 1 gives no CFG

@@ -12,12 +12,13 @@
 
 **Implementation:** We follow the TwinTilt code [shenytzzz/twintilt](https://github.com/shenytzzz/twintilt) (private), a NexusAlign fork that extends the official FDFO code [NVlabs/finite-difference-flow-optimization](https://github.com/NVlabs/finite-difference-flow-optimization), except for:
 
-- **Training length:** OCR trains 70 epochs and GenEval 300, instead of 500, because the task scores of our longer runs are near their plateau at these steps.
+- **Training length:** OCR trains 170 epochs and GenEval 300, instead of 500, because the task scores of our longer runs are near their plateau at these steps.
+- **Base KL:** For OCR, the KL to the base model uses CFG 4.5, as in AWM, and the weight 0.02, not 0.004. Without this change, the general metrics fall far below the base model, for example HPSv3 from 9.5 to 7.7.
 - **Precision:** The frozen transformer weights and the text encoders are fp16, not bf16, and the VAE is fp32, not bf16. The compute dtype stays fp16 with a gradient scaler. TF32 matmuls stay on, while TwinTilt turns them off.
 - **Rewards:** The PickScore reward resizes the float pixels with our antialiased bicubic resize, not with the CLIP processor of transformers. In the multi-reward, HPSv2.1 scores the uint8 pixels in fp32, not the float pixels under bf16 autocast.
 - **EMA:** The decay counts every optimizer step, also a step that the gradient scaler skips.
 - **Evaluation:** We evaluate as Flow-GRPO does, so that the results compare with the other algorithms: the EMA weights, CFG 4.5, and 128 T5 tokens, with our Euler loop under fp16 autocast and one noise per image. TwinTilt evaluates the student without CFG, with 256 T5 tokens, in the diffusers pipeline in bf16, and with the same noise for all prompts.
-- **Options:** We leave out the SA solver and CFG in rollouts and training, which no TwinTilt task uses. The evaluation can use CFG.
+- **Options:** We leave out the SA solver and CFG in the rollouts and the policy, which no TwinTilt task uses. The evaluation and the base KL can use CFG.
 - **Infrastructure:** FSDP, `torch.compile`, and fp16 frozen weights speed up training and change only the rounding. The prompt sampler, the group noise that the group ID seeds, the reward servers, the checkpoint intervals, and the resume from an epoch end are our own.
 
 ## Results
@@ -26,8 +27,8 @@
 
 | Model | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| SD3.5-M (ours) | 0.64 | 0.57 | 21.72 | 22.31 | 0.283 | 0.279 | 5.38 | 0.84 | 3.05 | 4.08 | 9.51 | [run](ocr-20261114_230204) |
-| OCR (ours) | 0.61 | **0.97** | 21.01 | 21.87 | 0.280 | 0.271 | 5.32 | 0.66 | 3.00 | 4.09 | 7.72 | [run](ocr-20261114_230204) |
+| SD3.5-M (ours) | 0.65 | 0.59 | 21.72 | 22.34 | 0.284 | 0.280 | 5.38 | 0.85 | 3.07 | 4.07 | 9.46 | [run](ocr-20261115_064626) |
+| OCR (ours) | 0.71 | **0.94** | 21.55 | 22.39 | 0.288 | 0.286 | 5.35 | 0.96 | 3.16 | 4.13 | 9.05 | [run](ocr-20261115_064626) |
 
 **GenEval and PickScore:** SD3.5-M trained on GenEval and PickScore, evaluated with CFG off.
 
@@ -38,7 +39,7 @@
 | PickScore (ours) | 0.46 | 0.61 | **24.27** | 24.33 | 0.266 | 0.322 | 6.49 | 1.36 | 3.41 | 4.19 | 12.62 | [run](pickscore-20261115_030323) |
 
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench.
-- **Checkpoints:** the OCR row uses step 70 of a 100-step run, and the GenEval row uses step 300 of a 500-step run. The configs now train these lengths. The PickScore row uses its final step 500, and the base rows use step 0.
+- **Checkpoints:** the OCR row uses step 170 of a 200-step run, and the GenEval row uses step 300 of a 500-step run. The configs now train these lengths. The PickScore row uses its final step 500, and the base rows use step 0.
 - **Bold:** in-domain results.
 
 ## Command
