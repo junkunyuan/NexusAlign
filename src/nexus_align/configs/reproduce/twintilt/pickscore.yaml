@@ -11,5 +11,4 @@ algorithm:
   kl_cfg_scale: 4.5  # CFG scale of the base model in this KL; 1 gives no CFG
 
 trainer:
-  epochs: 1300  # training epochs; 1300 steps, instead of 500 in the TwinTilt code
-  save_ckpt_every_n_epochs: 100  # save every N epochs, plus the initial weights at epoch 0
+  epochs: 600  # training epochs; 600 steps, instead of 500 in the TwinTilt code
