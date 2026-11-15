@@ -1,0 +1,52 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: fdfo  # trainer registry key
+debug: false  # if True, all ranks print to the console
+seed: 6  # base seed; the runtime RNG uses {seed + rank} in train mode
+deterministic: false  # if True, use deterministic mode for reproducibility
+
+# --------------------------------------------------------------------------------
+# Data configs.
+# --------------------------------------------------------------------------------
+# 2 * groups_per_epoch must split into batches of world_size * sample_batch_size. On
+# other GPU counts, lower both, as the official code does: for example 384 and 24 on 32
+# GPUs, or 256 and 4 on 128 GPUs.
+groups_per_epoch: 432  # prompts sampled per epoch, one pair of images each
+sample_batch_size: 18  # images per rank in one rollout batch; two per pair
+updates_per_epoch: 1  # trainer steps per epoch; FDFO logs and saves once per epoch
+
+# --------------------------------------------------------------------------------
+# Training configs.
+# --------------------------------------------------------------------------------
+epochs: 1000  # training epochs
+# Each optimizer step takes a random equal part of the (sample, timestep) slots.
+gradient_steps_per_epoch: 4  # optimizer steps per epoch
+# As in the official code, the trainer takes the largest divisor of the slots per step.
+max_train_batch_size: 13  # max slots per forward pass
+learning_rate: 3.0e-5  # AdamW learning rate
+adam_beta1: 0.9  # AdamW beta1
+adam_beta2: 0.999  # AdamW beta2
+adam_weight_decay: 1.0e-4  # AdamW weight decay
+adam_epsilon: 1.0e-8  # AdamW epsilon
+max_grad_norm: 1.0  # max gradient norm for clipping
+
+# --------------------------------------------------------------------------------
+# Logging configs.
+# --------------------------------------------------------------------------------
+log_every_n_steps: 1  # print and track the metrics every N total steps
+log_hardware: true  # if True, track GPU and CPU usage, and GPU efficiency such as MFU
+peak_tflops: null  # dense FP16/BF16 TFLOPS of one GPU for MFU; null looks it up by GPU
+log_tensorboard: false  # if True, also write scalars to log_dir/tensorboard
+plot_every_n_seconds: 30  # redraw the metric figures at most once every N seconds
+
+# --------------------------------------------------------------------------------
+# Checkpoint configs.
+# --------------------------------------------------------------------------------
+save_ckpt_every_n_epochs: 100  # save every N epochs, plus the initial weights at epoch 0
+save_ckpt_keep_last_n_epochs: 100  # keep only the last N epoch checkpoints
+save_ckpt_every_n_steps: null  # FDFO saves only end-of-epoch checkpoints
+save_ckpt_keep_last_n_steps: 10  # keep only the last N step checkpoints
+resume_path: null  # for example ${log_dir}/checkpoints/epoch_2-step_0-total_step_2
+load_ckpt_only_model: false  # if true, skip the optimizer, lr_scheduler, and scaler
+save_ckpt_only_model: false  # if true, skip the optimizer, lr_scheduler, and scaler

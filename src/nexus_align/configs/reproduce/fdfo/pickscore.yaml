@@ -1,0 +1,12 @@
+# @package _global_
+# Train FDFO on human preference alignment with SD3.5-M, CFG-free.
+# The args follow the defaults of fdfo/config.py and train.py of the official code.
+# Launch with: EXP=pickscore bash scripts/reproduce/fdfo_train.sh
+exp_info: fdfo_pickscore  # experiment name
+
+model:
+  ema_enabled: false  # if true, use an EMA model; it tracks only the LoRA weights
+
+reward:
+  # The official code trains on the raw PickScore.
+  normalize: false  # divide by 26 for training; evaluation reports the raw score

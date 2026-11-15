@@ -1,0 +1,226 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 21.72079388704151,
+    "twintilt_pickscore": 21.716989203356206
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_50-step_0-total_step_50",
+    "pickscore": 21.54726810567081,
+    "twintilt_pickscore": 21.540933333337307
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_100-step_0-total_step_100",
+    "pickscore": 21.537190458737314,
+    "twintilt_pickscore": 21.52933286037296
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 150,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_150-step_0-total_step_150",
+    "pickscore": 21.554266556166112,
+    "twintilt_pickscore": 21.5460747173056
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_200-step_0-total_step_200",
+    "pickscore": 21.584873646497726,
+    "twintilt_pickscore": 21.576051113195717
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 250,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_250-step_0-total_step_250",
+    "pickscore": 21.618338581174612,
+    "twintilt_pickscore": 21.60905014630407
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_300-step_0-total_step_300",
+    "pickscore": 21.612369439564645,
+    "twintilt_pickscore": 21.603408723138273
+  },
+  {
+    "epoch": 350,
+    "step": 0,
+    "total_step": 350,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_350-step_0-total_step_350",
+    "pickscore": 21.614782550372183,
+    "twintilt_pickscore": 21.605852629989386
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_400-step_0-total_step_400",
+    "pickscore": 21.620017281733453,
+    "twintilt_pickscore": 21.611666936427355
+  },
+  {
+    "epoch": 450,
+    "step": 0,
+    "total_step": 450,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_450-step_0-total_step_450",
+    "pickscore": 21.62296634912491,
+    "twintilt_pickscore": 21.612707222811878
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_500-step_0-total_step_500",
+    "pickscore": 21.589189008809626,
+    "twintilt_pickscore": 21.577839680947363
+  },
+  {
+    "epoch": 550,
+    "step": 0,
+    "total_step": 550,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_550-step_0-total_step_550",
+    "pickscore": 21.589813074097037,
+    "twintilt_pickscore": 21.578672859817743
+  },
+  {
+    "epoch": 600,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_600-step_0-total_step_600",
+    "pickscore": 21.5771109983325,
+    "twintilt_pickscore": 21.565326425246894
+  },
+  {
+    "epoch": 650,
+    "step": 0,
+    "total_step": 650,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_650-step_0-total_step_650",
+    "pickscore": 21.586584081873298,
+    "twintilt_pickscore": 21.575064438395202
+  },
+  {
+    "epoch": 700,
+    "step": 0,
+    "total_step": 700,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_700-step_0-total_step_700",
+    "pickscore": 21.574576544575393,
+    "twintilt_pickscore": 21.56297909282148
+  },
+  {
+    "epoch": 750,
+    "step": 0,
+    "total_step": 750,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_750-step_0-total_step_750",
+    "pickscore": 21.56842148862779,
+    "twintilt_pickscore": 21.557457179762423
+  },
+  {
+    "epoch": 800,
+    "step": 0,
+    "total_step": 800,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_800-step_0-total_step_800",
+    "pickscore": 21.546825951896608,
+    "twintilt_pickscore": 21.534970121458173
+  },
+  {
+    "epoch": 850,
+    "step": 0,
+    "total_step": 850,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_850-step_0-total_step_850",
+    "pickscore": 21.566558338701725,
+    "twintilt_pickscore": 21.553601758554578
+  },
+  {
+    "epoch": 900,
+    "step": 0,
+    "total_step": 900,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_900-step_0-total_step_900",
+    "pickscore": 21.5530893933028,
+    "twintilt_pickscore": 21.540325175970793
+  },
+  {
+    "epoch": 950,
+    "step": 0,
+    "total_step": 950,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_950-step_0-total_step_950",
+    "pickscore": 21.5332850497216,
+    "twintilt_pickscore": 21.520509032532573
+  },
+  {
+    "epoch": 1000,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1000-step_0-total_step_1000",
+    "pickscore": 21.530393076129258,
+    "twintilt_pickscore": 21.51663780026138
+  },
+  {
+    "epoch": 1050,
+    "step": 0,
+    "total_step": 1050,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1050-step_0-total_step_1050",
+    "pickscore": 21.52822456182912,
+    "twintilt_pickscore": 21.513206525240093
+  },
+  {
+    "epoch": 1100,
+    "step": 0,
+    "total_step": 1100,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1100-step_0-total_step_1100",
+    "pickscore": 21.523324767127633,
+    "twintilt_pickscore": 21.50986599130556
+  },
+  {
+    "epoch": 1150,
+    "step": 0,
+    "total_step": 1150,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1150-step_0-total_step_1150",
+    "pickscore": 21.539204719476402,
+    "twintilt_pickscore": 21.52474246174097
+  },
+  {
+    "epoch": 1200,
+    "step": 0,
+    "total_step": 1200,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1200-step_0-total_step_1200",
+    "pickscore": 21.542900947853923,
+    "twintilt_pickscore": 21.5300120851025
+  },
+  {
+    "epoch": 1250,
+    "step": 0,
+    "total_step": 1250,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1250-step_0-total_step_1250",
+    "pickscore": 21.53608124051243,
+    "twintilt_pickscore": 21.52182973921299
+  },
+  {
+    "epoch": 1300,
+    "step": 0,
+    "total_step": 1300,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1300-step_0-total_step_1300",
+    "pickscore": 21.535221490543336,
+    "twintilt_pickscore": 21.52085778163746
+  },
+  {
+    "epoch": 1350,
+    "step": 0,
+    "total_step": 1350,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1350-step_0-total_step_1350",
+    "pickscore": 21.529543122276664,
+    "twintilt_pickscore": 21.515338490717113
+  }
+]

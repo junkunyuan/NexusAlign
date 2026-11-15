@@ -308,24 +308,28 @@ class GRPOTrainer(BaseTrainer):
                 self.ema_step()
             if not synced:
                 continue
-
-            # After each optimizer step, update the runtime state, save a checkpoint,
-            # and log the metrics.
-            epoch_finished = self.step >= self.steps_per_epoch
-            if epoch_finished:
-                self.epoch += 1
-                self.step = 0
-                self.end_epoch()
-            self.checkpoint_manager.save_ckpt(self, epoch_finished=epoch_finished)
-            self._metrics = {
-                **{k: torch.stack(v).mean().item() for k, v in info.items()},
-                **rollout_metrics,
-            }
+            self.end_step(info, rollout_metrics)
             info = defaultdict(list)
-            self.meters.end("step")
-            self.meters.update_train_state(self.state_dict())
-            self.update_log()
-            self.meters.start("step")
+
+    def end_step(self, info: dict, rollout_metrics: dict) -> None:
+        """
+        After an optimizer step, update the runtime state, save a checkpoint, and log
+        the mean of each metric in info, and the rollout metrics.
+        """
+        epoch_finished = self.step >= self.steps_per_epoch
+        if epoch_finished:
+            self.epoch += 1
+            self.step = 0
+            self.end_epoch()
+        self.checkpoint_manager.save_ckpt(self, epoch_finished=epoch_finished)
+        self._metrics = {
+            **{k: torch.stack(v).mean().item() for k, v in info.items()},
+            **rollout_metrics,
+        }
+        self.meters.end("step")
+        self.meters.update_train_state(self.state_dict())
+        self.update_log()
+        self.meters.start("step")
 
     def end_epoch(self) -> None:
         """

@@ -1,0 +1,20 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: fdfo  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Sampling configs.
+# --------------------------------------------------------------------------------
+resolution: 512  # image resolution
+num_steps: 40  # rollout sampling steps of the Euler solver
+churn_weight: 0.0025  # churn gamma of the initial noise and of each step but the last
+guidance_scale: 1.0  # CFG scale of rollouts and training; 1.0 disables CFG
+max_sequence_length: 128  # T5 prompt tokens
+autocast_dtype: fp16  # transformer compute dtype
+
+# --------------------------------------------------------------------------------
+# Policy loss configs.
+# --------------------------------------------------------------------------------
+clip_range: 3.0e-2  # clip range of the SPO ratio, epsilon
+kl_weight: 0.0  # coefficient of the velocity KL to the base model

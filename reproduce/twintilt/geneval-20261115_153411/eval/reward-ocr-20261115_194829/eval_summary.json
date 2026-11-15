@@ -1,0 +1,219 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.13219034517845582
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_50-step_0-total_step_50",
+    "ocr": 0.3896852435167625
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_100-step_0-total_step_100",
+    "ocr": 0.40283763312680354
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 150,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_150-step_0-total_step_150",
+    "ocr": 0.3970408131041954
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_200-step_0-total_step_200",
+    "ocr": 0.39574504854050496
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 250,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_250-step_0-total_step_250",
+    "ocr": 0.40502618857713424
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_300-step_0-total_step_300",
+    "ocr": 0.39814288756656724
+  },
+  {
+    "epoch": 350,
+    "step": 0,
+    "total_step": 350,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_350-step_0-total_step_350",
+    "ocr": 0.40193290914998286
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_400-step_0-total_step_400",
+    "ocr": 0.42149570930296837
+  },
+  {
+    "epoch": 450,
+    "step": 0,
+    "total_step": 450,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_450-step_0-total_step_450",
+    "ocr": 0.3902524158245382
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_500-step_0-total_step_500",
+    "ocr": 0.40049709384147497
+  },
+  {
+    "epoch": 550,
+    "step": 0,
+    "total_step": 550,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_550-step_0-total_step_550",
+    "ocr": 0.4056212759121173
+  },
+  {
+    "epoch": 600,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_600-step_0-total_step_600",
+    "ocr": 0.3986713070249365
+  },
+  {
+    "epoch": 650,
+    "step": 0,
+    "total_step": 650,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_650-step_0-total_step_650",
+    "ocr": 0.40832630542392984
+  },
+  {
+    "epoch": 700,
+    "step": 0,
+    "total_step": 700,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_700-step_0-total_step_700",
+    "ocr": 0.41853133672595333
+  },
+  {
+    "epoch": 750,
+    "step": 0,
+    "total_step": 750,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_750-step_0-total_step_750",
+    "ocr": 0.4233787832885476
+  },
+  {
+    "epoch": 800,
+    "step": 0,
+    "total_step": 800,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_800-step_0-total_step_800",
+    "ocr": 0.40961603024962157
+  },
+  {
+    "epoch": 850,
+    "step": 0,
+    "total_step": 850,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_850-step_0-total_step_850",
+    "ocr": 0.4115198741749665
+  },
+  {
+    "epoch": 900,
+    "step": 0,
+    "total_step": 900,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_900-step_0-total_step_900",
+    "ocr": 0.4279666641305338
+  },
+  {
+    "epoch": 950,
+    "step": 0,
+    "total_step": 950,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_950-step_0-total_step_950",
+    "ocr": 0.4206486353991475
+  },
+  {
+    "epoch": 1000,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1000-step_0-total_step_1000",
+    "ocr": 0.41867186628264585
+  },
+  {
+    "epoch": 1050,
+    "step": 0,
+    "total_step": 1050,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1050-step_0-total_step_1050",
+    "ocr": 0.41813980577449705
+  },
+  {
+    "epoch": 1100,
+    "step": 0,
+    "total_step": 1100,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1100-step_0-total_step_1100",
+    "ocr": 0.40148658869288295
+  },
+  {
+    "epoch": 1150,
+    "step": 0,
+    "total_step": 1150,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1150-step_0-total_step_1150",
+    "ocr": 0.39920729486202106
+  },
+  {
+    "epoch": 1200,
+    "step": 0,
+    "total_step": 1200,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1200-step_0-total_step_1200",
+    "ocr": 0.3912624080378482
+  },
+  {
+    "epoch": 1250,
+    "step": 0,
+    "total_step": 1250,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1250-step_0-total_step_1250",
+    "ocr": 0.39978915130313664
+  },
+  {
+    "epoch": 1300,
+    "step": 0,
+    "total_step": 1300,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1300-step_0-total_step_1300",
+    "ocr": 0.39734459785168347
+  },
+  {
+    "epoch": 1350,
+    "step": 0,
+    "total_step": 1350,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1350-step_0-total_step_1350",
+    "ocr": 0.40627721578151504
+  },
+  {
+    "epoch": 1400,
+    "step": 0,
+    "total_step": 1400,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1400-step_0-total_step_1400",
+    "ocr": 0.40978714878945843
+  },
+  {
+    "epoch": 1450,
+    "step": 0,
+    "total_step": 1450,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1450-step_0-total_step_1450",
+    "ocr": 0.41205966540226807
+  },
+  {
+    "epoch": 1500,
+    "step": 0,
+    "total_step": 1500,
+    "ckpt": "logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1500-step_0-total_step_1500",
+    "ocr": 0.40679018286013263
+  }
+]

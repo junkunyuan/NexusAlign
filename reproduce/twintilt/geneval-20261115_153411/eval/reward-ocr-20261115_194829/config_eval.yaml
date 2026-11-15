@@ -1,0 +1,170 @@
+algorithm:
+  autocast_dtype: fp16
+  churn_weight: 0.04
+  eta: 1.0
+  group_size: 24
+  group_zscore: false
+  kl_cfg_scale: 4.5
+  kl_weight: 0.01
+  max_sequence_length: 128
+  name: twintilt
+  num_steps: 10
+  optimization_level: trajectory
+  projection_iterations: 5
+  resolution: 512
+  ridge_eps: 1.0e-06
+  ridge_scale: 0.001
+  u_scale: 0.1
+data:
+  file: '{split}.txt'
+  name: ocr
+  path: data_and_model/yifan123/flow_grpo/dataset/ocr
+  seed: 6
+  split: train
+data_and_model_dir: data_and_model
+evaluator:
+  ckpts:
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_0-step_0-total_step_0
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_50-step_0-total_step_50
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_100-step_0-total_step_100
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_150-step_0-total_step_150
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_200-step_0-total_step_200
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_250-step_0-total_step_250
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_300-step_0-total_step_300
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_350-step_0-total_step_350
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_400-step_0-total_step_400
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_450-step_0-total_step_450
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_500-step_0-total_step_500
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_550-step_0-total_step_550
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_600-step_0-total_step_600
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_650-step_0-total_step_650
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_700-step_0-total_step_700
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_750-step_0-total_step_750
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_800-step_0-total_step_800
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_850-step_0-total_step_850
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_900-step_0-total_step_900
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_950-step_0-total_step_950
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1000-step_0-total_step_1000
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1050-step_0-total_step_1050
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1100-step_0-total_step_1100
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1150-step_0-total_step_1150
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1200-step_0-total_step_1200
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1250-step_0-total_step_1250
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1300-step_0-total_step_1300
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1350-step_0-total_step_1350
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1400-step_0-total_step_1400
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1450-step_0-total_step_1450
+  - logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/checkpoints/epoch_1500-step_0-total_step_1500
+  data:
+    file: '{split}.txt'
+    name: ocr
+    path: data_and_model/yifan123/flow_grpo/dataset/ocr
+    seed: 6
+    split: train
+  dry_run: false
+  eval_dir: logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411/eval/reward-ocr-20261115_194829
+  global_seed: 0
+  guidance_scale: 1.0
+  model_key: ema
+  name: reward
+  new_run: false
+  num_steps: 40
+  num_workers: 4
+  per_proc_batch_size: 16
+  split: test
+exp_info: twintilt_geneval_kl_cfg_w0.01-20261115_153411
+job_type: eval
+log_dir: logs/twintilt_geneval_kl_cfg_w0.01-20261115_153411
+model:
+  attn_backend: sdpa
+  compile: true
+  dtype: fp32
+  ema_enabled: true
+  frozen_dtype: fp16
+  fsdp:
+    activation_ckpt: false
+    cpu_offload: false
+    param_dtype: fp32
+    reduce_dtype: fp32
+    replicate: -1
+    shard: -1
+    strategy: full_shard
+  lora:
+    alpha: 64
+    init: gaussian
+    rank: 32
+    target_modules:
+    - attn.add_k_proj
+    - attn.add_q_proj
+    - attn.add_v_proj
+    - attn.to_add_out
+    - attn.to_k
+    - attn.to_out.0
+    - attn.to_q
+    - attn.to_v
+  name: sd3_5_medium
+  path: data_and_model/stabilityai/stable-diffusion-3.5-medium
+  text_encoder_dtype: fp16
+  vae_dtype: fp32
+notes: ''
+project_path: .
+provenance:
+  hardware:
+    cpu_count: 224
+    cpu_model: Intel(R) Xeon(R) Platinum 8480+
+    gpu_capability: '9.0'
+    gpu_count: 8
+    gpu_memory_gb: 79.1
+    gpu_name: NVIDIA H100 80GB HBM3
+    os: Linux-5.15.152
+  software:
+    cuda: '12.6'
+    cudnn: 91002
+    nccl: 2.29.3
+    python: 3.11.2
+    torch: 2.12.0+cu126
+  start_time: '2026-11-15 19:48:29'
+rank: 0
+rewards:
+  ocr:
+    max_retries: 10
+    name: ocr
+    timeout: 120
+    url: http://127.0.0.1:18087
+timestamp: true
+trainer:
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1.0e-08
+  adam_weight_decay: 0.0001
+  debug: false
+  deterministic: false
+  ema_decay: 0.9
+  ema_warmup_rate: 0.01
+  epochs: 1500
+  groups_per_epoch: 48
+  learning_rate: 0.0003
+  load_ckpt_only_model: false
+  log_every_n_steps: 1
+  log_hardware: true
+  log_tensorboard: false
+  max_grad_norm: 1.0
+  name: twintilt
+  peak_tflops: null
+  plot_every_n_seconds: 30
+  resume_path: null
+  sample_batch_size: 9
+  save_ckpt_every_n_epochs: 50
+  save_ckpt_every_n_steps: null
+  save_ckpt_keep_last_n_epochs: 100
+  save_ckpt_keep_last_n_steps: 10
+  save_ckpt_only_model: false
+  seed: 6
+  shuffle: true
+  updates_per_epoch: 1
+wandb:
+  entity: null
+  mode: disabled
+  name: null
+  project: nexus_align
+world_size: 8

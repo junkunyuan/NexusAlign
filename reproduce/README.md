@@ -119,6 +119,8 @@ column compares one main result of our reproduction with the paper.
 
 - [ ] **Run JiT B/16** on ImageNet 256x256, and record the run. Then add JiT to the
   Algorithms tables.
+- [ ] **Run FDFO** on GenEval, OCR, and PickScore, and record the runs. Then add FDFO
+  to the Algorithms tables.
 - [ ] **Run PixelDiT-XL and PixelDiT2-H/16** on ImageNet 256x256, and record the runs.
   Then add PixelDiT and PixelDiT2 to the Algorithms tables.
 - [ ] **Rerun MeanFlow** with the fixed sampling. It now sets r = t and drops the labels

@@ -6,6 +6,7 @@ from nexus_align.registry import registry
 from nexus_align.algorithms.awm import AWM
 from nexus_align.algorithms.diffusion_art import DiffusionART
 from nexus_align.algorithms.diffusion_nft import DiffusionNFT
+from nexus_align.algorithms.fdfo import FDFO
 from nexus_align.algorithms.flow_grpo import FlowGRPO
 from nexus_align.algorithms.refl import ReFL
 from nexus_align.algorithms.twintilt import TwinTilt
@@ -23,6 +24,7 @@ from nexus_align.algorithms.pixeldit2 import PixelDiT2
 registry.register("algorithm", "awm", AWM)
 registry.register("algorithm", "diffusion_art", DiffusionART)
 registry.register("algorithm", "diffusion_nft", DiffusionNFT)
+registry.register("algorithm", "fdfo", FDFO)
 registry.register("algorithm", "flow_grpo", FlowGRPO)
 registry.register("algorithm", "refl", ReFL)
 registry.register("algorithm", "twintilt", TwinTilt)
