@@ -9,5 +9,5 @@ algorithm:
   group_zscore: false  # z-score a single reward in each group; false keeps the raw scores
 
 trainer:
-  epochs: 100  # training epochs; 100 steps, instead of 500 in the TwinTilt code
+  epochs: 70  # training epochs; 70 steps, instead of 500 in the TwinTilt code
   save_ckpt_every_n_epochs: 5  # save every N epochs, plus the initial weights at epoch 0

@@ -8,6 +8,10 @@ algorithm:
   # The TwinTilt trainer takes the group z-scores only of PickScore.
   group_zscore: false  # z-score a single reward in each group; false keeps the raw scores
 
+trainer:
+  epochs: 250  # training epochs; 250 steps, instead of 500 in the TwinTilt code
+  save_ckpt_every_n_epochs: 25  # save every N epochs, plus the initial weights at epoch 0
+
 reward:
   # TwinTilt scores lossless PNG images.
   jpeg: false  # send JPEG as Flow-GRPO does; false sends lossless PNG, as DiffusionNFT

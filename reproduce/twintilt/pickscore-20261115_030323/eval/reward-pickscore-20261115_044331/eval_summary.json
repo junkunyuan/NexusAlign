@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 19.84031276172027
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_50-step_0-total_step_50",
+    "pickscore": 23.20302071608603
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_100-step_0-total_step_100",
+    "pickscore": 23.523378401063383
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 150,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_150-step_0-total_step_150",
+    "pickscore": 23.72415514755994
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_200-step_0-total_step_200",
+    "pickscore": 23.84184879437089
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 250,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_250-step_0-total_step_250",
+    "pickscore": 23.971519200131297
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_300-step_0-total_step_300",
+    "pickscore": 24.0278512313962
+  },
+  {
+    "epoch": 350,
+    "step": 0,
+    "total_step": 350,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_350-step_0-total_step_350",
+    "pickscore": 24.086114431731403
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_400-step_0-total_step_400",
+    "pickscore": 24.16905488912016
+  },
+  {
+    "epoch": 450,
+    "step": 0,
+    "total_step": 450,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_450-step_0-total_step_450",
+    "pickscore": 24.228291117586195
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/twintilt_pickscore-20261115_030323/checkpoints/epoch_500-step_0-total_step_500",
+    "pickscore": 24.27270090393722
+  }
+]

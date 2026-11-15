@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.12792555711281003
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_50-step_0-total_step_50",
+    "ocr": 0.43686180382619877
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_100-step_0-total_step_100",
+    "ocr": 0.42765455985527445
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 150,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_150-step_0-total_step_150",
+    "ocr": 0.41756302883873325
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_200-step_0-total_step_200",
+    "ocr": 0.42028809487092034
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 250,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_250-step_0-total_step_250",
+    "ocr": 0.4136208549406007
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_300-step_0-total_step_300",
+    "ocr": 0.4065147252129704
+  },
+  {
+    "epoch": 350,
+    "step": 0,
+    "total_step": 350,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_350-step_0-total_step_350",
+    "ocr": 0.4132391006852117
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_400-step_0-total_step_400",
+    "ocr": 0.41941132567173234
+  },
+  {
+    "epoch": 450,
+    "step": 0,
+    "total_step": 450,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_450-step_0-total_step_450",
+    "ocr": 0.40455568418787685
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/twintilt_geneval-20261115_015252/checkpoints/epoch_500-step_0-total_step_500",
+    "ocr": 0.4029583819901595
+  }
+]
