@@ -9,7 +9,7 @@ algorithm:
   group_zscore: false  # z-score a single reward in each group; false keeps the raw scores
   # Pull to the base model with CFG 4.5, as in AWM, with a larger weight than the
   # 0.004 of the TwinTilt code. Without it, the general metrics fall below the base.
-  kl_weight: 0.02  # coefficient of the velocity KL to the base model
+  kl_weight: 0.01  # coefficient of the velocity KL to the base model
   kl_cfg_scale: 4.5  # CFG scale of the base model in this KL; 1 gives no CFG
 
 trainer:

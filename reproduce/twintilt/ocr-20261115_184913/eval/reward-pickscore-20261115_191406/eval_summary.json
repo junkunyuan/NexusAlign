@@ -1,0 +1,170 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 21.720587573945522,
+    "twintilt_pickscore": 21.717073773033917
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 10,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_10-step_0-total_step_10",
+    "pickscore": 21.502381086349487,
+    "twintilt_pickscore": 21.494879721663892
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_20-step_0-total_step_20",
+    "pickscore": 21.638980275020003,
+    "twintilt_pickscore": 21.631920422427356
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 30,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_30-step_0-total_step_30",
+    "pickscore": 21.621572258882225,
+    "twintilt_pickscore": 21.614476525224745
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_40-step_0-total_step_40",
+    "pickscore": 21.613952558487654,
+    "twintilt_pickscore": 21.60626262705773
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_50-step_0-total_step_50",
+    "pickscore": 21.57854938786477,
+    "twintilt_pickscore": 21.57022644765675
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 60,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_60-step_0-total_step_60",
+    "pickscore": 21.600996412336826,
+    "twintilt_pickscore": 21.59399237576872
+  },
+  {
+    "epoch": 70,
+    "step": 0,
+    "total_step": 70,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_70-step_0-total_step_70",
+    "pickscore": 21.61331402696669,
+    "twintilt_pickscore": 21.6066937725991
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 80,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_80-step_0-total_step_80",
+    "pickscore": 21.612679721787572,
+    "twintilt_pickscore": 21.604909117799252
+  },
+  {
+    "epoch": 90,
+    "step": 0,
+    "total_step": 90,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_90-step_0-total_step_90",
+    "pickscore": 21.592824603430927,
+    "twintilt_pickscore": 21.584566147066653
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_100-step_0-total_step_100",
+    "pickscore": 21.587805027142167,
+    "twintilt_pickscore": 21.578763977624476
+  },
+  {
+    "epoch": 110,
+    "step": 0,
+    "total_step": 110,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_110-step_0-total_step_110",
+    "pickscore": 21.590888305567205,
+    "twintilt_pickscore": 21.582402227446437
+  },
+  {
+    "epoch": 120,
+    "step": 0,
+    "total_step": 120,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_120-step_0-total_step_120",
+    "pickscore": 21.583914779126644,
+    "twintilt_pickscore": 21.575370417907834
+  },
+  {
+    "epoch": 130,
+    "step": 0,
+    "total_step": 130,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_130-step_0-total_step_130",
+    "pickscore": 21.58209578320384,
+    "twintilt_pickscore": 21.573610468767583
+  },
+  {
+    "epoch": 140,
+    "step": 0,
+    "total_step": 140,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_140-step_0-total_step_140",
+    "pickscore": 21.584658317267895,
+    "twintilt_pickscore": 21.576189608313143
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 150,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_150-step_0-total_step_150",
+    "pickscore": 21.581734648905694,
+    "twintilt_pickscore": 21.57261855248362
+  },
+  {
+    "epoch": 160,
+    "step": 0,
+    "total_step": 160,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_160-step_0-total_step_160",
+    "pickscore": 21.57347479648888,
+    "twintilt_pickscore": 21.563946962356567
+  },
+  {
+    "epoch": 170,
+    "step": 0,
+    "total_step": 170,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_170-step_0-total_step_170",
+    "pickscore": 21.57673025596887,
+    "twintilt_pickscore": 21.568259534426033
+  },
+  {
+    "epoch": 180,
+    "step": 0,
+    "total_step": 180,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_180-step_0-total_step_180",
+    "pickscore": 21.57760326564312,
+    "twintilt_pickscore": 21.569461504928768
+  },
+  {
+    "epoch": 190,
+    "step": 0,
+    "total_step": 190,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_190-step_0-total_step_190",
+    "pickscore": 21.574601797387004,
+    "twintilt_pickscore": 21.565819670446217
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/twintilt_ocr_kl_cfg_w0.01-20261115_184913/checkpoints/epoch_200-step_0-total_step_200",
+    "pickscore": 21.57837834302336,
+    "twintilt_pickscore": 21.569407990202308
+  }
+]

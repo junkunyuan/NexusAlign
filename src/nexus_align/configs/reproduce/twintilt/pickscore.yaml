@@ -1,5 +1,15 @@
 # @package _global_
-# Train TwinTilt on human preference alignment with SD3.5-M, CFG-free.
+# Train TwinTilt on human preference alignment with SD3.5-M, CFG only in the base KL.
 # The args follow the pickscore task of the TwinTilt code, TWINTILT.md and its configs.
 # Launch with: EXP=pickscore bash scripts/reproduce/twintilt_train.sh
 exp_info: twintilt_pickscore  # experiment name
+
+algorithm:
+  # Pull to the base model with CFG 4.5, as in AWM, with a larger weight than the
+  # 0.004 of the TwinTilt code.
+  kl_weight: 0.01  # coefficient of the velocity KL to the base model
+  kl_cfg_scale: 4.5  # CFG scale of the base model in this KL; 1 gives no CFG
+
+trainer:
+  epochs: 1300  # training epochs; 1300 steps, instead of 500 in the TwinTilt code
+  save_ckpt_every_n_epochs: 100  # save every N epochs, plus the initial weights at epoch 0
