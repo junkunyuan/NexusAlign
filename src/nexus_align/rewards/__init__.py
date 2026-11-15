@@ -11,6 +11,8 @@ from nexus_align.rewards.clipscore import ClipScore
 from nexus_align.rewards.pickscore import PickScore
 from nexus_align.rewards.imagereward import ImageReward
 from nexus_align.rewards.unifiedreward import UnifiedReward
+from nexus_align.rewards.twintilt_multi import TwinTiltMultiReward
+from nexus_align.rewards.twintilt_pickscore import TwinTiltPickScore
 
 registry.register("reward", "pickscore", PickScore)
 registry.register("reward", "ocr", OCR)
@@ -22,3 +24,5 @@ registry.register("reward", "imagereward", ImageReward)
 registry.register("reward", "deqa", DeQA)
 registry.register("reward", "unifiedreward", UnifiedReward)
 registry.register("reward", "hpsv3", HPSv3)
+registry.register("reward", "twintilt_pickscore", TwinTiltPickScore)
+registry.register("reward", "twintilt_multi", TwinTiltMultiReward)

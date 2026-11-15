@@ -1,0 +1,34 @@
+defaults:
+  - /reward@rewards.pickscore: twintilt_pickscore
+  - /reward@rewards.hpsv2: hpsv2
+  - /reward@rewards.clipscore: clipscore
+  - /reward@rewards.geneval: geneval
+  - _self_
+
+name: twintilt_multi  # reward name
+
+# --------------------------------------------------------------------------------
+# Calibration configs. They follow the multi_reward_geneval_clip30 preset of TwinTilt.
+# --------------------------------------------------------------------------------
+divisors:
+  pickscore: 26  # PickScore divisor
+  hpsv2: 1  # HPSv2.1 divisor
+  # Our ClipScore is the CLIP logit / 100, and TwinTilt uses the CLIP logit / 30.
+  clipscore: 0.3  # ClipScore divisor
+  geneval: 1  # GenEval divisor
+weights:
+  pickscore: 1.0  # PickScore training weight
+  hpsv2: 1.0  # HPSv2.1 training weight
+  clipscore: 1.0  # ClipScore training weight
+  geneval: 1.0  # GenEval training weight
+
+# --------------------------------------------------------------------------------
+# Component configs.
+# --------------------------------------------------------------------------------
+rewards:
+  pickscore:
+    normalize: false  # the divisor applies 1/26
+  geneval:
+    # TwinTilt scores lossless PNG images.
+    jpeg: false  # send JPEG as Flow-GRPO does; false sends lossless PNG, as DiffusionNFT
+    batch_size: 16  # images per request

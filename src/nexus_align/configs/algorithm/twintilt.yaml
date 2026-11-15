@@ -1,0 +1,30 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: twintilt  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Sampling configs.
+# --------------------------------------------------------------------------------
+resolution: 512  # image resolution
+num_steps: 10  # rollout sampling steps of the Euler solver
+churn_weight: 0.04  # churn gamma of the rollout noise; 0 gives the ODE
+optimization_level: trajectory  # trajectory: one noise per group; distribution: one per image
+max_sequence_length: 128  # T5 prompt tokens
+autocast_dtype: fp16  # transformer compute dtype
+
+# --------------------------------------------------------------------------------
+# Projection configs.
+# --------------------------------------------------------------------------------
+group_size: 24  # images per prompt, K
+group_zscore: true  # z-score a single reward in each group; false keeps the raw scores
+eta: 1.0  # tilt strength; q = softmax(eta * advantages)
+u_scale: 0.1  # scale of the solved correction u
+projection_iterations: 5  # Newton updates of the projection
+ridge_scale: 0.001  # ridge = ridge_scale * mean Gram diagonal + ridge_eps
+ridge_eps: 1.0e-6  # lowest ridge of the projection
+
+# --------------------------------------------------------------------------------
+# Policy loss configs.
+# --------------------------------------------------------------------------------
+kl_weight: 0.004  # coefficient of the velocity KL to the base model

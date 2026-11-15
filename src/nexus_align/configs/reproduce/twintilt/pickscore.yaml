@@ -1,0 +1,5 @@
+# @package _global_
+# Train TwinTilt on human preference alignment with SD3.5-M, CFG-free.
+# The args follow the pickscore task of the TwinTilt code, TWINTILT.md and its configs.
+# Launch with: EXP=pickscore bash scripts/reproduce/twintilt_train.sh
+exp_info: twintilt_pickscore  # experiment name

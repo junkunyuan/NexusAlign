@@ -8,6 +8,7 @@ from nexus_align.algorithms.diffusion_art import DiffusionART
 from nexus_align.algorithms.diffusion_nft import DiffusionNFT
 from nexus_align.algorithms.flow_grpo import FlowGRPO
 from nexus_align.algorithms.refl import ReFL
+from nexus_align.algorithms.twintilt import TwinTilt
 
 # Visual generation paradigms.
 from nexus_align.algorithms.imeanflow import IMeanFlow
@@ -24,6 +25,7 @@ registry.register("algorithm", "diffusion_art", DiffusionART)
 registry.register("algorithm", "diffusion_nft", DiffusionNFT)
 registry.register("algorithm", "flow_grpo", FlowGRPO)
 registry.register("algorithm", "refl", ReFL)
+registry.register("algorithm", "twintilt", TwinTilt)
 
 # Visual generation paradigms.
 registry.register("algorithm", "imeanflow", IMeanFlow)

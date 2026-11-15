@@ -1,0 +1,5 @@
+defaults:
+  - pickscore  # the PickScore weights and the divisor of 26
+  - _self_
+
+name: twintilt_pickscore  # reward name

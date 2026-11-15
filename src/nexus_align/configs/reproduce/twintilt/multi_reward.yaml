@@ -1,0 +1,6 @@
+# @package _global_
+# Train TwinTilt on PickScore, HPSv2.1, ClipScore, and GenEval with SD3.5-M, CFG-free.
+# The args follow the multi_reward_geneval_clip30 task of the TwinTilt code, on the
+# GenEval prompts.
+# Launch with: EXP=multi_reward bash scripts/reproduce/twintilt_train.sh
+exp_info: twintilt_multi_reward  # experiment name

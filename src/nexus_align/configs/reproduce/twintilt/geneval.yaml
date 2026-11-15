@@ -1,0 +1,14 @@
+# @package _global_
+# Train TwinTilt on GenEval with SD3.5-M, CFG-free.
+# The args follow the geneval task of the TwinTilt code, TWINTILT.md and its configs.
+# Launch with: EXP=geneval bash scripts/reproduce/twintilt_train.sh
+exp_info: twintilt_geneval  # experiment name
+
+algorithm:
+  # The TwinTilt trainer takes the group z-scores only of PickScore.
+  group_zscore: false  # z-score a single reward in each group; false keeps the raw scores
+
+reward:
+  # TwinTilt scores lossless PNG images.
+  jpeg: false  # send JPEG as Flow-GRPO does; false sends lossless PNG, as DiffusionNFT
+  batch_size: 16  # images per request
