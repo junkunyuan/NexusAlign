@@ -1,0 +1,13 @@
+# @package _global_
+# Reproduce AWM on visual text rendering with SD3.5-M, CFG-free, on 128 GPUs.
+# The args follow ocr_sd3_no_cfg_4nodes of the official config/dgx_awm.py.
+# The training epochs follow the GPU hours of Fig. 5a of the paper.
+# Launch with: EXP=ocr bash scripts/reproduce/awm_train.sh
+exp_info: awm_ocr_reproduce  # experiment name
+
+trainer:
+  # 128 GPUs cannot split the official 72 prompts into whole groups per round.
+  groups_per_epoch: 80  # prompts sampled per epoch
+  sample_batch_size: 15  # samples per rank in one sampling and training batch
+  epochs: 130  # training epochs
+  save_ckpt_every_n_epochs: 10  # save every N epochs, plus the initial weights at epoch 0

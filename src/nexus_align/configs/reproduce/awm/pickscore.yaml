@@ -1,0 +1,16 @@
+# @package _global_
+# Reproduce AWM on human preference alignment with SD3.5-M, CFG-free, on 128 GPUs.
+# The args follow pickscore_sd3_no_cfg_4nodes of the official config/dgx_awm.py.
+# The training epochs follow the GPU hours of Fig. 5b of the paper.
+# Launch with: EXP=pickscore bash scripts/reproduce/awm_train.sh
+exp_info: awm_pickscore_reproduce  # experiment name
+
+algorithm:
+  noise_level: 0.0  # SA-Solver noise tau for t in [0.3, 0.9]; 0 gives the ODE
+  kl_beta: 1.0e-4  # coefficient of the velocity KL to the base model
+
+trainer:
+  # 128 GPUs cannot split the official 24 prompts into whole groups per round.
+  groups_per_epoch: 32  # prompts sampled per epoch
+  epochs: 1800  # training epochs
+  save_ckpt_every_n_epochs: 150  # save every N epochs, plus the initial weights at epoch 0

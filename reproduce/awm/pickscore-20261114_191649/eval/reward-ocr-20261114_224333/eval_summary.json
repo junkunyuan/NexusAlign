@@ -1,0 +1,9 @@
+[
+  {
+    "epoch": 1800,
+    "step": 0,
+    "total_step": 1800,
+    "ckpt": "logs/awm_pickscore_reproduce-20261114_191649/checkpoints/epoch_1800-step_0-total_step_1800",
+    "ocr": 0.6506221756083894
+  }
+]

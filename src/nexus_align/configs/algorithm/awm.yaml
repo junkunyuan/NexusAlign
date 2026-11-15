@@ -1,0 +1,36 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: awm  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Sampling configs.
+# --------------------------------------------------------------------------------
+resolution: 512  # image resolution
+num_steps: 14  # rollout sampling steps of the SA-Solver
+noise_level: 0.4  # SA-Solver noise tau for t in [0.3, 0.9]; 0 gives the ODE
+max_sequence_length: 128  # T5 prompt tokens
+autocast_dtype: fp16  # transformer compute dtype
+
+# --------------------------------------------------------------------------------
+# Advantage configs.
+# --------------------------------------------------------------------------------
+group_size: 24  # images per prompt, G
+adv_clip_max: 5.0  # clip the advantages to [-adv_clip_max, adv_clip_max]
+advantage_max: 1.0  # then scale them to [-advantage_max, advantage_max]
+
+# --------------------------------------------------------------------------------
+# Policy loss configs.
+# --------------------------------------------------------------------------------
+num_train_timesteps: 6  # Monte Carlo timesteps T of each image: the first sampling step, plus stratified ones
+timestep_fraction: 0.9  # draw the stratified timesteps from steps 1 to int(num_steps * fraction)
+ghuber_power: 0.5  # power p of the generalized Huber log-likelihood; 1 gives w(t) = t of paper Eq. 15
+
+# --------------------------------------------------------------------------------
+# KL configs.
+# --------------------------------------------------------------------------------
+kl_beta: 0.003  # coefficient of the velocity KL to the base model
+kl_cfg_scale: 4.5  # CFG scale of the base model in this KL
+ref_kl_beta: 1.0  # coefficient beta of the velocity KL to the EMA reference; see paper Eq. 16
+ref_decay_rate: 0.001  # EMA reference decay = min(ref_decay_rate * step, ref_decay_max)
+ref_decay_max: 0.3  # highest decay of the EMA reference

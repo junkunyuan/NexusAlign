@@ -6,6 +6,7 @@ from nexus_align.trainers.grpo_trainer import GRPOTrainer
 from nexus_align.trainers.nft_trainer import NFTTrainer
 from nexus_align.trainers.refl_trainer import ReFLTrainer
 from nexus_align.trainers.art_trainer import ARTTrainer
+from nexus_align.trainers.awm_trainer import AWMTrainer
 
 
 registry.register("trainer", "sft", SFTTrainer)
@@ -13,3 +14,4 @@ registry.register("trainer", "grpo", GRPOTrainer)
 registry.register("trainer", "nft", NFTTrainer)
 registry.register("trainer", "refl", ReFLTrainer)
 registry.register("trainer", "art", ARTTrainer)
+registry.register("trainer", "awm", AWMTrainer)

@@ -1,0 +1,16 @@
+[
+  {
+    "epoch": 130,
+    "step": 0,
+    "total_step": 130,
+    "ckpt": "logs/awm_ocr_reproduce-20261114_164607/checkpoints/epoch_130-step_0-total_step_130",
+    "unifiedreward": 2.9171000000000005,
+    "aesthetic": 5.3178982093334195,
+    "deqa": 4.1219296875,
+    "imagereward": 0.5820516205627937,
+    "hpsv3": 7.883633824585005,
+    "pickscore": 22.12634278488159,
+    "clipscore": 0.2768731510937214,
+    "hpsv2": 0.26635579236596824
+  }
+]

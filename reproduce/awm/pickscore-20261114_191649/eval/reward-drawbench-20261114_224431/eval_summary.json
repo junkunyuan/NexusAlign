@@ -1,0 +1,16 @@
+[
+  {
+    "epoch": 1800,
+    "step": 0,
+    "total_step": 1800,
+    "ckpt": "logs/awm_pickscore_reproduce-20261114_191649/checkpoints/epoch_1800-step_0-total_step_1800",
+    "unifiedreward": 3.41758,
+    "aesthetic": 6.242549181461334,
+    "deqa": 4.2530625,
+    "imagereward": 1.3749094064538367,
+    "hpsv3": 12.76910658288002,
+    "pickscore": 24.103313167572022,
+    "clipscore": 0.2718892930299044,
+    "hpsv2": 0.31519141624867913
+  }
+]

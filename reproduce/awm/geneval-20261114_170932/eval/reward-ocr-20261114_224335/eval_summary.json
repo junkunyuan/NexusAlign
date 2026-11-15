@@ -1,0 +1,16 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/awm_geneval_reproduce-20261114_170932/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.1327525176603772
+  },
+  {
+    "epoch": 750,
+    "step": 0,
+    "total_step": 750,
+    "ckpt": "logs/awm_geneval_reproduce-20261114_170932/checkpoints/epoch_750-step_0-total_step_750",
+    "ocr": 0.3652345930585267
+  }
+]

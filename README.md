@@ -78,6 +78,20 @@ column compares one main result of our reproduction with the paper.
     </td>
   </tr>
   <tr>
+    <td nowrap><a href="reproduce/awm">AWM</a></td>
+    <td>
+      <i>Advantage Weighted Matching: Aligning RL with Pretraining in Diffusion
+      Models</i>
+      (<a href="https://arxiv.org/abs/2509.25050">ICML 2026</a>)
+    </td>
+    <td nowrap>2025-09-29</td>
+    <td nowrap>
+      GenEval: 0.969 / 0.985<br>
+      OCR: 0.94 / 0.96<br>
+      PickScore: 23.87 / 24.03
+    </td>
+  </tr>
+  <tr>
     <td nowrap><a href="reproduce/diffusion_nft">DiffusionNFT</a></td>
     <td>
       <i>DiffusionNFT: Online Diffusion Reinforcement with Forward Process</i>

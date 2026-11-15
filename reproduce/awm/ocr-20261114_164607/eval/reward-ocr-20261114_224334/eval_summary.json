@@ -1,0 +1,9 @@
+[
+  {
+    "epoch": 130,
+    "step": 0,
+    "total_step": 130,
+    "ckpt": "logs/awm_ocr_reproduce-20261114_164607/checkpoints/epoch_130-step_0-total_step_130",
+    "ocr": 0.9369285960544151
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "epoch": 1800,
+    "step": 0,
+    "total_step": 1800,
+    "ckpt": "logs/awm_pickscore_reproduce-20261114_191649/checkpoints/epoch_1800-step_0-total_step_1800",
+    "geneval": 0.5075003769033619,
+    "accuracy": 0.6613924050632911,
+    "strict_accuracy": 0.4755877034358047,
+    "single_object_accuracy": 0.965625,
+    "two_object_accuracy": 0.8434343434343434,
+    "counting_accuracy": 0.64375,
+    "colors_accuracy": 0.8377659574468085,
+    "position_accuracy": 0.1825,
+    "color_attr_accuracy": 0.565,
+    "single_object_strict_accuracy": 0.753125,
+    "two_object_strict_accuracy": 0.48484848484848486,
+    "counting_strict_accuracy": 0.64375,
+    "colors_strict_accuracy": 0.6117021276595744,
+    "position_strict_accuracy": 0.1275,
+    "color_attr_strict_accuracy": 0.33
+  }
+]
