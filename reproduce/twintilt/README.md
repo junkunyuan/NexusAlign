@@ -12,7 +12,7 @@
 
 **Implementation:** We follow the TwinTilt code [shenytzzz/twintilt](https://github.com/shenytzzz/twintilt) (private), a NexusAlign fork that extends the official FDFO code [NVlabs/finite-difference-flow-optimization](https://github.com/NVlabs/finite-difference-flow-optimization), except for:
 
-- **Training length:** OCR trains 170 epochs, GenEval 800, and PickScore 600, instead of 500. The task scores of our longer OCR and GenEval runs are near their plateau at these steps. PickScore still improves after step 500, but step 600 of our 1500-step run already beats the baselines on 8 of the 11 metrics.
+- **Training length:** OCR trains 170 epochs, GenEval 900, and PickScore 600, instead of 500. The task scores of our longer OCR and GenEval runs are near their plateau at these steps. PickScore still improves after step 500, but step 600 of our 1500-step run already beats the baselines on 8 of the 11 metrics.
 - **Base KL:** For OCR, GenEval, and PickScore, the KL to the base model uses CFG 4.5, as in AWM, and the weight 0.01, not 0.004. Without this change, the general metrics of OCR fall far below the base model, for example HPSv3 from 9.5 to 7.7.
 - **Precision:** The frozen transformer weights and the text encoders are fp16, not bf16, and the VAE is fp32, not bf16. The compute dtype stays fp16 with a gradient scaler. TF32 matmuls stay on, while TwinTilt turns them off.
 - **Rewards:** The PickScore reward resizes the float pixels with our antialiased bicubic resize, not with the CLIP processor of transformers. In the multi-reward, HPSv2.1 scores the uint8 pixels in fp32, not the float pixels under bf16 autocast.
@@ -29,7 +29,7 @@
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | SD3.5-M (ours) | 0.64 | 0.59 | 21.72 | 22.34 | 0.284 | 0.280 | 5.38 | 0.85 | 3.06 | 4.07 | 9.46 | [run](ocr-20261115_184913) |
 | OCR (ours) | 0.72 | **0.95** | 21.58 | 22.41 | 0.290 | 0.283 | 5.32 | 0.99 | 3.14 | 4.12 | 8.83 | [run](ocr-20261115_184913) |
-| GenEval (ours) | **0.96** | 0.67 | 21.55 | 22.53 | 0.294 | 0.294 | 5.36 | 1.22 | 3.29 | 4.15 | 10.62 | [run](geneval-20261115_153411) |
+| GenEval (ours) | **0.97** | 0.67 | 21.55 | 22.51 | 0.293 | 0.294 | 5.38 | 1.21 | 3.28 | 4.13 | 10.61 | [run](geneval-20261115_153411) |
 
 **PickScore:** SD3.5-M trained on PickScore, evaluated with CFG off.
 
@@ -39,7 +39,7 @@
 | PickScore (ours) | 0.52 | 0.67 | **24.35** | 24.43 | 0.268 | 0.323 | 6.41 | 1.35 | 3.43 | 4.26 | 12.79 | [run](pickscore-20261115_153604) |
 
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench.
-- **Checkpoints:** the OCR row uses step 170 of a 200-step run, the GenEval row uses step 800 of a 1500-step run, and the PickScore row uses step 600 of a 1500-step run. The configs now train these lengths. The base rows use step 0.
+- **Checkpoints:** the OCR row uses step 170 of a 200-step run, the GenEval row uses step 900 of a 1500-step run, and the PickScore row uses step 600 of a 1500-step run. The configs now train these lengths. The base rows use step 0.
 - **Bold:** in-domain results.
 
 ## Command
