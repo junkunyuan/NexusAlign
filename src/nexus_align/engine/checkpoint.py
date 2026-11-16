@@ -9,6 +9,9 @@ import torch
 import torch.distributed as dist
 
 from torch.distributed.fsdp import FSDPModule
+from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
+    _CHECKPOINT_PREFIX
+)
 from torch.distributed.checkpoint.state_dict import (
     StateDictOptions,
     set_model_state_dict,
@@ -232,14 +235,17 @@ class CheckpointManager:
             if key in ["model", "ema"]:
                 if getattr(trainer.model, "save_trainable_only", False):
                     # Select by the trainable names of the model, because the EMA
-                    # parameters are frozen.
+                    # parameters are frozen. Drop the activation-checkpoint prefix,
+                    # which the load of torch also drops from the names of the model.
+                    clean = lambda name: name.replace(_CHECKPOINT_PREFIX, "")
                     names = {
-                        name for name, p in trainer.model.model.named_parameters()
-                        if p.requires_grad
+                        clean(name) for name, p in
+                        trainer.model.model.named_parameters() if p.requires_grad
                     }
                     state_dict = {
-                        name: p.full_tensor().cpu()
-                        for name, p in component.named_parameters() if name in names
+                        clean(name): p.full_tensor().cpu()
+                        for name, p in component.named_parameters()
+                        if clean(name) in names
                     }
                 else:
                     options = StateDictOptions(full_state_dict=True, cpu_offload=True)

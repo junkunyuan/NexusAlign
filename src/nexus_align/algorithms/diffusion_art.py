@@ -26,6 +26,7 @@ import torch.distributed as dist
 from nexus_align.utils.dtype import DTYPE_MAP
 from nexus_align.engine.distributed import gather_tensor
 from nexus_align.algorithms.base_algorithm import BaseAlgorithm
+from nexus_align.rewards.multi_reward import combine_group_zscores
 
 
 def prompt_ids(prompts: list[str]) -> torch.Tensor:
@@ -191,21 +192,8 @@ class DiffusionART(BaseAlgorithm):
     def combine_rewards(
         self, prompts: list[str], scores: dict, weights: dict
     ) -> np.ndarray:
-        """
-        Combine the components of a multi-reward into one training reward.
-
-        Each component gets its group z-scores, with the eps after the population std.
-        The training reward is the mean of these z-scores with the given weights.
-        """
-        prompts = np.array(prompts)
-        total = np.zeros(len(prompts))
-        for key, weight in weights.items():
-            rewards = np.asarray(scores[key], dtype=np.float64)
-            for prompt in np.unique(prompts):
-                group = rewards[prompts == prompt]
-                zscores = (group - group.mean()) / (group.std() + self.multi_reward_eps)
-                total[prompts == prompt] += weight * zscores
-        return total / sum(weights.values())
+        """Combine the components of a multi-reward into one training reward."""
+        return combine_group_zscores(prompts, scores, weights, self.multi_reward_eps)
 
     def compute_advantages(self, prompts: list[str], rewards: np.ndarray) -> np.ndarray:
         """Subtract each prompt group's mean. A group with equal rewards gets zeros."""

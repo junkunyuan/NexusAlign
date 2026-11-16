@@ -23,9 +23,17 @@ data:
 data_and_model_dir: data_and_model
 evaluator:
   ckpts:
-  - logs/diffusion_nft_multi_reward_reproduce-20261116_053529/checkpoints/epoch_0-step_0-total_step_0
-  - logs/diffusion_nft_multi_reward_reproduce-20261116_053529/checkpoints/epoch_50-step_0-total_step_50
-  - logs/diffusion_nft_multi_reward_reproduce-20261116_053529/checkpoints/epoch_100-step_0-total_step_100
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_0-step_0-total_step_0
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_50-step_0-total_step_50
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_100-step_0-total_step_100
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_150-step_0-total_step_150
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_200-step_0-total_step_200
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_250-step_0-total_step_250
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_300-step_0-total_step_300
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_350-step_0-total_step_350
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_400-step_0-total_step_400
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_450-step_0-total_step_450
+  - logs/diffusion_nft_multi_reward_reproduce-20261116_184916/checkpoints/epoch_500-step_0-total_step_500
   data:
     file: '{split}_metadata.jsonl'
     name: geneval
@@ -34,7 +42,7 @@ evaluator:
     split: train
     text_key: prompt
   dry_run: false
-  eval_dir: logs/diffusion_nft_multi_reward_reproduce-20261116_053529/eval/reward-geneval-20261116_070425
+  eval_dir: logs/diffusion_nft_multi_reward_reproduce-20261116_184916/eval/reward-geneval-20261116_201137
   global_seed: 0
   guidance_scale: 1.0
   model_key: ema
@@ -44,9 +52,9 @@ evaluator:
   num_workers: 4
   per_proc_batch_size: 16
   split: test
-exp_info: diffusion_nft_multi_reward_reproduce-20261116_053529
+exp_info: diffusion_nft_multi_reward_reproduce-20261116_184916
 job_type: eval
-log_dir: logs/diffusion_nft_multi_reward_reproduce-20261116_053529
+log_dir: logs/diffusion_nft_multi_reward_reproduce-20261116_184916
 model:
   attn_backend: sdpa
   compile: true
@@ -95,16 +103,42 @@ provenance:
     nccl: 2.29.3
     python: 3.11.2
     torch: 2.12.0+cu126
-  start_time: '2026-11-16 07:04:26'
+  start_time: '2026-11-16 20:11:37'
 rank: 0
 rewards:
-  geneval:
-    batch_size: 64
-    jpeg: false
-    max_retries: 10
-    name: geneval
-    timeout: 120
-    url: http://127.0.0.1:18085
+  multi_reward:
+    divisors:
+      clipscore: 0.3
+      geneval: 1
+      hpsv2: 1
+      pickscore: 26
+    name: multi_reward
+    rewards:
+      clipscore:
+        clip_path: data_and_model/openai/clip-vit-large-patch14
+        name: clipscore
+      geneval:
+        batch_size: 64
+        jpeg: false
+        max_retries: 10
+        name: geneval
+        timeout: 120
+        url: http://127.0.0.1:18085
+      hpsv2:
+        max_retries: 10
+        name: hpsv2
+        timeout: 120
+        url: http://127.0.0.1:18090
+      pickscore:
+        model_path: data_and_model/yuvalkirstain/PickScore_v1
+        name: pickscore
+        normalize: false
+        processor_path: data_and_model/laion/CLIP-ViT-H-14-laion2B-s32B-b79K
+    weights:
+      clipscore: 0.25
+      geneval: 0.25
+      hpsv2: 0.25
+      pickscore: 0.25
 timestamp: true
 trainer:
   adam_beta1: 0.9

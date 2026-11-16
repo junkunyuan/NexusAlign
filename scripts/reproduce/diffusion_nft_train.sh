@@ -65,8 +65,6 @@ prepare_pickscore() {
 }
 DATA=${EXP}
 REWARD=${EXP}
-MODEL=sd3_5_medium
-ALGORITHM=diffusion_nft
 SERVERS=()
 prepare stabilityai/stable-diffusion-3.5-medium
 prepare yifan123/flow_grpo
@@ -119,8 +117,8 @@ torchrun \
     --master_port ${MASTER_PORT} \
     src/nexus_align/cli/main.py \
     data=${DATA} \
-    algorithm=${ALGORITHM} \
-    model=${MODEL} \
+    algorithm=diffusion_nft \
+    model=sd3_5_medium \
     trainer=nft \
     reward=${REWARD} \
     +reproduce=diffusion_nft/${EXP} \

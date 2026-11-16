@@ -37,11 +37,16 @@ class DistributedGroupSampler(Sampler):
 
     If num_windows > 1, each window gets group_size / num_windows copies of every
     group, as follows:
-    - If num_windows divides num_batches, the batches make num_windows equal windows.
-      Batch i of each window holds the copies of the same prompts.
+    - If whole_groups is True, every batch holds whole groups, and the windows split
+      the samples of each batch. Then batch_size must also be a multiple of
+      num_windows.
+    - Else if num_windows divides num_batches, the batches make num_windows equal
+      windows. Batch i of each window holds the copies of the same prompts.
     - Otherwise, every batch holds whole groups, and the windows alternate along its
       global list. Then each rank gets batch_size / num_windows samples of each window,
       rounded up or down, and window_ids gives the window of each of its samples.
+    In the first and the last case, split_batches is True and window_ids gives the
+    window of each sample of a batch.
     """
 
     def __init__(
@@ -63,7 +68,8 @@ class DistributedGroupSampler(Sampler):
         self.whole_groups = whole_groups
         self.rank = dist.get_rank()
         self.world_size = dist.get_world_size()
-        self.split_batches = num_batches % num_windows != 0  # windows inside each batch
+        # Windows inside each batch, which window_ids then gives.
+        self.split_batches = whole_groups or num_batches % num_windows != 0
         total = self.world_size * batch_size
         total = total if self.split_batches else total * num_windows
         assert total % group_size == 0 and group_size % num_windows == 0, (
@@ -73,6 +79,10 @@ class DistributedGroupSampler(Sampler):
         assert not (whole_groups and batch_size % group_size), (
             f"❌ whole_groups needs batch_size {batch_size} to be a multiple of "
             f"group_size {group_size}"
+        )
+        assert not (whole_groups and batch_size % num_windows), (
+            f"❌ whole_groups needs batch_size {batch_size} to be a multiple of "
+            f"num_windows {num_windows}, which split the samples of a batch"
         )
         assert batch_size >= num_windows, (
             f"❌ batch_size {batch_size} must be at least num_windows {num_windows}"
@@ -118,7 +128,10 @@ class DistributedGroupSampler(Sampler):
 
     def iter_split_batches(self):
         """Yield batches of whole groups, in which the windows alternate."""
-        copies = self.group_size // self.num_windows
+        # With whole groups, a batch holds whole groups and the windows split it.
+        copies = self.group_size
+        if not self.whole_groups:
+            copies = self.group_size // self.num_windows
         for i in range(self.num_batches):
             g = torch.Generator()
             g.manual_seed(self.seed + self.epoch * self.num_batches + i)
@@ -126,12 +139,15 @@ class DistributedGroupSampler(Sampler):
 
             # Shuffle the copies of each window, then alternate the windows, for
             # example ["dog", "sun", "sun", "dog"] for windows 0, 1, 0, 1.
-            windows = []
-            for _ in range(self.num_windows):
-                repeated = [idx for idx in indices.tolist() for _ in range(copies)]
-                order = torch.randperm(len(repeated), generator=g).tolist()
-                windows.append([repeated[k] for k in order])
-            shuffled = [idx for column in zip(*windows) for idx in column]
+            if self.whole_groups:
+                shuffled = [idx for idx in indices.tolist() for _ in range(copies)]
+            else:
+                windows = []
+                for _ in range(self.num_windows):
+                    repeated = [idx for idx in indices.tolist() for _ in range(copies)]
+                    order = torch.randperm(len(repeated), generator=g).tolist()
+                    windows.append([repeated[k] for k in order])
+                shuffled = [idx for column in zip(*windows) for idx in column]
 
             start = self.rank * self.batch_size  # this rank's slice
             yield shuffled[start: start + self.batch_size]

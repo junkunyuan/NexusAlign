@@ -21,9 +21,9 @@ data:
   split: train
   text_key: prompt
 data_and_model_dir: data_and_model
-exp_info: diffusion_nft_multi_reward_reproduce-20261116_053529
+exp_info: diffusion_nft_multi_reward_reproduce-20261116_184916
 job_type: train
-log_dir: logs/diffusion_nft_multi_reward_reproduce-20261116_053529
+log_dir: logs/diffusion_nft_multi_reward_reproduce-20261116_184916
 model:
   attn_backend: sdpa
   compile: true
@@ -72,7 +72,7 @@ provenance:
     nccl: 2.29.3
     python: 3.11.2
     torch: 2.12.0+cu126
-  start_time: '2026-11-16 05:35:29'
+  start_time: '2026-11-16 18:49:17'
 rank: 0
 reward:
   divisors:

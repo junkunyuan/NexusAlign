@@ -11,9 +11,31 @@ References:
             - configs/examples/sd3_multireward.yaml: the divisor of each component
 """
 
+import numpy as np
 import torch
 
 from nexus_align.registry import registry
+
+
+def combine_group_zscores(
+    prompts: list[str], scores: dict, weights: dict, eps: float = 1.0e-4
+) -> np.ndarray:
+    """
+    Combine the components of a multi-reward into one training reward.
+
+    Each component gets its group z-scores, with the eps after the population std.
+    The training reward is the mean of these z-scores with the given weights. It is
+    already normalized in each group, so an algorithm takes it as the advantages.
+    """
+    prompts = np.array(prompts)
+    total = np.zeros(len(prompts))
+    for key, weight in weights.items():
+        rewards = np.asarray(scores[key], dtype=np.float64)
+        for prompt in np.unique(prompts):
+            group = rewards[prompts == prompt]
+            zscores = (group - group.mean()) / (group.std() + eps)
+            total[prompts == prompt] += weight * zscores
+    return total / sum(weights.values())
 
 
 class MultiReward:

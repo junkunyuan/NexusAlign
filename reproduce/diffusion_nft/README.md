@@ -13,7 +13,7 @@
 **Implementation:** We follow the official code [NVlabs/DiffusionNFT](https://github.com/NVlabs/DiffusionNFT), with the GenEval reward from [yifan123/reward-server](https://github.com/yifan123/reward-server), except for:
 
 - **Paper and code:** Where the paper and the code differ, we follow the code. It trains 9 of the 10 timesteps and uses a KL weight of 1e-4. For OCR, its old policy stays on-policy for 75 steps, then decays at a rate of 0.0075.
-- **Multi-reward:** We train on GenEval, PickScore, ClipScore, and HPSv2.1 on the GenEval prompts for 500 steps, with the GenEval recipe, as our DiffusionART and TwinTilt multi-reward runs do, so that the three compare. The official `sd3_multi_reward` trains on PickScore, HPSv2.1, and ClipScore on the PickScore prompts. As there, the training reward is the sum of the calibrated scores, not the mean of their group z-scores as in DiffusionART.
+- **Multi-reward:** We train on GenEval, PickScore, ClipScore, and HPSv2.1 on the GenEval prompts for 500 steps, with the GenEval recipe, as our DiffusionART and TwinTilt multi-reward runs do, so that the three compare. The official `sd3_multi_reward` trains on PickScore, HPSv2.1, and ClipScore on the PickScore prompts. The training reward is the mean of the group z-scores of the four calibrated scores, as in DiffusionART and TwinTilt. The official code instead normalizes their sum in its NFT recipes, which gave a higher and more stable run here (see the notes).
 - **T5 length in evaluation:** The evaluation encodes the prompts with 128 T5 tokens, as the training and `eval_fn` do. `evaluation.py` of the official code uses the diffusers default of 256.
 - **GPUs:** We train on 64 GPUs (128 for the multi-reward) instead of 8, with the same 1152 images per update (576 for OCR).
 - **Infrastructure:** `torch.compile`, fp16 frozen weights, FSDP, and the in-place old-policy swap speed up training and change only the rounding. The code for logging, checkpointing, and the reward servers is our own.
@@ -37,11 +37,11 @@
 
 | Model | Multi† | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| SD3.5-M w/o CFG (ours) | 2.046 | 0.24 | 0.13 | 19.82 | 20.54 | 0.238 | 0.207 | 5.17 | -0.58 | 2.03 | 3.37 | -1.01 | [run](multi_reward-20261116_053529) |
-| Multi-reward (ours) | **3.110** | 0.94 | 0.44 | 20.90 | 22.24 | 0.283 | 0.263 | 5.29 | 0.93 | 3.02 | 4.16 | 9.83 | [run](multi_reward-20261116_053529) |
+| SD3.5-M w/o CFG (ours) | 2.046 | 0.24 | 0.13 | 19.82 | 20.54 | 0.238 | 0.207 | 5.17 | -0.58 | 2.03 | 3.37 | -1.01 | [run](multi_reward-20261116_184916) |
+| Multi-reward (ours) | **2.580** | 0.47 | 0.18 | 20.34 | 21.71 | 0.267 | 0.259 | 5.71 | 0.86 | 2.64 | 3.43 | 6.93 | [run](multi_reward-20261116_184916) |
 
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench. Multi† is GenEval + PickScore / 26 + ClipScore logit / 30 + HPSv2.1 on the GenEval test prompts, as DiffusionART reports it.
-- **Checkpoints:** the multi-reward row uses the final epoch 500, and its base row epoch 0. Epoch 250 is higher on 11 of the 12 metrics, all except GenEval† (Multi† 3.141, HPSv3 11.88).
+- **Checkpoints:** the multi-reward row uses the final epoch 500, and its base row epoch 0. This run falls after epoch 400, so epoch 150 is higher on every metric except Aesthetic (Multi† 3.066, GenEval† 0.79, HPSv3 13.44).
 - **Bold:** in-domain results.
 
 ## Command

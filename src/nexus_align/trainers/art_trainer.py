@@ -21,10 +21,11 @@ class ARTTrainer(GRPOTrainer):
     Generic trainer for DiffusionART, with the epoch loop of GRPOTrainer.
 
     - Each optimizer step of an epoch gets an equal part of every prompt group. If the
-      steps do not divide the batches, for example 1152 images on 128 GPUs, each step
-      takes the samples of its window from every batch. A rank then trains 4 or 5 of
-      its 9 samples per step, and the loss scale keeps the mean over all the samples of
-      the step on all ranks, as in the official code.
+      sampler puts the windows inside each batch, for example 1152 images on 128 GPUs
+      or one whole prompt group per batch, each step takes the samples of its
+      window from every batch. A rank then trains 4 or 5 of its 9 samples, and the loss
+      scale keeps the mean over all the samples of the step on all ranks, as in the
+      official code.
     - The algorithm calculates the guidance of each group from the rollouts of all
       ranks, before the trainer splits the samples into optimizer steps.
     - The trainer trains on every sample. A sample of a group with equal rewards has
@@ -65,7 +66,8 @@ class ARTTrainer(GRPOTrainer):
 
     def make_batches(self, samples: dict) -> list[dict]:
         num_batches, updates = self.num_batches_per_epoch, self.updates_per_epoch
-        if num_batches % updates == 0:
+        # The sampler says whether the windows live inside each batch.
+        if not self.train_dataloader.batch_sampler.split_batches:
             return super().make_batches(samples)
         # The window and the batch of each sample of this rank, in the sampler order.
         windows = self.train_dataloader.batch_sampler.window_ids().repeat(num_batches)
