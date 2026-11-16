@@ -66,6 +66,7 @@ class GRPOTrainer(BaseTrainer):
 
     ema_every_batch = True  # if False, call ema_step only after an optimizer step
     split_groups = False  # if True, each optimizer step gets a part of every group
+    whole_groups = False  # if True, each rank samples whole prompt groups
 
     def __init__(
         self,
@@ -148,6 +149,7 @@ class GRPOTrainer(BaseTrainer):
             num_batches=self.num_batches_per_epoch,
             seed=self.seed,
             num_windows=self.updates_per_epoch if self.split_groups else 1,
+            whole_groups=self.whole_groups,
         )
         return DataLoader(dataset, batch_sampler=sampler, collate_fn=dataset.collate_fn)
 

@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 19.817687023431063
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_50-step_0-total_step_100",
+    "pickscore": 21.50474883057177
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_100-step_0-total_step_200",
+    "pickscore": 21.478693421930075
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_150-step_0-total_step_300",
+    "pickscore": 21.183586824685335
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_200-step_0-total_step_400",
+    "pickscore": 20.806304919999093
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_250-step_0-total_step_500",
+    "pickscore": 20.603056227322668
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_300-step_0-total_step_600",
+    "pickscore": 20.427274922374636
+  },
+  {
+    "epoch": 350,
+    "step": 0,
+    "total_step": 700,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_350-step_0-total_step_700",
+    "pickscore": 20.32905429508537
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 800,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_400-step_0-total_step_800",
+    "pickscore": 20.14638890232891
+  },
+  {
+    "epoch": 450,
+    "step": 0,
+    "total_step": 900,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_450-step_0-total_step_900",
+    "pickscore": 19.97956417640671
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/diffusion_art_multi_reward_reproduce-20261116_025704/checkpoints/epoch_500-step_0-total_step_1000",
+    "pickscore": 19.878551022149622
+  }
+]

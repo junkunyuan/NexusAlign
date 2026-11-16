@@ -60,8 +60,15 @@ if [[ "$DATA" != "$EXP" && " geneval ocr pickscore drawbench " != *" ${DATA} "* 
   exit 1
 fi
 for reward in $REWARDS; do
-  if [[ " ocr geneval " == *" ${reward} "* && "$reward" != "$DATA" ]]; then
-    echo "❌ The ${reward} reward needs DATA=${reward}: it checks each prompt's target"
+  target=$reward
+  [[ "$reward" == multi_reward ]] && target=geneval
+  if [[ " ocr geneval " == *" ${target} "* && "$target" != "$DATA" ]]; then
+    echo "❌ The ${reward} reward needs DATA=${target}: it checks each prompt's target"
+    exit 1
+  fi
+  if [[ " ${REWARDS} " == *" multi_reward "* \
+      && " geneval pickscore clipscore hpsv2 " == *" ${reward} "* ]]; then
+    echo "❌ multi_reward already reports ${reward}; evaluate them in separate runs"
     exit 1
   fi
 done
@@ -69,6 +76,9 @@ echo "🚀 diffusion_nft evaluation: EXP=${EXP} DATA=${DATA} REWARDS=${REWARDS}"
 EVAL_ARGS=()
 if [[ " ${REWARDS} " == *" geneval "* ]]; then
   EVAL_ARGS+=(rewards.geneval.jpeg=false)  # the official GenEval reward scores raw pixels
+fi
+if [[ " ${REWARDS} " == *" multi_reward "* ]]; then
+  EVAL_ARGS+=(rewards.multi_reward.rewards.geneval.jpeg=false)  # as for geneval
 fi
 
 # --------------------------------------------------------------------------------
@@ -86,21 +96,31 @@ prepare() {
     echo "💾 Prepared $1"
   fi
 }
+prepare_geneval() {
+  prepare mask2former
+  prepare timm/vit_large_patch14_clip_224.openai
+  prepare yifan123/reward-server
+  prepare open-mmlab/mmdetection
+}
+prepare_pickscore() {
+  prepare yuvalkirstain/PickScore_v1
+  prepare laion/CLIP-ViT-H-14-laion2B-s32B-b79K
+}
 prepare stabilityai/stable-diffusion-3.5-medium
 prepare yifan123/flow_grpo
 prepare NVlabs/DiffusionNFT  # DrawBench test prompts
+SERVERS=()
 for reward in $REWARDS; do
   case "$reward" in
     ocr) prepare paddleocr ;;
-    geneval)
-      prepare mask2former
-      prepare timm/vit_large_patch14_clip_224.openai
-      prepare yifan123/reward-server
-      prepare open-mmlab/mmdetection
-      ;;
-    pickscore)
-      prepare yuvalkirstain/PickScore_v1
-      prepare laion/CLIP-ViT-H-14-laion2B-s32B-b79K
+    geneval) prepare_geneval ;;
+    pickscore) prepare_pickscore ;;
+    multi_reward)
+      prepare_geneval
+      prepare_pickscore
+      prepare openai/clip-vit-large-patch14
+      prepare xswu/HPSv2
+      SERVERS+=(geneval hpsv2)
       ;;
     aesthetic)
       prepare openai/clip-vit-large-patch14
@@ -129,7 +149,6 @@ done
 # --------------------------------------------------------------------------------
 # Start the reward servers of this node, and stop them when the evaluation ends.
 # --------------------------------------------------------------------------------
-SERVERS=()
 for reward in $REWARDS; do
   if [[ " ocr geneval deqa hpsv2 imagereward hpsv3 unifiedreward " \
       == *" ${reward} "* ]]; then

@@ -181,7 +181,10 @@ if [[ "$NAME" == "unifiedreward" ]]; then
   # node. The smaller static memory leaves space for sampling on the same GPUs. It runs
   # in data_and_model/, so that the vision tower that the model config names resolves
   # to the local copy. With no_proxy, its warmup requests to itself skip the proxy.
-  setsid nohup env -C "$DATA" no_proxy="127.0.0.1,localhost,${no_proxy:-}" \
+  # -u PYTHONPATH keeps the caller's modules out of this venv, for example an
+  # overlay that a model needs.
+  setsid nohup env -C "$DATA" -u PYTHONPATH \
+    no_proxy="127.0.0.1,localhost,${no_proxy:-}" \
     "${VENV}/bin/python" -m sglang.launch_server \
     --model-path "${DATA}/CodeGoat24/UnifiedReward-7b-v1.5" \
     --served-model-name UnifiedReward-7b-v1.5 --api-key flowgrpo --host 127.0.0.1 \
@@ -192,7 +195,9 @@ else
   if [[ "$NAME" == "deqa" || "$NAME" == "hpsv3" ]]; then
     EXTRA_ARGS+=(--timeout 900)  # a worker loads its 7B model before it answers
   fi
-  REWARD_SERVER_PORT=$PORT REWARD_SERVER_WORKERS=${NUM_GPUS} nohup \
+  # -u PYTHONPATH keeps the caller's modules out of this venv, for example an
+  # overlay that a model needs. The servers import only their own directory.
+  REWARD_SERVER_PORT=$PORT REWARD_SERVER_WORKERS=${NUM_GPUS} nohup env -u PYTHONPATH \
     "${VENV}/bin/gunicorn" -c "${SERVERS}/gunicorn.conf.py" "${EXTRA_ARGS[@]}" \
     --chdir "$APP_DIR" --pythonpath "$SERVERS" "$APP" > "$LOG" 2>&1 < /dev/null &
 fi

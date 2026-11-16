@@ -33,12 +33,15 @@ class RemoteReward:
       makes the job fail, not hang.
     - By default, the client sends the images as raw uint8 arrays with their prompts,
       and returns the scores as the first headline metric.
+    - batch_size images go in one request. A reward model that needs much memory per
+      image takes a smaller batch, so that it fits beside the trained model.
     """
 
     def __init__(self, cfg_reward) -> None:
         self.name = cfg_reward.name
         self.url = cfg_reward.url
         self.timeout = cfg_reward.get("timeout", 120)
+        self.batch_size = cfg_reward.get("batch_size", 0) or None  # None: one request
         self.session = requests.Session()
         self.session.trust_env = False  # the server is local, so skip any HTTP proxy
         retries = Retry(
@@ -58,5 +61,12 @@ class RemoteReward:
 
     @torch.no_grad()
     def __call__(self, images, prompts, metadatas, only_strict=True) -> dict[str, list]:
-        response = self.post({"images": to_uint8(images), "prompts": list(prompts)})
-        return {self.metrics[0]: response["scores"]}
+        scores = []
+        size = self.batch_size or len(images)
+        for start in range(0, len(images), size):
+            batch = slice(start, start + size)
+            response = self.post({
+                "images": to_uint8(images[batch]), "prompts": list(prompts[batch]),
+            })
+            scores += response["scores"]
+        return {self.metrics[0]: scores}

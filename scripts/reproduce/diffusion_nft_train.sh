@@ -10,7 +10,7 @@ set -e
 # --------------------------------------------------------------------------------
 # Prepare the experiment.
 # --------------------------------------------------------------------------------
-EXP=${EXP:-pickscore}  # geneval, ocr, pickscore
+EXP=${EXP:-pickscore}  # geneval, ocr, pickscore, multi_reward
 echo "🚀 diffusion_nft training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
@@ -53,37 +53,60 @@ prepare() {
     echo "💾 Prepared $1"
   fi
 }
+prepare_geneval() {
+  prepare mask2former
+  prepare timm/vit_large_patch14_clip_224.openai
+  prepare yifan123/reward-server
+  prepare open-mmlab/mmdetection
+}
+prepare_pickscore() {
+  prepare yuvalkirstain/PickScore_v1
+  prepare laion/CLIP-ViT-H-14-laion2B-s32B-b79K
+}
 DATA=${EXP}
 REWARD=${EXP}
 MODEL=sd3_5_medium
 ALGORITHM=diffusion_nft
+SERVERS=()
 prepare stabilityai/stable-diffusion-3.5-medium
 prepare yifan123/flow_grpo
 case "$EXP" in
   pickscore)
-    prepare yuvalkirstain/PickScore_v1
-    prepare laion/CLIP-ViT-H-14-laion2B-s32B-b79K
+    prepare_pickscore
     prepare NVlabs/DiffusionNFT  # DrawBench test prompts
     ;;
   ocr)
     prepare paddleocr
+    SERVERS=(ocr)
     ;;
   geneval)
-    prepare mask2former
-    prepare timm/vit_large_patch14_clip_224.openai
-    prepare yifan123/reward-server
-    prepare open-mmlab/mmdetection
+    prepare_geneval
+    SERVERS=(geneval)
+    ;;
+  multi_reward)
+    # GenEval, PickScore, ClipScore, and HPSv2.1 on the GenEval prompts.
+    prepare_geneval
+    prepare_pickscore
+    prepare openai/clip-vit-large-patch14
+    prepare xswu/HPSv2
+    DATA=geneval
+    SERVERS=(geneval hpsv2)
     ;;
   *) echo "❌ Unknown EXP: ${EXP}"; exit 1 ;;
 esac
 
 # --------------------------------------------------------------------------------
-# Start the reward server of this node, and stop it when the training ends.
+# Start the reward servers of this node, and stop them when the training ends.
 # --------------------------------------------------------------------------------
-if [[ "$REWARD" == "ocr" || "$REWARD" == "geneval" ]]; then
-  bash scripts/tools/reward_server.sh ${REWARD}
-  trap "bash scripts/tools/reward_server.sh ${REWARD} stop" EXIT
-fi
+stop_servers() {
+  for server in "${SERVERS[@]}"; do
+    bash scripts/tools/reward_server.sh "$server" stop
+  done
+}
+trap stop_servers EXIT
+for server in "${SERVERS[@]}"; do
+  bash scripts/tools/reward_server.sh "$server"
+done
 
 # --------------------------------------------------------------------------------
 # Start the training.

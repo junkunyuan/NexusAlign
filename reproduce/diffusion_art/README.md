@@ -29,9 +29,17 @@
 | OCR (ours) | 0.02 | **0.98** | 17.27 | 18.85 | 0.192 | 0.142 | 3.74 | -1.73 | 1.18 | 1.54 | -8.80 | [run](ocr-20261104_004111) |
 | PickScore (ours) | 0.44 | 0.54 | **23.38** | 23.57 | 0.275 | 0.312 | 6.35 | 1.29 | 3.16 | 3.45 | 9.81 | [run](pickscore-20261104_021028) |
 
-- **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench.
+**Multi-reward of the official code:** SD3.5-M trained on GenEval, PickScore, ClipScore, and HPSv2.1, on the GenEval prompts.
+
+| Model | Multi† | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| SD3.5-M w/o CFG (ours) | 2.046 | 0.24 | 0.13 | 19.82 | 20.54 | 0.239 | 0.206 | 5.17 | -0.58 | 2.02 | 3.36 | -1.06 | [run](multi_reward-20261116_025704) |
+| Multi-reward (ours) | **2.887** | 0.64 | 0.40 | 19.88 | 21.73 | 0.276 | 0.286 | 4.97 | 0.83 | 2.56 | 2.00 | 5.55 | [run](multi_reward-20261116_025704) |
+
+- **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench. Multi† is GenEval + PickScore / 26 + ClipScore logit / 30 + HPSv2.1 on the GenEval test prompts, as the official code reports it.
+- **Checkpoints:** each row uses the final epoch 500, and the base rows use epoch 0.
 - **Bold:** in-domain results.
-- **Paper:** Fig. 5 gives only the training rewards. Our training rewards match these curves to our observation.
+- **Paper:** Fig. 5 gives only the training rewards of the single tasks, and the official code gives no multi-reward results. Our training rewards match these curves to our observation.
 
 ## Command
 

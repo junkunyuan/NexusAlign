@@ -1,6 +1,13 @@
 # @package _global_
-# Train TwinTilt on PickScore, HPSv2.1, ClipScore, and GenEval with SD3.5-M, CFG-free.
-# The args follow the multi_reward_geneval_clip30 task of the TwinTilt code, on the
-# GenEval prompts.
+# Train TwinTilt on PickScore, HPSv2.1, ClipScore, and GenEval with SD3.5-M, CFG-free,
+# on the GenEval prompts.
+# The args follow the multi_reward_geneval_clip30 task of the TwinTilt code, TWINTILT.md
+# and its configs.
 # Launch with: EXP=multi_reward bash scripts/reproduce/twintilt_train.sh
 exp_info: twintilt_multi_reward  # experiment name
+
+algorithm:
+  # This task stays CFG-free: the multi-reward already scores the general metrics, so
+  # the other tasks pull to the base model with CFG, but this one keeps the TwinTilt KL.
+  kl_weight: 0.004  # coefficient of the velocity KL to the base model
+  kl_cfg_scale: 1.0  # CFG scale of the base model in this KL; 1 gives no CFG

@@ -32,6 +32,9 @@ class DistributedGroupSampler(Sampler):
     group_size times, shuffles them, and gives each rank its slice of batch_size.
     The seed of batch i in epoch e is seed + e * num_batches + i, so all ranks agree.
 
+    If whole_groups is True, the batch keeps the group order, so each rank gets whole
+    groups. Then batch_size must be a multiple of group_size.
+
     If num_windows > 1, each window gets group_size / num_windows copies of every
     group, as follows:
     - If num_windows divides num_batches, the batches make num_windows equal windows.
@@ -49,6 +52,7 @@ class DistributedGroupSampler(Sampler):
         num_batches: int,
         seed: int = 0,
         num_windows: int = 1,
+        whole_groups: bool = False,
     ) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
@@ -56,6 +60,7 @@ class DistributedGroupSampler(Sampler):
         self.num_batches = num_batches
         self.seed = seed
         self.num_windows = num_windows
+        self.whole_groups = whole_groups
         self.rank = dist.get_rank()
         self.world_size = dist.get_world_size()
         self.split_batches = num_batches % num_windows != 0  # windows inside each batch
@@ -64,6 +69,10 @@ class DistributedGroupSampler(Sampler):
         assert total % group_size == 0 and group_size % num_windows == 0, (
             f"❌ group_size {group_size} must divide the samples of a prompt draw "
             f"{total}, and num_windows {num_windows} must divide group_size"
+        )
+        assert not (whole_groups and batch_size % group_size), (
+            f"❌ whole_groups needs batch_size {batch_size} to be a multiple of "
+            f"group_size {group_size}"
         )
         assert batch_size >= num_windows, (
             f"❌ batch_size {batch_size} must be at least num_windows {num_windows}"
@@ -95,8 +104,12 @@ class DistributedGroupSampler(Sampler):
                 repeated = [idx for idx in indices.tolist() for _ in range(copies)]
 
                 # Shuffle the samples into a global list, the same on all ranks.
-                order = torch.randperm(len(repeated), generator=g).tolist()
-                shuffled = [repeated[k] for k in order]
+                # Whole groups keep the group order instead.
+                if self.whole_groups:
+                    shuffled = repeated
+                else:
+                    order = torch.randperm(len(repeated), generator=g).tolist()
+                    shuffled = [repeated[k] for k in order]
 
                 # Keep the samples of this rank.
                 start = self.rank * self.batch_size  # this rank's slice
