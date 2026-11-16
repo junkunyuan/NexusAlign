@@ -75,7 +75,10 @@ class BaseTrainer(ABC):
 
         # Other training state.
         self.max_epochs = self.epochs
-        self.steps_per_epoch = max(len(self.train_dataloader) // self.grad_accu_step, 1)
+        # A subclass sets steps_per_epoch if its optimizer steps split the batches.
+        steps = getattr(self, "steps_per_epoch", None)
+        steps = steps or max(len(self.train_dataloader) // self.grad_accu_step, 1)
+        self.steps_per_epoch = steps
         self.max_total_steps = self.max_epochs * self.steps_per_epoch
         self.epoch = 0
         self.step = 0

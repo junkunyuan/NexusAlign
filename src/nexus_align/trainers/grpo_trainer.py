@@ -48,7 +48,8 @@ class GRPOTrainer(BaseTrainer):
       updates_per_epoch steps.
     - If ema_every_batch is True, the trainer calls ema_step after every batch.
     - If split_groups is True, each optimizer step of an epoch gets an equal part of
-      every prompt group. Then set shuffle to False, to keep these parts.
+      every prompt group. Then set shuffle to False, to keep these parts. If the steps
+      do not divide the batches, each step takes its part of every batch.
 
     The algorithm provides:
     - group_size: the responses per prompt.
@@ -81,11 +82,15 @@ class GRPOTrainer(BaseTrainer):
         samples_per_epoch = cfg_trainer["groups_per_epoch"] * algorithm.group_size
         num_batches = samples_per_epoch // samples_per_round
         updates = cfg_trainer["updates_per_epoch"]
-        if samples_per_epoch % samples_per_round or num_batches % updates:
+        # With split_groups, the optimizer steps can also split each batch.
+        split_batches = self.split_groups and num_batches % updates != 0
+        if samples_per_epoch % samples_per_round or (
+            num_batches % updates and not self.split_groups
+        ):
             raise ValueError(
                 f"❌ groups_per_epoch * group_size ({samples_per_epoch}) must split into "
                 f"batches of world_size * sample_batch_size ({samples_per_round}), and "
-                f"their number into updates_per_epoch ({updates})"
+                f"their number into updates_per_epoch ({updates}) without split_groups"
             )
         if self.split_groups and cfg_trainer["shuffle"]:
             raise ValueError("❌ split_groups needs shuffle: false, to keep the parts")
@@ -94,7 +99,10 @@ class GRPOTrainer(BaseTrainer):
                 "❌ GRPO saves only end-of-epoch checkpoints; use save_ckpt_every_n_epochs"
             )
         cfg_trainer["num_batches_per_epoch"] = num_batches
-        cfg_trainer["grad_accu_step"] = num_batches // updates
+        # With split batches, each optimizer step takes its part of every batch.
+        accu = num_batches if split_batches else num_batches // updates
+        cfg_trainer["grad_accu_step"] = accu
+        cfg_trainer["steps_per_epoch"] = updates
         self.group_size = algorithm.group_size
         super().__init__(
             cfg_trainer=cfg_trainer,
@@ -229,7 +237,7 @@ class GRPOTrainer(BaseTrainer):
 
         # 3. Compute the advantages of this rank.
         reward = rewards[self.reward.name]
-        advantages = self.algorithm.compute_advantages(gathered_prompts, reward)  # customed
+        advantages = self.compute_advantages(gathered_prompts, rewards)
         advantages = torch.as_tensor(advantages).reshape(dist.get_world_size(), -1)
         samples["advantages"] = advantages[dist.get_rank()].to(self.model.device)
 
@@ -245,6 +253,11 @@ class GRPOTrainer(BaseTrainer):
             "advantages_abs_mean": samples["advantages"].abs().mean().item(),
         })
         return samples, metrics
+
+    def compute_advantages(self, prompts: list[str], rewards: dict) -> np.ndarray:
+        """Get one advantage per response from the reward metrics of all ranks."""
+        reward = rewards[self.reward.name]
+        return self.algorithm.compute_advantages(prompts, reward)  # customed
 
     def filter_samples(self, samples: dict) -> dict:
         """Drop zero-advantage samples, but keep a multiple of num_batches_per_epoch."""
@@ -262,19 +275,24 @@ class GRPOTrainer(BaseTrainer):
     # ----------------------------------------
     # Training loop.
     # ----------------------------------------
-    def train_epoch(self, samples: dict, rollout_metrics: dict) -> None:
-        """Train on the sampled epoch: shuffle, rebatch, and run each micro step."""
-        samples = self.filter_samples(samples)
+    def make_batches(self, samples: dict) -> list[dict]:
+        """Shuffle the samples if shuffle, and cut them into equal training batches."""
         total_batch_size = samples["advantages"].shape[0]
         if self.shuffle:
             perm = torch.randperm(total_batch_size, device=self.model.device)
             samples = {k: v[perm] for k, v in samples.items()}
         batch_size = total_batch_size // self.num_batches_per_epoch
-        batches = [
+        return [
             {k: v[i * batch_size: (i + 1) * batch_size] for k, v in samples.items()}
             for i in range(self.num_batches_per_epoch)
         ]
-        rollout_metrics["actual_batch_size"] = batch_size
+
+    def train_epoch(self, samples: dict, rollout_metrics: dict) -> None:
+        """Train on the sampled epoch: shuffle, rebatch, and run each micro step."""
+        samples = self.filter_samples(samples)
+        batches = self.make_batches(samples)
+        sizes = [batch["advantages"].shape[0] for batch in batches]
+        rollout_metrics["actual_batch_size"] = sum(sizes) / len(sizes)
 
         self.train_mode()
         num_steps = self.algorithm.num_micro_steps

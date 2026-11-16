@@ -1,0 +1,93 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.13049188341699292
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_100-step_0-total_step_100",
+    "ocr": 0.45484584508765086
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_200-step_0-total_step_200",
+    "ocr": 0.5107496421844645
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_300-step_0-total_step_300",
+    "ocr": 0.5826061689436343
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_400-step_0-total_step_400",
+    "ocr": 0.5660461924348033
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_500-step_0-total_step_500",
+    "ocr": 0.606661505200126
+  },
+  {
+    "epoch": 600,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_600-step_0-total_step_600",
+    "ocr": 0.6184260330204717
+  },
+  {
+    "epoch": 700,
+    "step": 0,
+    "total_step": 700,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_700-step_0-total_step_700",
+    "ocr": 0.5658853254489623
+  },
+  {
+    "epoch": 800,
+    "step": 0,
+    "total_step": 800,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_800-step_0-total_step_800",
+    "ocr": 0.570399289027927
+  },
+  {
+    "epoch": 900,
+    "step": 0,
+    "total_step": 900,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_900-step_0-total_step_900",
+    "ocr": 0.6347096213524835
+  },
+  {
+    "epoch": 1000,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_1000-step_0-total_step_1000",
+    "ocr": 0.632223519576198
+  },
+  {
+    "epoch": 1100,
+    "step": 0,
+    "total_step": 1100,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_1100-step_0-total_step_1100",
+    "ocr": 0.6378936699404433
+  },
+  {
+    "epoch": 1200,
+    "step": 0,
+    "total_step": 1200,
+    "ckpt": "logs/fdfo_pickscore_256pairs-20261115_220041/checkpoints/epoch_1200-step_0-total_step_1200",
+    "ocr": 0.6322535280539121
+  }
+]

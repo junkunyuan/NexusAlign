@@ -1,0 +1,9 @@
+# @package _global_
+# Reproduce DiffusionART on GenEval, PickScore, ClipScore, and HPSv2.1 with SD3.5-M,
+# CFG-free, on the GenEval prompts.
+# The args follow configs/paper/image/sd3_multireward_art.yaml of the official code.
+# Launch with: EXP=multi_reward bash scripts/reproduce/diffusion_art_train.sh
+exp_info: diffusion_art_multi_reward_reproduce  # experiment name
+
+model:
+  ema_enabled: false  # if true, use an EMA model; it tracks only the LoRA weights

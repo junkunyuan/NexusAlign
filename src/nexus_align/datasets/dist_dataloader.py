@@ -32,9 +32,13 @@ class DistributedGroupSampler(Sampler):
     group_size times, shuffles them, and gives each rank its slice of batch_size.
     The seed of batch i in epoch e is seed + e * num_batches + i, so all ranks agree.
 
-    If num_windows > 1, the batches make num_windows equal windows. Batch i of each
-    window holds group_size / num_windows copies of the same prompts, so each window
-    gets an equal part of every group.
+    If num_windows > 1, each window gets group_size / num_windows copies of every
+    group, as follows:
+    - If num_windows divides num_batches, the batches make num_windows equal windows.
+      Batch i of each window holds the copies of the same prompts.
+    - Otherwise, every batch holds whole groups, and the windows alternate along its
+      global list. Then each rank gets batch_size / num_windows samples of each window,
+      rounded up or down, and window_ids gives the window of each of its samples.
     """
 
     def __init__(
@@ -54,13 +58,15 @@ class DistributedGroupSampler(Sampler):
         self.num_windows = num_windows
         self.rank = dist.get_rank()
         self.world_size = dist.get_world_size()
-        total = self.world_size * batch_size * num_windows
+        self.split_batches = num_batches % num_windows != 0  # windows inside each batch
+        total = self.world_size * batch_size
+        total = total if self.split_batches else total * num_windows
         assert total % group_size == 0 and group_size % num_windows == 0, (
-            f"❌ group_size {group_size} must divide world_size * batch_size * "
-            f"num_windows {total}, and num_windows {num_windows} must divide group_size"
+            f"❌ group_size {group_size} must divide the samples of a prompt draw "
+            f"{total}, and num_windows {num_windows} must divide group_size"
         )
-        assert num_batches % num_windows == 0, (
-            f"❌ num_windows {num_windows} must divide num_batches {num_batches}"
+        assert batch_size >= num_windows, (
+            f"❌ batch_size {batch_size} must be at least num_windows {num_windows}"
         )
         self.num_groups = total // group_size
         self.epoch = 0
@@ -69,6 +75,9 @@ class DistributedGroupSampler(Sampler):
         return self.num_batches
 
     def __iter__(self):
+        if self.split_batches:
+            yield from self.iter_split_batches()
+            return
         per_window = self.num_batches // self.num_windows
         copies = self.group_size // self.num_windows
         batches = [None] * self.num_batches
@@ -93,6 +102,31 @@ class DistributedGroupSampler(Sampler):
                 start = self.rank * self.batch_size  # this rank's slice
                 batches[w * per_window + i] = shuffled[start: start + self.batch_size]
         yield from batches  # batch_size prompt indices per batch
+
+    def iter_split_batches(self):
+        """Yield batches of whole groups, in which the windows alternate."""
+        copies = self.group_size // self.num_windows
+        for i in range(self.num_batches):
+            g = torch.Generator()
+            g.manual_seed(self.seed + self.epoch * self.num_batches + i)
+            indices = torch.randperm(len(self.dataset), generator=g)[:self.num_groups]
+
+            # Shuffle the copies of each window, then alternate the windows, for
+            # example ["dog", "sun", "sun", "dog"] for windows 0, 1, 0, 1.
+            windows = []
+            for _ in range(self.num_windows):
+                repeated = [idx for idx in indices.tolist() for _ in range(copies)]
+                order = torch.randperm(len(repeated), generator=g).tolist()
+                windows.append([repeated[k] for k in order])
+            shuffled = [idx for column in zip(*windows) for idx in column]
+
+            start = self.rank * self.batch_size  # this rank's slice
+            yield shuffled[start: start + self.batch_size]
+
+    def window_ids(self) -> torch.Tensor:
+        """Return the window of each sample of this rank in a batch of split windows."""
+        start = self.rank * self.batch_size
+        return torch.arange(start, start + self.batch_size) % self.num_windows
 
     def set_epoch(self, epoch: int) -> None:
         self.epoch = epoch

@@ -12,7 +12,9 @@ References:
               sigma weight, and the trust-region mask
             - src/visual_rl/training/rollout.py: collect_rollout, for the Euler ODE
               rollouts and their cached velocities
-            - src/visual_rl/backends/sd3.py: evaluate, for the evaluation sampler
+            - src/visual_rl/backends/sd3.py: evaluate, for the evaluation sampler;
+              _art_guidance_scores, for the training reward of a multi-reward
+            - src/visual_rl/training/multi_reward.py: combined_group_advantages
 """
 
 import hashlib
@@ -48,6 +50,7 @@ class DiffusionART(BaseAlgorithm):
 
         # Guidance configs.
         self.group_size = cfg_algorithm.get("group_size", 24)  # images per prompt, K
+        self.multi_reward_eps = cfg_algorithm.get("multi_reward_eps", 1.0e-4)  # std floor of the group z-scores of a multi-reward
 
         # Trust-region mask configs.
         self.mask_noise_level = cfg_algorithm.get("mask_noise_level", 0.8)  # noise level nu of the reference SDE; see paper Appendix C.2
@@ -184,6 +187,25 @@ class DiffusionART(BaseAlgorithm):
             "num_steps": num_steps,
         })
         return self.pipeline.decode(out["latents"][:, -1])
+
+    def combine_rewards(
+        self, prompts: list[str], scores: dict, weights: dict
+    ) -> np.ndarray:
+        """
+        Combine the components of a multi-reward into one training reward.
+
+        Each component gets its group z-scores, with the eps after the population std.
+        The training reward is the mean of these z-scores with the given weights.
+        """
+        prompts = np.array(prompts)
+        total = np.zeros(len(prompts))
+        for key, weight in weights.items():
+            rewards = np.asarray(scores[key], dtype=np.float64)
+            for prompt in np.unique(prompts):
+                group = rewards[prompts == prompt]
+                zscores = (group - group.mean()) / (group.std() + self.multi_reward_eps)
+                total[prompts == prompt] += weight * zscores
+        return total / sum(weights.values())
 
     def compute_advantages(self, prompts: list[str], rewards: np.ndarray) -> np.ndarray:
         """Subtract each prompt group's mean. A group with equal rewards gets zeros."""

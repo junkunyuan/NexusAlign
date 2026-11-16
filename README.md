@@ -78,6 +78,20 @@ column compares one main result of our reproduction with the paper.
     </td>
   </tr>
   <tr>
+    <td nowrap><a href="reproduce/fdfo">FDFO</a></td>
+    <td>
+      <i>Finite Difference Flow Optimization for RL Post-Training of Text-to-Image
+      Models</i>
+      (<a href="https://arxiv.org/abs/2603.12893">arXiv 2026</a>)
+    </td>
+    <td nowrap>2026-03-13</td>
+    <td nowrap>
+      GenEval: 0.64 / -<br>
+      OCR: 0.91 / -<br>
+      PickScore: 22.52 / -
+    </td>
+  </tr>
+  <tr>
     <td nowrap><a href="reproduce/awm">AWM</a></td>
     <td>
       <i>Advantage Weighted Matching: Aligning RL with Pretraining in Diffusion

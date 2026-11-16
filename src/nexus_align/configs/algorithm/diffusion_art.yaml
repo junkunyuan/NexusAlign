@@ -15,6 +15,7 @@ autocast_dtype: fp16  # transformer compute dtype
 # Guidance configs.
 # --------------------------------------------------------------------------------
 group_size: 24  # images per prompt, K
+multi_reward_eps: 1.0e-4  # std floor of the group z-scores of a multi-reward
 
 # --------------------------------------------------------------------------------
 # Trust-region mask configs.

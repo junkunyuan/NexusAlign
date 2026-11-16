@@ -1,0 +1,93 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 19.831953920889646
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_100-step_0-total_step_100",
+    "pickscore": 19.352193001657724
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_200-step_0-total_step_200",
+    "pickscore": 18.761877148412168
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_300-step_0-total_step_300",
+    "pickscore": 18.181482727173716
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_400-step_0-total_step_400",
+    "pickscore": 18.130215746816248
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_500-step_0-total_step_500",
+    "pickscore": 18.0164412423037
+  },
+  {
+    "epoch": 600,
+    "step": 0,
+    "total_step": 600,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_600-step_0-total_step_600",
+    "pickscore": 17.842865428887308
+  },
+  {
+    "epoch": 700,
+    "step": 0,
+    "total_step": 700,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_700-step_0-total_step_700",
+    "pickscore": 17.91049000946805
+  },
+  {
+    "epoch": 800,
+    "step": 0,
+    "total_step": 800,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_800-step_0-total_step_800",
+    "pickscore": 17.742722549010068
+  },
+  {
+    "epoch": 900,
+    "step": 0,
+    "total_step": 900,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_900-step_0-total_step_900",
+    "pickscore": 17.634935871697962
+  },
+  {
+    "epoch": 1000,
+    "step": 0,
+    "total_step": 1000,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_1000-step_0-total_step_1000",
+    "pickscore": 17.46332915779203
+  },
+  {
+    "epoch": 1100,
+    "step": 0,
+    "total_step": 1100,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_1100-step_0-total_step_1100",
+    "pickscore": 17.50813945196569
+  },
+  {
+    "epoch": 1200,
+    "step": 0,
+    "total_step": 1200,
+    "ckpt": "logs/fdfo_ocr_256pairs-20261115_221948/checkpoints/epoch_1200-step_0-total_step_1200",
+    "pickscore": 17.362883687019348
+  }
+]

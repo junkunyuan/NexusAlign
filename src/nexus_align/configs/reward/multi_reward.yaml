@@ -1,0 +1,31 @@
+defaults:
+  - /reward@rewards.geneval: geneval
+  - /reward@rewards.pickscore: pickscore
+  - /reward@rewards.clipscore: clipscore
+  - /reward@rewards.hpsv2: hpsv2
+  - _self_
+
+name: multi_reward  # reward name
+
+# --------------------------------------------------------------------------------
+# Calibration configs. They follow configs/paper/image/sd3_multireward_art.yaml and
+# configs/examples/sd3_multireward.yaml of DiffusionART.
+# --------------------------------------------------------------------------------
+divisors:
+  geneval: 1  # GenEval divisor
+  pickscore: 26  # PickScore divisor
+  # Our ClipScore is the CLIP logit / 100, and DiffusionART uses the CLIP logit / 30.
+  clipscore: 0.3  # ClipScore divisor
+  hpsv2: 1  # HPSv2.1 divisor
+weights:
+  geneval: 0.25  # GenEval training weight
+  pickscore: 0.25  # PickScore training weight
+  clipscore: 0.25  # ClipScore training weight
+  hpsv2: 0.25  # HPSv2.1 training weight
+
+# --------------------------------------------------------------------------------
+# Component configs.
+# --------------------------------------------------------------------------------
+rewards:
+  pickscore:
+    normalize: false  # the divisor applies 1/26
