@@ -25,8 +25,9 @@ case "$NAME" in
   imagereward) PORT=18091 ;;
   hpsv3) PORT=18092 ;;
   unifiedreward) PORT=17140 ;;
+  qwen_judge) PORT=18093 ;;
   *) echo "❌ Unknown reward server: <$NAME>; use ocr, geneval, deqa, hpsv2," \
-       "imagereward, hpsv3, or unifiedreward"; exit 1 ;;
+       "imagereward, hpsv3, qwen_judge, or unifiedreward"; exit 1 ;;
 esac
 
 PROJECT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -110,6 +111,12 @@ else
       $UV_PIP image-reward==1.5 $NFT_DEPS \
         "clip @ git+https://github.com/openai/CLIP.git@d05afc436d78f1c48dc0dbf8e5980a9d471f35f6"
     fi
+  elif [[ "$NAME" == "qwen_judge" ]]; then
+    # The judge needs a transformers that knows its architecture, and accelerate for
+    # the device map that spreads it over the GPUs of this node.
+    $PT_PIP ${PT}/cu126 torch==2.11.0+cu126 torchvision==0.26.0+cu126
+    $UV_PIP transformers==5.19.0 accelerate==1.11.0 'huggingface-hub>=1.0' \
+      sentencepiece protobuf pillow flask==3.1.3 gunicorn==23.0.0
   elif [[ "$NAME" == "deqa" ]]; then
     # torch follows reward-server. The rest follows DeQA-Score's pyproject.toml.
     $PT_PIP ${PT}/cu121 torch==2.1.2 torchvision==0.16.2
@@ -169,6 +176,9 @@ elif [[ "$NAME" == "hpsv3" ]]; then
   APP_DIR="$SERVERS"
   APP="hpsv3_server:create_app('${DATA}/MizzenAI/HPSv3/HPSv3.safetensors', \
 '${DATA}/Qwen/Qwen2-VL-7B-Instruct')"
+elif [[ "$NAME" == "qwen_judge" ]]; then
+  APP_DIR="$SERVERS"
+  APP="qwen_judge_server:create_app('${DATA}/Qwen/Qwen3.8-27B')"
 else
   APP_DIR="${DATA}/yifan123/reward-server"
   CONFIG="${DATA}/open-mmlab/mmdetection/configs/mask2former/mask2former_swin-s-p4-w7-224_lsj_8x2_50e_coco.py"
@@ -195,9 +205,16 @@ else
   if [[ "$NAME" == "deqa" || "$NAME" == "hpsv3" ]]; then
     EXTRA_ARGS+=(--timeout 900)  # a worker loads its 7B model before it answers
   fi
+  WORKERS=${NUM_GPUS}
+  if [[ "$NAME" == "qwen_judge" ]]; then
+    # The judge has 27.8 B parameters, so one worker holds it across the GPUs of this
+    # node, instead of one copy per GPU, and every rank of the node shares it.
+    WORKERS=1
+    EXTRA_ARGS+=(--timeout 1800 --graceful-timeout 60)
+  fi
   # -u PYTHONPATH keeps the caller's modules out of this venv, for example an
   # overlay that a model needs. The servers import only their own directory.
-  REWARD_SERVER_PORT=$PORT REWARD_SERVER_WORKERS=${NUM_GPUS} nohup env -u PYTHONPATH \
+  REWARD_SERVER_PORT=$PORT REWARD_SERVER_WORKERS=${WORKERS} nohup env -u PYTHONPATH \
     "${VENV}/bin/gunicorn" -c "${SERVERS}/gunicorn.conf.py" "${EXTRA_ARGS[@]}" \
     --chdir "$APP_DIR" --pythonpath "$SERVERS" "$APP" > "$LOG" 2>&1 < /dev/null &
 fi

@@ -111,6 +111,7 @@ for reward in $REWARDS; do
     ocr) prepare paddleocr ;;
     geneval) prepare_geneval ;;
     pickscore | twintilt_pickscore) prepare_pickscore ;;
+    qwen_judge) prepare Qwen/Qwen3.8-27B ;;
     twintilt_multi)
       prepare_pickscore
       prepare xswu/HPSv2
@@ -139,8 +140,8 @@ for reward in $REWARDS; do
       ;;
     *) echo "❌ Unknown reward: ${reward}"; exit 1 ;;
   esac
-  if [[ " ocr geneval deqa hpsv2 imagereward hpsv3 unifiedreward " == *" ${reward} "* ]]
-  then
+  if [[ " ocr geneval deqa hpsv2 imagereward hpsv3 qwen_judge unifiedreward " \
+      == *" ${reward} "* ]]; then
     SERVERS+=("$reward")
   fi
   EVAL_ARGS+=("+reward@rewards.${reward}=${reward}")

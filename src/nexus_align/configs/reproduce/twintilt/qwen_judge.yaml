@@ -1,0 +1,18 @@
+# @package _global_
+# Train TwinTilt on the holistic score of the Qwen judge with SD3.5-M, CFG-free, on
+# the PickScore prompts.
+# The args follow the Qwen judge task of the TwinTilt code, which trains 50
+# epochs and saves every 5 of them.
+# Launch with: EXP=qwen_judge bash scripts/reproduce/twintilt_train.sh
+exp_info: twintilt_qwen_judge  # experiment name
+
+algorithm:
+  # The judge rates the whole image, so this task keeps the CFG-free base KL of the
+  # TwinTilt code, as the multi-reward task does.
+  kl_weight: 0.004  # coefficient of the velocity KL to the base model
+  kl_cfg_scale: 1.0  # CFG scale of the base model in this KL; 1 gives no CFG
+
+trainer:
+  epochs: 50  # training epochs; 50 steps, as the Qwen branch trains
+  # The run saves 11 checkpoints, at epochs 0, 5, ..., 50.
+  save_ckpt_every_n_epochs: 5  # save every N epochs, plus the initial weights at epoch 0

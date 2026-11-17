@@ -1,0 +1,5 @@
+name: qwen_judge  # reward name
+# The judge server of this node; see scripts/tools/reward_server.sh.
+url: http://127.0.0.1:18093  # judge server URL
+timeout: 600  # seconds per request; the judge reads every image of a batch
+max_retries: 10  # retries on server errors before the job fails

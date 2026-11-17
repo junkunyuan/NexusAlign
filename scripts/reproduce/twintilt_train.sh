@@ -12,7 +12,7 @@ set -e
 # --------------------------------------------------------------------------------
 # Prepare the experiment.
 # --------------------------------------------------------------------------------
-EXP=${EXP:-pickscore}  # pickscore, geneval, ocr, multi_reward
+EXP=${EXP:-pickscore}  # pickscore, geneval, ocr, multi_reward, qwen_judge
 echo "🚀 twintilt training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
@@ -91,6 +91,12 @@ case "$EXP" in
     DATA=geneval
     REWARD=twintilt_multi
     SERVERS=(geneval hpsv2)
+    ;;
+  qwen_judge)
+    # One judge per node, across its GPUs: 27.8 B parameters do not fit per rank.
+    prepare Qwen/Qwen3.8-27B
+    DATA=pickscore
+    SERVERS=(qwen_judge)
     ;;
   *) echo "❌ Unknown EXP: ${EXP}"; exit 1 ;;
 esac
