@@ -16,6 +16,7 @@
 - **Prompt sampling:** Each epoch draws its prompts at random, as our DiffusionNFT and Flow-GRPO runs do. The official code goes through the shuffled prompts without replacement.
 - **GPUs:** We train on 64 or 128 GPUs instead of 8, with the same 1152 images per rollout (1024 for OCR).
 - **Multi-reward:** HPSv2.1 resizes the pixels as float tensors, as DiffusionNFT does, not as PIL images with the transform of the HPSv2 package.
+- **Qwen judge:** The judge task trains SD3.5-M on the PickScore prompts with the rollout of our PickScore run, and the judge scores the whole image. The TwinTilt code has this judge task, and we train SD3.5-M for 50 epochs, which give the 100 updates of our other SD3.5-M runs, so that the judge compares with them.
 - **MiniMax-H3-Image:** The HPSv3 task trains the H3-Image DiT on its native six-step PDD sampler at 768 pixels, with 128 groups of 24 images for 50 epochs, which give 100 updates. FSDP shards the 33B model and the text encoder over the GPUs of each node, and the rollout and the training forward passes take four members at a time. A packed sequence holds one prompt, so one rank rolls out one whole group, each of the two updates trains one half of it, and `groups_per_epoch` must be a multiple of the GPU count.
 - **Infrastructure:** `torch.compile`, fp16 frozen weights, and FSDP speed up training and change only the rounding. The copies of a group spread over the ranks, so the guidance sums over all ranks. On 128 GPUs, each rank trains 4 or 5 images of each update, with a loss scale that keeps the mean over all images of the update. The code for logging, checkpointing, and the reward servers is our own.
 
@@ -56,8 +57,8 @@
 
 Train SD3.5-M on one reward with its specific training data, on 8, 16, 32, 64, or 128 GPUs:
 ```bash
-# EXP is geneval, ocr, pickscore, multi_reward (on the GenEval prompts), or
-# h3_hpsv3 (MiniMax-H3-Image on 128 GPUs).
+# EXP is geneval, ocr, pickscore, multi_reward (on the GenEval prompts), qwen_judge,
+# or h3_hpsv3 (MiniMax-H3-Image on 128 GPUs).
 EXP=geneval bash scripts/reproduce/diffusion_art_train.sh
 ```
 
@@ -69,6 +70,10 @@ for TASK in geneval pickscore ocr; do
   EXP_NAME=<log_dir_name> DATA=$TASK REWARDS=$TASK \
     bash scripts/reproduce/diffusion_art_eval.sh
 done
+
+# The Qwen judge, on the PickScore test prompts.
+EXP_NAME=<log_dir_name> DATA=pickscore REWARDS=qwen_judge \
+  bash scripts/reproduce/diffusion_art_eval.sh
 
 # The other metrics on DrawBench, with two reward models per evaluation to prevent OOM.
 for REWARDS in "unifiedreward aesthetic" "deqa imagereward" "hpsv3 pickscore" \

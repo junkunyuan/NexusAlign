@@ -1,0 +1,18 @@
+# @package _global_
+# Train AWM on the holistic score of the Qwen judge with SD3.5-M, CFG-free, on the
+# PickScore prompts.
+# The rollout follows our PickScore run, and the run trains 100 epochs, which is twice
+# the Qwen judge run of TwinTilt.
+# Launch with: EXP=qwen_judge bash scripts/reproduce/awm_train.sh
+exp_info: awm_qwen_judge  # experiment name
+
+algorithm:
+  noise_level: 0.0  # SA-Solver noise tau for t in [0.3, 0.9]; 0 gives the ODE
+  kl_beta: 1.0e-4  # coefficient of the velocity KL to the base model
+
+trainer:
+  # 128 GPUs cannot split the official 24 prompts into whole groups per round.
+  groups_per_epoch: 32  # prompts sampled per epoch
+  epochs: 100  # training epochs; 100 steps
+  # The run saves 11 checkpoints, at epochs 0, 10, ..., 100.
+  save_ckpt_every_n_epochs: 10  # save every N epochs, plus the initial weights at epoch 0

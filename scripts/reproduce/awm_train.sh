@@ -10,7 +10,7 @@ set -e
 # --------------------------------------------------------------------------------
 # Prepare the experiment.
 # --------------------------------------------------------------------------------
-EXP=${EXP:-pickscore}  # geneval, ocr, pickscore, multi_reward, h3_hpsv3
+EXP=${EXP:-pickscore}  # geneval, ocr, pickscore, multi_reward, qwen_judge, h3_hpsv3
 echo "🚀 awm training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
@@ -89,6 +89,12 @@ case "$EXP" in
     prepare xswu/HPSv2
     DATA=geneval
     SERVERS=(geneval hpsv2)
+    ;;
+  qwen_judge)
+    # One judge per node, across its GPUs: 27.8 B parameters do not fit per rank.
+    prepare Qwen/Qwen3.8-27B
+    DATA=pickscore
+    SERVERS=(qwen_judge)
     ;;
   h3_hpsv3)
     prepare MiniMaxAI/MiniMax-H3-Image

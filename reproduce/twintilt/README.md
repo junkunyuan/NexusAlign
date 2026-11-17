@@ -15,12 +15,13 @@
 - **Training length:** OCR trains 170 epochs, GenEval 900, and PickScore 600, instead of 500. The multi-reward keeps the 500 of the code, and its scores still rise there. The task scores of our longer OCR and GenEval runs are near their plateau at these steps. PickScore still improves after step 500, but step 600 of our 1500-step run already beats the baselines on 8 of the 11 metrics.
 - **MiniMax-H3-Image:** The HPSv3 task trains the H3-Image DiT on its native six-step PDD sampler at 768 pixels, with 48 groups of 24 images for 100 steps. FSDP shards the 33B model, its EMA, and the text encoder over the GPUs of each node, and the rollout and the training forward passes take four members at a time. HPSv3 scores four images per request, because it needs tens of GB for a group of 768-pixel images.
 - **Base KL:** For OCR, GenEval, and PickScore, the KL to the base model uses CFG 4.5, as in AWM, and the weight 0.01, not 0.004. Without this change, the general metrics of OCR fall far below the base model, for example HPSv3 from 9.5 to 7.7. The multi-reward task keeps the CFG-free KL of the code, because it already scores the general metrics.
+- **Qwen judge:** The judge task trains SD3.5-M on the PickScore prompts with the CFG-free base KL of the multi-reward task, because the judge also scores the general quality. The TwinTilt code trains this judge task for 50 epochs. We train SD3.5-M, so that the judge compares with our other SD3.5-M tasks, and for 100 epochs, because the scores of our 50-epoch run still rise at its end.
 - **Precision:** The frozen transformer weights and the text encoders are fp16, not bf16, and the VAE is fp32, not bf16. The compute dtype stays fp16 with a gradient scaler. TF32 matmuls stay on, while TwinTilt turns them off.
 - **Rewards:** The PickScore reward resizes the float pixels with our antialiased bicubic resize, not with the CLIP processor of transformers. In the multi-reward, HPSv2.1 scores the uint8 pixels in fp32, not the float pixels under bf16 autocast.
 - **EMA:** The decay counts every optimizer step, also a step that the gradient scaler skips.
 - **Evaluation:** We evaluate as Flow-GRPO does, so that the results compare with the other algorithms: the EMA weights, CFG 4.5, and 128 T5 tokens, with our Euler loop under fp16 autocast and one noise per image. As DiffusionNFT does for its OCR runs, the GenEval run evaluates its own task without CFG. The PickScore run evaluates all tasks without CFG. TwinTilt evaluates the student without CFG, with 256 T5 tokens, in the diffusers pipeline in bf16, and with the same noise for all prompts.
 - **Options:** We leave out the SA solver and CFG in the rollouts and the policy, which no TwinTilt task uses. The evaluation and the base KL can use CFG.
-- **Infrastructure:** FSDP, `torch.compile`, and fp16 frozen weights speed up training and change only the rounding. The prompt sampler, the group noise that the group ID seeds, the reward servers, the checkpoint intervals, and the resume from an epoch end are our own.
+- **Infrastructure:** FSDP, `torch.compile`, and fp16 frozen weights speed up training and change only the rounding. The prompt sampler, the group noise that the group ID seeds, the reward servers, which include one judge per node that its ranks share, the checkpoint intervals, and the resume from an epoch end are our own.
 
 ## Results
 
@@ -57,7 +58,8 @@
 
 Train SD3.5-M on one task. The default batch of 9 images per GPU works on 8, 16, 32, 64, or 128 GPUs:
 ```bash
-# EXP is pickscore, geneval, ocr, or multi_reward (on the GenEval prompts).
+# EXP is pickscore, geneval, ocr, qwen_judge, or multi_reward (on the GenEval
+# prompts).
 EXP=pickscore bash scripts/reproduce/twintilt_train.sh
 
 # On 8 GPUs, 24 images per GPU are about 20% faster.
@@ -80,5 +82,9 @@ done
 
 # The multi-reward and its four components, on the GenEval test prompts.
 EXP_NAME=<log_dir_name> DATA=geneval REWARDS=twintilt_multi \
+  bash scripts/reproduce/twintilt_eval.sh
+
+# The Qwen judge, on the PickScore test prompts.
+EXP_NAME=<log_dir_name> DATA=pickscore REWARDS=qwen_judge \
   bash scripts/reproduce/twintilt_eval.sh
 ```

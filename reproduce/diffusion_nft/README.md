@@ -14,6 +14,7 @@
 
 - **Paper and code:** Where the paper and the code differ, we follow the code. It trains 9 of the 10 timesteps and uses a KL weight of 1e-4. For OCR, its old policy stays on-policy for 75 steps, then decays at a rate of 0.0075.
 - **Multi-reward:** We train on GenEval, PickScore, ClipScore, and HPSv2.1 on the GenEval prompts for 500 steps, with the GenEval recipe, as our DiffusionART and TwinTilt multi-reward runs do, so that the three compare. The official `sd3_multi_reward` trains on PickScore, HPSv2.1, and ClipScore on the PickScore prompts. The training reward is the mean of the group z-scores of the four calibrated scores, as in DiffusionART and TwinTilt. The official code instead normalizes their sum in its NFT recipes, which gave a higher and more stable run here (see the notes).
+- **Qwen judge:** The judge task trains on the holistic score of a 27.8B Qwen judge on the PickScore prompts, with the PickScore recipe, for 100 steps. One judge per node serves every rank of that node, sharded over its GPUs. The judge is not in the official code.
 - **T5 length in evaluation:** The evaluation encodes the prompts with 128 T5 tokens, as the training and `eval_fn` do. `evaluation.py` of the official code uses the diffusers default of 256.
 - **GPUs:** We train on 64 GPUs (128 for the multi-reward) instead of 8, with the same 1152 images per update (576 for OCR).
 - **MiniMax-H3-Image:** The HPSv3 task trains the H3-Image DiT on its native six-step PDD sampler at 768 pixels, with 128 groups of 24 images for 100 steps, and with no KL term. FSDP shards the 33B model, its EMA, and the text encoder over the GPUs of each node, and the rollout and the training forward passes take four members at a time. A packed sequence holds one prompt, so one rank rolls out one whole group, and `groups_per_epoch` must be a multiple of the GPU count.
@@ -58,7 +59,7 @@
 
 Train SD3.5-M on one reward with its specific training data:
 ```bash
-# EXP is geneval, ocr, pickscore, multi_reward (on the GenEval prompts), or
+# EXP is geneval, ocr, pickscore, multi_reward (on the GenEval prompts), qwen_judge, or
 # h3_hpsv3 (MiniMax-H3-Image on 128 GPUs).
 EXP=geneval bash scripts/reproduce/diffusion_nft_train.sh
 ```
@@ -82,6 +83,10 @@ done
 
 # The multi-reward and its four components, on the GenEval test prompts.
 EXP_NAME=<log_dir_name> DATA=geneval REWARDS=multi_reward \
+  bash scripts/reproduce/diffusion_nft_eval.sh
+
+# The judge, on the PickScore test prompts.
+EXP_NAME=<log_dir_name> DATA=pickscore REWARDS=qwen_judge \
   bash scripts/reproduce/diffusion_nft_eval.sh
 ```
 

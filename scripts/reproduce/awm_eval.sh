@@ -146,6 +146,7 @@ for reward in $REWARDS; do
       prepare MizzenAI/HPSv3
       prepare Qwen/Qwen2-VL-7B-Instruct
       ;;
+    qwen_judge) prepare Qwen/Qwen3.8-27B ;;
     *) echo "❌ Unknown reward: ${reward}"; exit 1 ;;
   esac
   EVAL_ARGS+=("+reward@rewards.${reward}=${reward}")
@@ -158,7 +159,7 @@ SERVERS=()
 for reward in $REWARDS; do
   if [[ "$reward" == multi_reward ]]; then
     SERVERS+=(geneval hpsv2)
-  elif [[ " ocr geneval deqa hpsv2 imagereward hpsv3 unifiedreward " \
+  elif [[ " ocr geneval deqa hpsv2 imagereward hpsv3 qwen_judge unifiedreward " \
       == *" ${reward} "* ]]; then
     SERVERS+=("$reward")
   fi

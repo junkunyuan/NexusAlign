@@ -16,6 +16,7 @@
 - **Training length:** The code trains until it is stopped, and the paper gives only GPU hours. We train 750 (GenEval), 130 (OCR), 1800 (PickScore), and 500 (multi-reward) epochs, with one update per epoch.
 - **Multi-reward:** We train on GenEval, PickScore, ClipScore, and HPSv2.1 on the GenEval prompts, with the GenEval recipe, as our DiffusionNFT and DiffusionART multi-reward runs do, so that the runs compare. The code has no multi-reward task. The training reward is the mean of the group z-scores of the four calibrated scores, as in DiffusionART. Flow-GRPO, which the code follows, normalizes their summed score instead.
 - **GPUs:** We train on 128 GPUs instead of 32. 128 ranks cannot split the official batches into whole prompt groups, so we use 1920 images per update instead of 1728 (GenEval, OCR), and 768 instead of 576 (PickScore).
+- **Qwen judge:** The judge task trains SD3.5-M on the PickScore prompts with the rollout of our PickScore run, and the judge scores the whole image. The TwinTilt code has this judge task, and we train SD3.5-M for 100 epochs, so that the judge compares with our other SD3.5-M runs.
 - **MiniMax-H3-Image:** The HPSv3 task trains the H3-Image DiT on its native six-step PDD sampler at 768 pixels, with 128 groups of 24 images for 100 steps. The six PDD steps are the trained timesteps, all images of one prompt share the noise of each step, and the base KL runs without CFG, because H3-Image has none. FSDP shards the 33B model, its EMA, and the text encoder over the GPUs of each node, and the rollout and the training forward passes take four members at a time. A packed sequence holds one prompt, so one rank rolls out one whole group, and `groups_per_epoch` must be a multiple of the GPU count.
 - **Evaluation:** We evaluate the EMA weights. The official code logs both the EMA and the trained weights. The H3-Image run evaluates its student, because its builder needs the student weights.
 - **Infrastructure:** `torch.compile`, fp16 frozen weights, FSDP, fp32 solver steps on fp16 latents, and one forward for both CFG branches speed up training and change only the rounding. The code for logging, checkpointing, and the reward servers is our own.
@@ -59,8 +60,8 @@
 
 Train SD3.5-M on one reward with its specific training data:
 ```bash
-# EXP is geneval, ocr, pickscore, multi_reward (on the GenEval prompts), or
-# h3_hpsv3 (MiniMax-H3-Image on 128 GPUs).
+# EXP is geneval, ocr, pickscore, multi_reward (on the GenEval prompts), qwen_judge,
+# or h3_hpsv3 (MiniMax-H3-Image on 128 GPUs).
 EXP=geneval bash scripts/reproduce/awm_train.sh
 ```
 
@@ -72,6 +73,10 @@ for TASK in geneval pickscore ocr; do
   EXP_NAME=<log_dir_name> DATA=$TASK REWARDS=$TASK \
     bash scripts/reproduce/awm_eval.sh
 done
+
+# The Qwen judge, on the PickScore test prompts.
+EXP_NAME=<log_dir_name> DATA=pickscore REWARDS=qwen_judge \
+  bash scripts/reproduce/awm_eval.sh
 
 # The other metrics on DrawBench, with two reward models per evaluation to prevent OOM.
 for REWARDS in "unifiedreward aesthetic" "deqa imagereward" "hpsv3 pickscore" \
