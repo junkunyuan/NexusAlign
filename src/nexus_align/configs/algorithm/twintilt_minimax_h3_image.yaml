@@ -1,0 +1,32 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: twintilt_minimax_h3_image  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Sampling configs. H3-Image fixes its native sampler: six PDD steps without CFG.
+# --------------------------------------------------------------------------------
+resolution: 768  # image resolution
+num_steps: 6  # rollout sampling steps of the Euler solver
+churn_weight: 0.04  # churn gamma of the rollout noise; 0 gives the ODE
+optimization_level: trajectory  # trajectory: one noise per group; distribution: one per image
+max_sequence_length: 4096  # Qwen3-VL prompt tokens
+autocast_dtype: bf16  # transformer compute dtype; H3 runs without autocast
+
+# --------------------------------------------------------------------------------
+# Projection configs.
+# --------------------------------------------------------------------------------
+group_size: 24  # images per prompt, K
+chunk_size: 4  # members per forward pass, in the rollout and in training
+group_zscore: true  # z-score a single reward in each group; false keeps the raw scores
+eta: 1.0  # tilt strength; q = softmax(eta * advantages)
+u_scale: 0.1  # scale of the solved correction u
+projection_iterations: 5  # Newton updates of the projection
+ridge_scale: 0.001  # ridge = ridge_scale * mean Gram diagonal + ridge_eps
+ridge_eps: 1.0e-6  # lowest ridge of the projection
+
+# --------------------------------------------------------------------------------
+# Policy loss configs.
+# --------------------------------------------------------------------------------
+kl_weight: 0.004  # coefficient of the velocity KL to the base model
+kl_cfg_scale: 1.0  # CFG scale of the base model in this KL; 1 gives no CFG

@@ -13,6 +13,7 @@
 **Implementation:** We follow the TwinTilt code [shenytzzz/twintilt](https://github.com/shenytzzz/twintilt) (private), a NexusAlign fork that extends the official FDFO code [NVlabs/finite-difference-flow-optimization](https://github.com/NVlabs/finite-difference-flow-optimization), except for:
 
 - **Training length:** OCR trains 170 epochs, GenEval 900, and PickScore 600, instead of 500. The multi-reward keeps the 500 of the code, and its scores still rise there. The task scores of our longer OCR and GenEval runs are near their plateau at these steps. PickScore still improves after step 500, but step 600 of our 1500-step run already beats the baselines on 8 of the 11 metrics.
+- **MiniMax-H3-Image:** The HPSv3 task trains the H3-Image DiT on its native six-step PDD sampler at 768 pixels, with 48 groups of 24 images for 100 steps. FSDP shards the 33B model, its EMA, and the text encoder over the GPUs of each node, and the rollout and the training forward passes take four members at a time. HPSv3 scores four images per request, because it needs tens of GB for a group of 768-pixel images.
 - **Base KL:** For OCR, GenEval, and PickScore, the KL to the base model uses CFG 4.5, as in AWM, and the weight 0.01, not 0.004. Without this change, the general metrics of OCR fall far below the base model, for example HPSv3 from 9.5 to 7.7. The multi-reward task keeps the CFG-free KL of the code, because it already scores the general metrics.
 - **Precision:** The frozen transformer weights and the text encoders are fp16, not bf16, and the VAE is fp32, not bf16. The compute dtype stays fp16 with a gradient scaler. TF32 matmuls stay on, while TwinTilt turns them off.
 - **Rewards:** The PickScore reward resizes the float pixels with our antialiased bicubic resize, not with the CLIP processor of transformers. In the multi-reward, HPSv2.1 scores the uint8 pixels in fp32, not the float pixels under bf16 autocast.
@@ -39,8 +40,15 @@
 | PickScore (ours) | 0.52 | 0.67 | **24.35** | 24.43 | 0.268 | 0.323 | 6.41 | 1.35 | 3.43 | 4.26 | 12.79 | [run](pickscore-20261115_153604) |
 | Multi-reward (ours) | **0.82** | 0.45 | **22.26** | 23.56 | **0.282** | **0.352** | 6.21 | 1.40 | 3.29 | 4.47 | 14.10 | [run](multi_reward-20261116_035928) |
 
+**HPSv3 on MiniMax-H3-Image:** its native six-step sampler at 768 pixels without CFG, with the student weights.
+
+| Model | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| MiniMax-H3-Image (ours) | 0.61 | 0.74 | 20.86 | 21.96 | 0.277 | 0.267 | 5.04 | 0.75 | 3.15 | 4.22 | 9.05 | [run](h3_hpsv3-20261116_082643) |
+| HPSv3 (ours) | 0.51 | 0.83 | 20.92 | 22.21 | 0.240 | 0.311 | 6.31 | 0.92 | 3.12 | 4.52 | **14.48** | [run](h3_hpsv3-20261116_082643) |
+
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench.
-- **Checkpoints:** the OCR row uses step 170 of a 200-step run, the GenEval row uses step 900 of a 1500-step run, the PickScore row uses step 600 of a 1500-step run, and the multi-reward row uses its final step 500. The configs now train these lengths. The base rows use step 0.
+- **Checkpoints:** the OCR row uses step 170 of a 200-step run, the GenEval row uses step 900 of a 1500-step run, the PickScore row uses step 600 of a 1500-step run, the multi-reward row uses its final step 500, and the HPSv3 row uses its final step 100. The configs now train these lengths. The base rows use step 0.
 - **Bold:** in-domain results. The multi-reward trains on four of the metrics, so its row bolds four columns.
 
 ## Command

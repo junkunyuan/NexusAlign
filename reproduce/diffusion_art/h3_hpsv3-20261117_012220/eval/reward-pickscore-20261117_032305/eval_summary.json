@@ -1,0 +1,90 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 20.855411272961646,
+    "hpsv3": 7.12871231412646
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_10-step_0-total_step_20",
+    "pickscore": 21.637911779340357,
+    "hpsv3": 11.071432662050938
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_20-step_0-total_step_40",
+    "pickscore": 21.799663809593767,
+    "hpsv3": 11.861824530060403
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 60,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_30-step_0-total_step_60",
+    "pickscore": 21.164866956416517,
+    "hpsv3": 12.300408167764544
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 80,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_40-step_0-total_step_80",
+    "pickscore": 20.97485756361857,
+    "hpsv3": 12.636101036914624
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_50-step_0-total_step_100",
+    "pickscore": 20.792146978434175,
+    "hpsv3": 12.723272061906755
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 120,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_60-step_0-total_step_120",
+    "pickscore": 20.271286671049893,
+    "hpsv3": 12.062794777448289
+  },
+  {
+    "epoch": 70,
+    "step": 0,
+    "total_step": 140,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_70-step_0-total_step_140",
+    "pickscore": 20.707563547883183,
+    "hpsv3": 12.115726066287607
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 160,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_80-step_0-total_step_160",
+    "pickscore": 20.247456531971693,
+    "hpsv3": 12.283896405715495
+  },
+  {
+    "epoch": 90,
+    "step": 0,
+    "total_step": 180,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_90-step_0-total_step_180",
+    "pickscore": 20.232829748652875,
+    "hpsv3": 12.375022230204195
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_100-step_0-total_step_200",
+    "pickscore": 20.556689789984375,
+    "hpsv3": 11.95100802287925
+  }
+]

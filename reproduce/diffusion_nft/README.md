@@ -16,6 +16,7 @@
 - **Multi-reward:** We train on GenEval, PickScore, ClipScore, and HPSv2.1 on the GenEval prompts for 500 steps, with the GenEval recipe, as our DiffusionART and TwinTilt multi-reward runs do, so that the three compare. The official `sd3_multi_reward` trains on PickScore, HPSv2.1, and ClipScore on the PickScore prompts. The training reward is the mean of the group z-scores of the four calibrated scores, as in DiffusionART and TwinTilt. The official code instead normalizes their sum in its NFT recipes, which gave a higher and more stable run here (see the notes).
 - **T5 length in evaluation:** The evaluation encodes the prompts with 128 T5 tokens, as the training and `eval_fn` do. `evaluation.py` of the official code uses the diffusers default of 256.
 - **GPUs:** We train on 64 GPUs (128 for the multi-reward) instead of 8, with the same 1152 images per update (576 for OCR).
+- **MiniMax-H3-Image:** The HPSv3 task trains the H3-Image DiT on its native six-step PDD sampler at 768 pixels, with 128 groups of 24 images for 100 steps, and with no KL term. FSDP shards the 33B model, its EMA, and the text encoder over the GPUs of each node, and the rollout and the training forward passes take four members at a time. A packed sequence holds one prompt, so one rank rolls out one whole group, and `groups_per_epoch` must be a multiple of the GPU count.
 - **Infrastructure:** `torch.compile`, fp16 frozen weights, FSDP, and the in-place old-policy swap speed up training and change only the rounding. The code for logging, checkpointing, and the reward servers is our own.
 
 ## Results
@@ -40,8 +41,15 @@
 | SD3.5-M w/o CFG (ours) | 2.046 | 0.24 | 0.13 | 19.82 | 20.54 | 0.238 | 0.207 | 5.17 | -0.58 | 2.03 | 3.37 | -1.01 | [run](multi_reward-20261116_184916) |
 | Multi-reward (ours) | **2.580** | 0.47 | 0.18 | 20.34 | 21.71 | 0.267 | 0.259 | 5.71 | 0.86 | 2.64 | 3.43 | 6.93 | [run](multi_reward-20261116_184916) |
 
+**HPSv3 on MiniMax-H3-Image:** its native six-step sampler at 768 pixels without CFG, with the student weights.
+
+| Model | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| MiniMax-H3-Image (ours) | 0.61 | 0.74 | 20.86 | 21.96 | 0.277 | 0.267 | 5.04 | 0.75 | 3.15 | 4.22 | 9.05 | [run](h3_hpsv3-20261116_082204) |
+| HPSv3 (ours) | 0.71 | 0.71 | 21.40 | 22.44 | 0.257 | 0.286 | 5.86 | 1.08 | 3.22 | 4.13 | **13.03** | [run](h3_hpsv3-20261116_082204) |
+
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench. Multi† is GenEval + PickScore / 26 + ClipScore logit / 30 + HPSv2.1 on the GenEval test prompts, as DiffusionART reports it.
-- **Checkpoints:** the multi-reward row uses the final epoch 500, and its base row epoch 0. This run falls after epoch 400, so epoch 150 is higher on every metric except Aesthetic (Multi† 3.066, GenEval† 0.79, HPSv3 13.44).
+- **Checkpoints:** the multi-reward row uses the final epoch 500, and its base row epoch 0. This run falls after epoch 400, so epoch 150 is higher on every metric except Aesthetic (Multi† 3.066, GenEval† 0.79, HPSv3 13.44). The HPSv3 row uses its final step 100, where no metric has reached a plateau yet.
 - **Bold:** in-domain results.
 
 ## Command
@@ -50,7 +58,8 @@
 
 Train SD3.5-M on one reward with its specific training data:
 ```bash
-# EXP is geneval, ocr, pickscore, or multi_reward (on the GenEval prompts).
+# EXP is geneval, ocr, pickscore, multi_reward (on the GenEval prompts), or
+# h3_hpsv3 (MiniMax-H3-Image on 128 GPUs).
 EXP=geneval bash scripts/reproduce/diffusion_nft_train.sh
 ```
 

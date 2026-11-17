@@ -47,6 +47,8 @@ if [[ ! -f "$CONFIG" ]]; then
 fi
 EXP=$(python -c "import yaml; print(yaml.safe_load(open('${CONFIG}'))['data']['name'])")
 REWARD=$(python -c "import yaml; print(yaml.safe_load(open('${CONFIG}'))['reward']['name'])")
+MODEL=$(python -c \
+  "import yaml; print(yaml.safe_load(open('${CONFIG}'))['model']['name'])")
 REWARDS=${REWARDS//,/ }  # commas also work
 if [[ -z "$DATA" || -z "${REWARDS// /}" ]]; then
   echo "❌ Set DATA and REWARDS, e.g. DATA=${EXP} REWARDS=${REWARD}, or DATA=drawbench" \
@@ -80,6 +82,14 @@ fi
 if [[ " ${REWARDS} " == *" multi_reward "* ]]; then
   EVAL_ARGS+=(rewards.multi_reward.rewards.geneval.jpeg=false)  # as for geneval
 fi
+# MiniMax-H3-Image samples its native six-step grid at 768 pixels without CFG, and it
+# evaluates its student, because its builder needs the student weights. Its diffusers
+# overlay goes first on PYTHONPATH.
+if [[ "$MODEL" == "minimax_h3_image" ]]; then
+  EVAL_ARGS+=(evaluator.num_steps=6 evaluator.guidance_scale=1.0)
+  EVAL_ARGS+=(evaluator.model_key=model)
+  source scripts/tools/h3_overlay.sh
+fi
 
 # --------------------------------------------------------------------------------
 # Prepare the model, prompts, and reward models: download each missing asset.
@@ -106,7 +116,12 @@ prepare_pickscore() {
   prepare yuvalkirstain/PickScore_v1
   prepare laion/CLIP-ViT-H-14-laion2B-s32B-b79K
 }
-prepare stabilityai/stable-diffusion-3.5-medium
+if [[ "$MODEL" == "minimax_h3_image" ]]; then
+  prepare MiniMaxAI/MiniMax-H3-Image
+fi
+if [[ "$MODEL" != "minimax_h3_image" ]]; then
+  prepare stabilityai/stable-diffusion-3.5-medium
+fi
 prepare yifan123/flow_grpo
 prepare NVlabs/DiffusionNFT  # DrawBench test prompts
 SERVERS=()

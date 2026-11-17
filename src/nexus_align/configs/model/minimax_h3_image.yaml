@@ -1,0 +1,20 @@
+name: minimax_h3_image  # model name
+path: ${data_and_model_dir}/MiniMaxAI/MiniMax-H3-Image  # diffusers pipeline directory
+ema_enabled: true  # if true, keep an EMA shadow of the LoRA weights
+lora:
+  rank: 32  # LoRA rank r
+  alpha: 64  # LoRA alpha
+  init: gaussian  # initialization of LoRA A; B starts at zero
+  seed: 42  # seed of the LoRA initialization, the same on every rank
+  # The six attention and feed-forward projections of every DiT block. PEFT matches a
+  # pattern against the whole name, so this one leaves the token refiner blocks frozen.
+  target_pattern: transformer_blocks\..*(to_q|to_k|to_v|to_out\.0|net\.0\.proj|net\.2)
+  layers_per_block: 6  # expected LoRA layers per block, to check the pattern
+fsdp:
+  replicate: -1  # fsdp replicate
+  shard: -1  # fsdp shard; -1 shards within a node of up to 8 GPUs
+  strategy: full_shard  # full_shard or shard_grad_op
+  cpu_offload: false  # offload the parameters and gradients to the CPU
+  param_dtype: null  # keep each weight's dtype: bf16, with the model's own fp32 modules
+  reduce_dtype: fp32  # gradient reduction dtype
+  activation_ckpt: true  # activation checkpointing

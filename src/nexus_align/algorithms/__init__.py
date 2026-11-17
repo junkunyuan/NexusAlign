@@ -5,11 +5,21 @@ from nexus_align.registry import registry
 # Visual generation post-training.
 from nexus_align.algorithms.awm import AWM
 from nexus_align.algorithms.diffusion_art import DiffusionART
+from nexus_align.algorithms.awm_minimax_h3_image import AWMMiniMaxH3Image
+from nexus_align.algorithms.diffusion_art_minimax_h3_image import (
+    DiffusionARTMiniMaxH3Image,
+)
 from nexus_align.algorithms.diffusion_nft import DiffusionNFT
+from nexus_align.algorithms.diffusion_nft_minimax_h3_image import (
+    DiffusionNFTMiniMaxH3Image,
+)
 from nexus_align.algorithms.fdfo import FDFO
 from nexus_align.algorithms.flow_grpo import FlowGRPO
 from nexus_align.algorithms.refl import ReFL
 from nexus_align.algorithms.twintilt import TwinTilt
+from nexus_align.algorithms.twintilt_minimax_h3_image import (
+    TwinTiltMiniMaxH3Image
+)
 
 # Visual generation paradigms.
 from nexus_align.algorithms.imeanflow import IMeanFlow
@@ -23,11 +33,21 @@ from nexus_align.algorithms.pixeldit2 import PixelDiT2
 # Visual generation post-training.
 registry.register("algorithm", "awm", AWM)
 registry.register("algorithm", "diffusion_art", DiffusionART)
+registry.register("algorithm", "awm_minimax_h3_image", AWMMiniMaxH3Image)
+registry.register(
+    "algorithm", "diffusion_art_minimax_h3_image", DiffusionARTMiniMaxH3Image
+)
 registry.register("algorithm", "diffusion_nft", DiffusionNFT)
+registry.register(
+    "algorithm", "diffusion_nft_minimax_h3_image", DiffusionNFTMiniMaxH3Image
+)
 registry.register("algorithm", "fdfo", FDFO)
 registry.register("algorithm", "flow_grpo", FlowGRPO)
 registry.register("algorithm", "refl", ReFL)
 registry.register("algorithm", "twintilt", TwinTilt)
+registry.register(
+    "algorithm", "twintilt_minimax_h3_image", TwinTiltMiniMaxH3Image
+)
 
 # Visual generation paradigms.
 registry.register("algorithm", "imeanflow", IMeanFlow)

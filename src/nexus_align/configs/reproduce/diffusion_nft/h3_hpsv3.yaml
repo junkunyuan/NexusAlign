@@ -1,0 +1,6 @@
+# @package _global_
+# Train DiffusionNFT on HPSv3 with MiniMax-H3-Image, on the PickScore prompts.
+# The args follow the H3-Image recipe of TwinTilt: 48 groups of 24 images, the native
+# six-step PDD sampler at 768 pixels, no CFG, and one update per epoch.
+# Launch with: EXP=h3_hpsv3 bash scripts/reproduce/diffusion_nft_train.sh
+exp_info: diffusion_nft_h3_hpsv3  # experiment name

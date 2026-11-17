@@ -2,8 +2,8 @@
 # ================================================================================
 # TwinTilt Training.
 # ================================================================================
-# The tasks follow the TwinTilt code: pickscore, geneval, ocr, and
-# multi_reward_geneval_clip30 (multi_reward here).
+# The tasks follow the TwinTilt code: pickscore, geneval, ocr,
+# multi_reward_geneval_clip30 (multi_reward here), and h3_hpsv3 on MiniMax-H3-Image.
 # Usage:
 #     EXP=pickscore bash scripts/reproduce/twintilt_train.sh (on every node)
 # ================================================================================
@@ -12,7 +12,7 @@ set -e
 # --------------------------------------------------------------------------------
 # Prepare the experiment.
 # --------------------------------------------------------------------------------
-EXP=${EXP:-pickscore}  # pickscore, geneval, ocr, multi_reward, qwen_judge
+EXP=${EXP:-pickscore}  # pickscore, geneval, ocr, multi_reward, qwen_judge, h3_hpsv3
 echo "🚀 twintilt training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
@@ -67,8 +67,10 @@ prepare_pickscore() {
 }
 DATA=${EXP}
 REWARD=${EXP}
+MODEL=sd3_5_medium
+ALGORITHM=twintilt
+TRAINER=twintilt
 SERVERS=()
-prepare stabilityai/stable-diffusion-3.5-medium
 prepare yifan123/flow_grpo
 case "$EXP" in
   pickscore)
@@ -98,8 +100,23 @@ case "$EXP" in
     DATA=pickscore
     SERVERS=(qwen_judge)
     ;;
+  h3_hpsv3)
+    prepare MiniMaxAI/MiniMax-H3-Image
+    prepare MizzenAI/HPSv3
+    prepare Qwen/Qwen2-VL-7B-Instruct
+    DATA=pickscore
+    REWARD=hpsv3
+    MODEL=minimax_h3_image
+    ALGORITHM=twintilt_minimax_h3_image
+    TRAINER=twintilt_minimax_h3_image
+    SERVERS=(hpsv3)
+    source scripts/tools/h3_overlay.sh
+    ;;
   *) echo "❌ Unknown EXP: ${EXP}"; exit 1 ;;
 esac
+if [[ "$MODEL" == "sd3_5_medium" ]]; then
+  prepare stabilityai/stable-diffusion-3.5-medium
+fi
 
 # --------------------------------------------------------------------------------
 # Start the reward servers of this node, and stop them when the training ends.
@@ -125,9 +142,9 @@ torchrun \
     --master_port ${MASTER_PORT} \
     src/nexus_align/cli/main.py \
     data=${DATA} \
-    algorithm=twintilt \
-    model=sd3_5_medium \
-    trainer=twintilt \
+    algorithm=${ALGORITHM} \
+    model=${MODEL} \
+    trainer=${TRAINER} \
     reward=${REWARD} \
     +reproduce=twintilt/${EXP} \
     "$@"

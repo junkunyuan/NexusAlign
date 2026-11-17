@@ -1,0 +1,26 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: diffusion_art_minimax_h3_image  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Sampling configs. H3-Image fixes its native sampler: six PDD steps without CFG.
+# --------------------------------------------------------------------------------
+resolution: 768  # image resolution
+num_steps: 6  # rollout sampling steps of the Euler ODE
+max_sequence_length: 4096  # Qwen3-VL prompt tokens
+autocast_dtype: bf16  # transformer compute dtype; H3 runs without autocast
+
+# --------------------------------------------------------------------------------
+# Guidance configs.
+# --------------------------------------------------------------------------------
+group_size: 24  # images per prompt, K
+chunk_size: 4  # members per forward pass, in the rollout and in training
+max_groups: 1024  # groups per rank and epoch, for the noise seeds
+multi_reward_eps: 1.0e-4  # std floor of the group z-scores of a multi-reward
+
+# --------------------------------------------------------------------------------
+# Trust-region mask configs.
+# --------------------------------------------------------------------------------
+mask_noise_level: 0.8  # noise level nu of the reference SDE; see paper Appendix C.2
+mask_threshold: 1.0e-5  # drift threshold delta; see paper Eq. 8

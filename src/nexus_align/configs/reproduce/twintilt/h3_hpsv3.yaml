@@ -1,0 +1,6 @@
+# @package _global_
+# Train TwinTilt on HPSv3 with MiniMax-H3-Image, on the PickScore prompts.
+# The args follow src/nexus_align/twintilt_h3/configs of the TwinTilt code: 48 groups
+# of 24 images, 500 epochs, one update per epoch, and the raw HPSv3 group z-scores.
+# Launch with: EXP=h3_hpsv3 bash scripts/reproduce/twintilt_train.sh
+exp_info: twintilt_h3_hpsv3  # experiment name

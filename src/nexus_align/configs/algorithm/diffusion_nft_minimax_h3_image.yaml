@@ -1,0 +1,35 @@
+# --------------------------------------------------------------------------------
+# General configs.
+# --------------------------------------------------------------------------------
+name: diffusion_nft_minimax_h3_image  # algorithm name
+
+# --------------------------------------------------------------------------------
+# Sampling configs. H3-Image fixes its native sampler: six PDD steps without CFG.
+# --------------------------------------------------------------------------------
+resolution: 768  # image resolution
+num_steps: 6  # rollout sampling steps
+solver: flow  # rollout sampler: dpm2 (2nd-order DPM-Solver) or flow (Euler), both ODE
+max_sequence_length: 4096  # Qwen3-VL prompt tokens
+autocast_dtype: bf16  # transformer compute dtype; H3 runs without autocast
+
+# --------------------------------------------------------------------------------
+# Advantage configs.
+# --------------------------------------------------------------------------------
+group_size: 24  # images per prompt, K
+chunk_size: 4  # members per forward pass, in the rollout and in training
+max_groups: 1024  # groups per rank and epoch, for the noise seeds
+
+# --------------------------------------------------------------------------------
+# Policy loss configs.
+# --------------------------------------------------------------------------------
+timestep_fraction: 1.0  # train on int(num_steps * fraction) sampling timesteps of each image
+adv_clip_max: 5.0  # optimality r = 0.5 + 0.5 * clip(advantage / max, -1, 1)
+beta: 1.0  # implicit policy coefficient beta; see paper Eq. 5
+kl_beta: 1.0e-4  # coefficient of the velocity KL to the reference policy
+
+# --------------------------------------------------------------------------------
+# Soft update configs.
+# --------------------------------------------------------------------------------
+eta_rate: 0.001  # old policy decay eta = min(eta_rate * (step - eta_delay), eta_max)
+eta_max: 0.5  # highest eta
+eta_delay: 0  # optimizer steps with eta = 0 (on-policy) before eta grows

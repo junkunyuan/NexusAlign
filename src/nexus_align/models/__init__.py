@@ -9,6 +9,11 @@ from nexus_align.models.pixeldit import PixelDiTModelNames, PixelDiTModel
 from nexus_align.models.pixeldit2 import PixelDiT2ModelNames, PixelDiT2Model
 from nexus_align.models.sd3 import SD3Model
 
+try:  # H3-Image needs the newer diffusers of scripts/tools/h3_overlay.sh
+    from nexus_align.models.minimax_h3_image import MiniMaxH3ImageModel
+except ImportError:
+    MiniMaxH3ImageModel = None
+
 for _name in MeanFlowDiTModelNames:
     registry.register("model", _name, MeanFlowDiTModel)
 for _name in IMeanFlowDiTModelNames:
@@ -22,3 +27,5 @@ for _name in PixelDiTModelNames:
 for _name in PixelDiT2ModelNames:
     registry.register("model", _name, PixelDiT2Model)
 registry.register("model", "sd3_5_medium", SD3Model)
+if MiniMaxH3ImageModel is not None:
+    registry.register("model", "minimax_h3_image", MiniMaxH3ImageModel)

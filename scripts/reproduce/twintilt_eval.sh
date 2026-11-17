@@ -73,6 +73,15 @@ for reward in $REWARDS; do
 done
 echo "🚀 twintilt evaluation: DATA=${DATA} REWARDS=${REWARDS}"
 EVAL_ARGS=()
+# MiniMax-H3-Image samples its native six-step grid at 768 pixels without CFG, and
+# TwinTilt evaluates its student. Its diffusers overlay goes first on PYTHONPATH.
+MODEL=$(python -c \
+  "import yaml; print(yaml.safe_load(open('${CONFIG}'))['model']['name'])")
+if [[ "$MODEL" == "minimax_h3_image" ]]; then
+  EVAL_ARGS+=(evaluator.num_steps=6 evaluator.guidance_scale=1.0)
+  EVAL_ARGS+=(evaluator.model_key=model)
+  source scripts/tools/h3_overlay.sh
+fi
 if [[ " ${REWARDS} " == *" geneval "* ]]; then
   EVAL_ARGS+=(rewards.geneval.jpeg=false)  # TwinTilt scores lossless PNG images
 fi
@@ -105,6 +114,9 @@ prepare_pickscore() {
 prepare stabilityai/stable-diffusion-3.5-medium
 prepare yifan123/flow_grpo
 prepare NVlabs/DiffusionNFT  # DrawBench test prompts
+if [[ "$MODEL" == "minimax_h3_image" ]]; then
+  prepare MiniMaxAI/MiniMax-H3-Image
+fi
 SERVERS=()
 for reward in $REWARDS; do
   case "$reward" in

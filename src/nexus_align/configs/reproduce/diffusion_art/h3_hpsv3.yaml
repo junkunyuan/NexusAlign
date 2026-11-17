@@ -1,0 +1,9 @@
+# @package _global_
+# Train DiffusionART on HPSv3 with MiniMax-H3-Image, on the PickScore prompts.
+# The args follow the H3-Image recipe of TwinTilt: 48 groups of 24 images, the native
+# six-step PDD sampler at 768 pixels, and no CFG, with the two updates of ART.
+# Launch with: EXP=h3_hpsv3 bash scripts/reproduce/diffusion_art_train.sh
+exp_info: diffusion_art_h3_hpsv3  # experiment name
+
+model:
+  ema_enabled: false  # if true, keep an EMA shadow of the LoRA weights

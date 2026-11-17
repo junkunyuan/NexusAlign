@@ -10,7 +10,7 @@ set -e
 # --------------------------------------------------------------------------------
 # Prepare the experiment.
 # --------------------------------------------------------------------------------
-EXP=${EXP:-pickscore}  # geneval, ocr, pickscore, multi_reward
+EXP=${EXP:-pickscore}  # geneval, ocr, pickscore, multi_reward, h3_hpsv3
 echo "🚀 diffusion_nft training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
@@ -65,9 +65,10 @@ prepare_pickscore() {
 }
 DATA=${EXP}
 REWARD=${EXP}
+MODEL=sd3_5_medium
+ALGORITHM=diffusion_nft
+TRAINER=nft
 SERVERS=()
-prepare stabilityai/stable-diffusion-3.5-medium
-prepare yifan123/flow_grpo
 case "$EXP" in
   pickscore)
     prepare_pickscore
@@ -90,8 +91,24 @@ case "$EXP" in
     DATA=geneval
     SERVERS=(geneval hpsv2)
     ;;
+  h3_hpsv3)
+    prepare MiniMaxAI/MiniMax-H3-Image
+    prepare MizzenAI/HPSv3
+    prepare Qwen/Qwen2-VL-7B-Instruct
+    DATA=pickscore
+    REWARD=hpsv3
+    MODEL=minimax_h3_image
+    ALGORITHM=${ALGORITHM}_minimax_h3_image
+    TRAINER=diffusion_nft_minimax_h3_image
+    SERVERS=(hpsv3)
+    source scripts/tools/h3_overlay.sh
+    ;;
   *) echo "❌ Unknown EXP: ${EXP}"; exit 1 ;;
 esac
+if [[ "$MODEL" == "sd3_5_medium" ]]; then
+  prepare stabilityai/stable-diffusion-3.5-medium
+  prepare yifan123/flow_grpo
+fi
 
 # --------------------------------------------------------------------------------
 # Start the reward servers of this node, and stop them when the training ends.
@@ -117,9 +134,9 @@ torchrun \
     --master_port ${MASTER_PORT} \
     src/nexus_align/cli/main.py \
     data=${DATA} \
-    algorithm=diffusion_nft \
-    model=sd3_5_medium \
-    trainer=nft \
+    algorithm=${ALGORITHM} \
+    model=${MODEL} \
+    trainer=${TRAINER} \
     reward=${REWARD} \
     +reproduce=diffusion_nft/${EXP} \
     "$@"

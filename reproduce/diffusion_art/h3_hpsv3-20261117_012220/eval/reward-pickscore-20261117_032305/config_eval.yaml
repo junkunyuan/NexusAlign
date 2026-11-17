@@ -1,0 +1,137 @@
+algorithm:
+  autocast_dtype: bf16
+  chunk_size: 4
+  group_size: 24
+  mask_noise_level: 0.8
+  mask_threshold: 1.0e-05
+  max_groups: 1024
+  max_sequence_length: 4096
+  multi_reward_eps: 0.0001
+  name: diffusion_art_minimax_h3_image
+  num_steps: 6
+  resolution: 768
+data:
+  file: '{split}.txt'
+  name: pickscore
+  path: data_and_model/yifan123/flow_grpo/dataset/pickscore
+  seed: 42
+  split: train
+data_and_model_dir: data_and_model
+evaluator:
+  ckpts:
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_0-step_0-total_step_0
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_10-step_0-total_step_20
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_20-step_0-total_step_40
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_30-step_0-total_step_60
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_40-step_0-total_step_80
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_50-step_0-total_step_100
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_60-step_0-total_step_120
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_70-step_0-total_step_140
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_80-step_0-total_step_160
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_90-step_0-total_step_180
+  - logs/diffusion_art_h3_hpsv3-20261117_012220/checkpoints/epoch_100-step_0-total_step_200
+  data:
+    file: '{split}.txt'
+    name: pickscore
+    path: data_and_model/yifan123/flow_grpo/dataset/pickscore
+    seed: 42
+    split: train
+  dry_run: false
+  eval_dir: logs/diffusion_art_h3_hpsv3-20261117_012220/eval/reward-pickscore-20261117_032305
+  global_seed: 0
+  guidance_scale: 1.0
+  model_key: model
+  name: reward
+  new_run: true
+  num_steps: 6
+  num_workers: 4
+  per_proc_batch_size: 16
+  split: test
+exp_info: diffusion_art_h3_hpsv3-20261117_012220
+job_type: eval
+log_dir: logs/diffusion_art_h3_hpsv3-20261117_012220
+model:
+  ema_enabled: false
+  fsdp:
+    activation_ckpt: true
+    cpu_offload: false
+    param_dtype: null
+    reduce_dtype: fp32
+    replicate: -1
+    shard: -1
+    strategy: full_shard
+  lora:
+    alpha: 64
+    init: gaussian
+    layers_per_block: 6
+    rank: 32
+    seed: 42
+    target_pattern: transformer_blocks\..*(to_q|to_k|to_v|to_out\.0|net\.0\.proj|net\.2)
+  name: minimax_h3_image
+  path: data_and_model/MiniMaxAI/MiniMax-H3-Image
+notes: ''
+project_path: .
+provenance:
+  hardware:
+    cpu_count: 224
+    cpu_model: Intel(R) Xeon(R) Platinum 8480+
+    gpu_capability: '9.0'
+    gpu_count: 8
+    gpu_memory_gb: 79.1
+    gpu_name: NVIDIA H100 80GB HBM3
+    os: Linux-5.15.152
+  software:
+    cuda: '12.6'
+    cudnn: 91002
+    nccl: 2.29.3
+    python: 3.11.2
+    torch: 2.12.0+cu126
+  start_time: '2026-11-17 03:23:05'
+rank: 0
+rewards:
+  hpsv3:
+    batch_size: 4
+    max_retries: 10
+    name: hpsv3
+    timeout: 120
+    url: http://127.0.0.1:18092
+  pickscore:
+    model_path: data_and_model/yuvalkirstain/PickScore_v1
+    name: pickscore
+    normalize: true
+    processor_path: data_and_model/laion/CLIP-ViT-H-14-laion2B-s32B-b79K
+timestamp: true
+trainer:
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1.0e-08
+  adam_weight_decay: 0.0001
+  debug: false
+  deterministic: false
+  epochs: 100
+  groups_per_epoch: 128
+  learning_rate: 0.0003
+  load_ckpt_only_model: false
+  log_every_n_steps: 1
+  log_hardware: true
+  log_tensorboard: false
+  max_grad_norm: 1.0
+  name: diffusion_art_minimax_h3_image
+  peak_tflops: null
+  plot_every_n_seconds: 30
+  resume_path: null
+  sample_batch_size: 24
+  save_ckpt_every_n_epochs: 10
+  save_ckpt_every_n_steps: null
+  save_ckpt_keep_last_n_epochs: 100
+  save_ckpt_keep_last_n_steps: 10
+  save_ckpt_only_model: false
+  seed: 42
+  shuffle: false
+  updates_per_epoch: 2
+wandb:
+  entity: null
+  mode: disabled
+  name: null
+  project: nexus_align
+world_size: 8
