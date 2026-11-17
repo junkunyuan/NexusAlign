@@ -1,0 +1,11 @@
+# @package _global_
+# Train AWM on GenEval, PickScore, ClipScore, and HPSv2.1 with SD3.5-M, CFG-free, on
+# the GenEval prompts, as the multi-reward runs of DiffusionNFT and DiffusionART.
+# The args follow _geneval_sd3_no_cfg of the official config/dgx_awm.py.
+# Launch with: EXP=multi_reward bash scripts/reproduce/awm_train.sh
+exp_info: awm_multi_reward_reproduce  # experiment name
+
+trainer:
+  groups_per_epoch: 48  # prompts sampled per epoch; as the other multi-reward runs
+  sample_batch_size: 9  # samples per rank in one sampling and training batch
+  epochs: 500  # training epochs; 500 rollouts, as the other multi-reward runs

@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.1327525176603772
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_50-step_0-total_step_50",
+    "ocr": 0.46230521155287696
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_100-step_0-total_step_100",
+    "ocr": 0.4784653739733151
+  },
+  {
+    "epoch": 150,
+    "step": 0,
+    "total_step": 150,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_150-step_0-total_step_150",
+    "ocr": 0.5120905793485802
+  },
+  {
+    "epoch": 200,
+    "step": 0,
+    "total_step": 200,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_200-step_0-total_step_200",
+    "ocr": 0.5120115896275469
+  },
+  {
+    "epoch": 250,
+    "step": 0,
+    "total_step": 250,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_250-step_0-total_step_250",
+    "ocr": 0.4899837417550646
+  },
+  {
+    "epoch": 300,
+    "step": 0,
+    "total_step": 300,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_300-step_0-total_step_300",
+    "ocr": 0.45574376604437833
+  },
+  {
+    "epoch": 350,
+    "step": 0,
+    "total_step": 350,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_350-step_0-total_step_350",
+    "ocr": 0.49091397110288
+  },
+  {
+    "epoch": 400,
+    "step": 0,
+    "total_step": 400,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_400-step_0-total_step_400",
+    "ocr": 0.48729135870198503
+  },
+  {
+    "epoch": 450,
+    "step": 0,
+    "total_step": 450,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_450-step_0-total_step_450",
+    "ocr": 0.4495911837577665
+  },
+  {
+    "epoch": 500,
+    "step": 0,
+    "total_step": 500,
+    "ckpt": "logs/awm_multi_reward_reproduce-20261116_230650/checkpoints/epoch_500-step_0-total_step_500",
+    "ocr": 0.37882837616310105
+  }
+]

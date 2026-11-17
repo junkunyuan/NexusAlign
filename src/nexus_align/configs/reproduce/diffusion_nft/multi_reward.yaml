@@ -1,13 +1,12 @@
 # @package _global_
 # Train DiffusionNFT on GenEval, PickScore, ClipScore, and HPSv2.1 with SD3.5-M,
-# CFG-free, on the GenEval prompts, as the multi-reward runs of DiffusionART and
-# TwinTilt.
+# CFG-free, on the GenEval prompts, as the multi-reward run of DiffusionART.
 # The args follow sd3_geneval of the official config/nft.py and config/base.py.
 # Launch with: EXP=multi_reward bash scripts/reproduce/diffusion_nft_train.sh
 exp_info: diffusion_nft_multi_reward_reproduce  # experiment name
 
 trainer:
-  epochs: 500  # training epochs; 500 rollouts, as in DiffusionART and TwinTilt
+  epochs: 500  # training epochs; 500 rollouts, as in DiffusionART
   save_ckpt_every_n_epochs: 50  # save every N epochs, plus the initial weights at epoch 0
 
 reward:

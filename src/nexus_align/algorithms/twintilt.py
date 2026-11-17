@@ -29,6 +29,12 @@ References:
         - Official code: https://github.com/scxue/advantage_weighted_matching
             - advantage_weighted_matching/scripts/train_sd3_awm.py: the base KL with
               CFG in the training loop of main
+    - DiffusionART:
+        - Paper: DiffusionART: Efficient, Stable and Scalable Reinforcement of
+          Diffusion Models (arXiv 2026)
+        - Official code: https://github.com/vanzll/DiffusionART
+            - src/visual_rl/algorithms/covariance.py: art_scalar_covariance, for the
+              covariance direction of the correction
 """
 
 import math
@@ -147,6 +153,25 @@ def solve_projection(
     return u.reshape(groups, *points.shape[2:])
 
 
+@torch.no_grad()
+def covariance_correction(
+    points: torch.Tensor,
+    advantages: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Return the covariance of the advantages and the endpoints of each group, with RMS 1.
+
+    This is the DiffusionART guidance (see DiffusionART Eq. 5). A group with equal
+    advantages gets zero.
+    """
+    d = points.double().flatten(2)
+    a = advantages.double()
+    covariance = torch.bmm((a - a.mean(1, keepdim=True)).unsqueeze(1), d).squeeze(1)
+    rms = covariance.square().mean(1, keepdim=True).sqrt()
+    covariance = torch.where(rms > 0, covariance / rms, 0.0)
+    return covariance.reshape(points.shape[:1] + points.shape[2:])
+
+
 def churn_step(
     latents: torch.Tensor,
     velocity: torch.Tensor,
@@ -193,6 +218,8 @@ class TwinTilt(BaseAlgorithm):
         self.projection_iterations = cfg_algorithm.get("projection_iterations", 5)  # Newton updates of the projection
         self.ridge_scale = cfg_algorithm.get("ridge_scale", 0.001)  # ridge = ridge_scale * mean Gram diagonal + ridge_eps
         self.ridge_eps = cfg_algorithm.get("ridge_eps", 1.0e-6)  # lowest ridge of the projection
+        self.correction_direction = cfg_algorithm.get("correction_direction", "projection")  # projection: the solved u; covariance: the reward covariance, as DiffusionART
+        self.correction_norm = cfg_algorithm.get("correction_norm", "u")  # size of a covariance correction; u: the norm of the solved u; unit: RMS 1, as DiffusionART
 
         # Policy loss configs.
         self.kl_weight = cfg_algorithm.get("kl_weight", 0.004)  # coefficient of the velocity KL to the base model
@@ -430,14 +457,25 @@ class TwinTilt(BaseAlgorithm):
 
         # 2. Solve the correction of each group.
         advantages = self.compute_advantages(scores, reward)
+        points = latents.reshape(-1, k, *latents.shape[1:])
         u = solve_projection(
-            latents.reshape(-1, k, *latents.shape[1:]),
+            points,
             advantages.reshape(-1, k),
             self.eta,
             self.projection_iterations,
             self.ridge_scale,
             self.ridge_eps,
         )
+        metrics = {}
+        if self.correction_direction == "covariance":
+            covariance = covariance_correction(points, advantages.reshape(-1, k))
+            metrics["correction_cosine"] = torch.nn.functional.cosine_similarity(
+                covariance.flatten(1), u.double().flatten(1)
+            ).mean().item()
+            if self.correction_norm == "u":
+                u_rms = u.double().flatten(1).square().mean(1).sqrt()
+                covariance = covariance * u_rms.view(-1, *[1] * (u.ndim - 1))
+            u = covariance
         displacement = (u * self.u_scale).float()
 
         # 3. Keep the advantages and the corrections of the images of this rank.
@@ -446,7 +484,7 @@ class TwinTilt(BaseAlgorithm):
         position = torch.argsort(order)[rank * size: (rank + 1) * size]
         samples["advantages"] = advantages[position]
         samples["displacement"] = displacement[position // k]
-        metrics = {
+        metrics |= {
             "projection_rms": displacement.square().mean().sqrt().item(),
             "advantages_abs_mean": advantages.abs().mean().item(),
             "reward_std_mean": (

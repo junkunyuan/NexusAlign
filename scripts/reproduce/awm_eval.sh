@@ -59,8 +59,15 @@ if [[ "$DATA" != "$EXP" && " geneval ocr pickscore drawbench " != *" ${DATA} "* 
   exit 1
 fi
 for reward in $REWARDS; do
-  if [[ " ocr geneval " == *" ${reward} "* && "$reward" != "$DATA" ]]; then
-    echo "❌ The ${reward} reward needs DATA=${reward}: it checks each prompt's target"
+  target=$reward
+  [[ "$reward" == multi_reward ]] && target=geneval
+  if [[ " ocr geneval " == *" ${target} "* && "$target" != "$DATA" ]]; then
+    echo "❌ The ${reward} reward needs DATA=${target}: it checks each prompt's target"
+    exit 1
+  fi
+  if [[ " ${REWARDS} " == *" multi_reward "* \
+      && " geneval pickscore clipscore hpsv2 " == *" ${reward} "* ]]; then
+    echo "❌ multi_reward already reports ${reward}; evaluate them in separate runs"
     exit 1
   fi
 done
@@ -85,18 +92,26 @@ prepare() {
 prepare stabilityai/stable-diffusion-3.5-medium
 prepare yifan123/flow_grpo
 prepare NVlabs/DiffusionNFT  # DrawBench test prompts
+prepare_geneval() {
+  prepare mask2former
+  prepare timm/vit_large_patch14_clip_224.openai
+  prepare yifan123/reward-server
+  prepare open-mmlab/mmdetection
+}
+prepare_pickscore() {
+  prepare yuvalkirstain/PickScore_v1
+  prepare laion/CLIP-ViT-H-14-laion2B-s32B-b79K
+}
 for reward in $REWARDS; do
   case "$reward" in
     ocr) prepare paddleocr ;;
-    geneval)
-      prepare mask2former
-      prepare timm/vit_large_patch14_clip_224.openai
-      prepare yifan123/reward-server
-      prepare open-mmlab/mmdetection
-      ;;
-    pickscore)
-      prepare yuvalkirstain/PickScore_v1
-      prepare laion/CLIP-ViT-H-14-laion2B-s32B-b79K
+    geneval) prepare_geneval ;;
+    pickscore) prepare_pickscore ;;
+    multi_reward)
+      prepare_geneval
+      prepare_pickscore
+      prepare openai/clip-vit-large-patch14
+      prepare xswu/HPSv2
       ;;
     aesthetic)
       prepare openai/clip-vit-large-patch14
@@ -127,7 +142,9 @@ done
 # --------------------------------------------------------------------------------
 SERVERS=()
 for reward in $REWARDS; do
-  if [[ " ocr geneval deqa hpsv2 imagereward hpsv3 unifiedreward " \
+  if [[ "$reward" == multi_reward ]]; then
+    SERVERS+=(geneval hpsv2)
+  elif [[ " ocr geneval deqa hpsv2 imagereward hpsv3 unifiedreward " \
       == *" ${reward} "* ]]; then
     SERVERS+=("$reward")
   fi

@@ -23,6 +23,8 @@ u_scale: 0.1  # scale of the solved correction u
 projection_iterations: 5  # Newton updates of the projection
 ridge_scale: 0.001  # ridge = ridge_scale * mean Gram diagonal + ridge_eps
 ridge_eps: 1.0e-6  # lowest ridge of the projection
+correction_direction: projection  # projection: the solved u; covariance: the reward covariance, as DiffusionART
+correction_norm: u  # size of a covariance correction; u: the norm of the solved u; unit: RMS 1, as DiffusionART
 
 # --------------------------------------------------------------------------------
 # Policy loss configs.

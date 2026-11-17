@@ -21,8 +21,8 @@ class NFTTrainer(GRPOTrainer):
       (r = 0.5).
     - The trainer calls ema_step once after each optimizer step.
     - A multi-reward, that is a reward with weights, trains on the weighted mean of the
-      group z-scores of its calibrated components, as DiffusionART and TwinTilt do,
-      and not on the group z-scores of its summed score.
+      group z-scores of its calibrated components, as DiffusionART does, and not on
+      the group z-scores of its summed score.
     - After each epoch, the algorithm soft-updates its sampling (old) policy before the
       trainer saves the checkpoint.
 
