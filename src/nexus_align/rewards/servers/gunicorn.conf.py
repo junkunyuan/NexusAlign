@@ -3,7 +3,8 @@ Gunicorn config of the reward servers: one worker per GPU of this node, on local
 
 This config follows the gunicorn.conf.py of reward-server. The port and the worker
 count come from the REWARD_SERVER_PORT and REWARD_SERVER_WORKERS environment
-variables.
+variables. REWARD_SERVER_ALL_DEVICES leaves every GPU visible to the worker, for a
+server whose model is too large for one GPU and spreads itself over all of them.
 """
 
 import os
@@ -21,7 +22,8 @@ def pre_fork(server, worker):
 
 def post_fork(server, worker):
     # This hook runs on the worker.
-    os.environ["CUDA_VISIBLE_DEVICES"] = str(worker.device_id)
+    if not os.environ.get("REWARD_SERVER_ALL_DEVICES"):
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(worker.device_id)
 
 
 def child_exit(server, worker):

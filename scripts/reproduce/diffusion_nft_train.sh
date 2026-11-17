@@ -10,7 +10,7 @@ set -e
 # --------------------------------------------------------------------------------
 # Prepare the experiment.
 # --------------------------------------------------------------------------------
-EXP=${EXP:-pickscore}  # geneval, ocr, pickscore, multi_reward, h3_hpsv3
+EXP=${EXP:-pickscore}  # geneval, ocr, pickscore, multi_reward, qwen_judge, h3_hpsv3
 echo "🚀 diffusion_nft training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
@@ -81,6 +81,12 @@ case "$EXP" in
   geneval)
     prepare_geneval
     SERVERS=(geneval)
+    ;;
+  qwen_judge)
+    # One judge per node, across its GPUs: 27.8 B parameters do not fit per rank.
+    prepare Qwen/Qwen3.8-27B
+    DATA=pickscore
+    SERVERS=(qwen_judge)
     ;;
   multi_reward)
     # GenEval, PickScore, ClipScore, and HPSv2.1 on the GenEval prompts.

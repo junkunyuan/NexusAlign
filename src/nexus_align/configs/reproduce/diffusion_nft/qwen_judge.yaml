@@ -1,0 +1,11 @@
+# @package _global_
+# Train DiffusionNFT on the holistic score of the Qwen judge with SD3.5-M, CFG-free,
+# on the PickScore prompts, as the Qwen judge run of TwinTilt does.
+# The args follow sd3_pickscore of the official config/nft.py and config/base.py.
+# Launch with: EXP=qwen_judge bash scripts/reproduce/diffusion_nft_train.sh
+exp_info: diffusion_nft_qwen_judge  # experiment name
+
+trainer:
+  epochs: 50  # training epochs; 50 steps, as the Qwen judge run of TwinTilt trains
+  # The run saves 11 checkpoints, at epochs 0, 5, ..., 50.
+  save_ckpt_every_n_epochs: 5  # save every N epochs, plus the initial weights at epoch 0

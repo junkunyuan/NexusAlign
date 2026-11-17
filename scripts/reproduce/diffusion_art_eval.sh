@@ -146,6 +146,7 @@ for reward in $REWARDS; do
       prepare MizzenAI/HPSv3
       prepare Qwen/Qwen2-VL-7B-Instruct
       ;;
+    qwen_judge) prepare Qwen/Qwen3.8-27B ;;
     *) echo "❌ Unknown reward: ${reward}"; exit 1 ;;
   esac
   EVAL_ARGS+=("+reward@rewards.${reward}=${reward}")
@@ -155,7 +156,7 @@ done
 # Start the reward servers of this node, and stop them when the evaluation ends.
 # --------------------------------------------------------------------------------
 for reward in $REWARDS; do
-  if [[ " ocr geneval deqa hpsv2 imagereward hpsv3 unifiedreward " \
+  if [[ " ocr geneval deqa hpsv2 imagereward hpsv3 qwen_judge unifiedreward " \
       == *" ${reward} "* ]]; then
     SERVERS+=("$reward")
   fi

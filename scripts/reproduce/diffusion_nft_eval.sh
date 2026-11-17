@@ -130,6 +130,7 @@ for reward in $REWARDS; do
     ocr) prepare paddleocr ;;
     geneval) prepare_geneval ;;
     pickscore) prepare_pickscore ;;
+    qwen_judge) prepare Qwen/Qwen3.8-27B ;;
     multi_reward)
       prepare_geneval
       prepare_pickscore
@@ -165,8 +166,8 @@ done
 # Start the reward servers of this node, and stop them when the evaluation ends.
 # --------------------------------------------------------------------------------
 for reward in $REWARDS; do
-  if [[ " ocr geneval deqa hpsv2 imagereward hpsv3 unifiedreward " \
-      == *" ${reward} "* ]]; then
+  if [[ " ocr geneval deqa hpsv2 imagereward hpsv3 qwen_judge \
+      unifiedreward " == *" ${reward} "* ]]; then
     SERVERS+=("$reward")
   fi
 done

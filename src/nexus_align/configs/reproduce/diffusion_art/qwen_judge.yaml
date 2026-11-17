@@ -1,0 +1,19 @@
+# @package _global_
+# Train DiffusionART on the holistic score of the Qwen judge with SD3.5-M, CFG-free, on
+# the PickScore prompts.
+# The rollout follows our PickScore run, and the 50 epochs follow the Qwen judge run of
+# TwinTilt, which the minimax-h3-qwen branch of its code trains.
+# Launch with: EXP=qwen_judge bash scripts/reproduce/diffusion_art_train.sh
+exp_info: diffusion_art_qwen_judge  # experiment name
+
+model:
+  ema_enabled: false  # if true, use an EMA model; it tracks only the LoRA weights
+
+algorithm:
+  group_size: 18  # images per prompt, K
+
+trainer:
+  groups_per_epoch: 64  # prompts sampled per epoch
+  epochs: 50  # training epochs; the two updates of each epoch give 100 steps
+  # The run saves 11 checkpoints, at epochs 0, 5, ..., 50.
+  save_ckpt_every_n_epochs: 5  # save every N epochs, plus the initial weights at epoch 0

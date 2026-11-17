@@ -117,6 +117,10 @@ else
     $PT_PIP ${PT}/cu126 torch==2.11.0+cu126 torchvision==0.26.0+cu126
     $UV_PIP transformers==5.19.0 accelerate==1.11.0 'huggingface-hub>=1.0' \
       sentencepiece protobuf pillow flask==3.1.3 gunicorn==23.0.0
+    # The judge is a hybrid model: without these kernels transformers falls back to
+    # its reference implementations of the gated delta rule and the causal conv.
+    $UV_PIP flash-linear-attention==0.6.0
+    $UV_PIP --no-build-isolation causal-conv1d==1.7.0
   elif [[ "$NAME" == "deqa" ]]; then
     # torch follows reward-server. The rest follows DeQA-Score's pyproject.toml.
     $PT_PIP ${PT}/cu121 torch==2.1.2 torchvision==0.16.2
@@ -211,6 +215,7 @@ else
     # node, instead of one copy per GPU, and every rank of the node shares it.
     WORKERS=1
     EXTRA_ARGS+=(--timeout 1800 --graceful-timeout 60)
+    export REWARD_SERVER_ALL_DEVICES=1  # the device map needs every GPU of this node
   fi
   # -u PYTHONPATH keeps the caller's modules out of this venv, for example an
   # overlay that a model needs. The servers import only their own directory.

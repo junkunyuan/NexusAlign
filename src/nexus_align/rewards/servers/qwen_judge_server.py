@@ -11,6 +11,9 @@ References:
             - src/nexus_align/rewards/qwen_judge.py: QwenJudge.score and next_digit
 """
 
+import glob
+import os
+
 import torch
 from PIL import Image
 from flask import Flask
@@ -57,12 +60,15 @@ class Judge:
         self.processor = AutoProcessor.from_pretrained(model_path)
         self.processor.tokenizer.padding_side = "left"  # the last token is the answer
         # device_map spreads the layers over the GPUs of this node, so the judge and
-        # the policy of every rank fit together.
+        # the policy of every rank fit together. Without a cap per GPU, it fits the
+        # whole judge on the first GPU, which then has no room for the policy of its
+        # rank. The cap is an even share of the weights, with room for the activations.
         self.model = AutoModelForImageTextToText.from_pretrained(
             model_path,
             dtype={"bf16": torch.bfloat16, "fp16": torch.float16,
                    "fp32": torch.float32}[dtype],
             device_map="auto",
+            max_memory=self.gpu_shares(model_path),
         )
         self.model.eval().requires_grad_(False)
         self.device = next(self.model.parameters()).device
@@ -74,6 +80,18 @@ class Judge:
         self.digit_ids = torch.tensor([i[0] for i in ids], device=self.device)
         self.prefix_ids = tokenizer.encode(ANSWER_PREFIX, add_special_tokens=False)
         print(f"✅ Prepared the Qwen judge from <{model_path}>")
+
+    @staticmethod
+    def gpu_shares(model_path: str) -> dict:
+        """Return the memory of each GPU that the judge weights may use."""
+        size = sum(
+            os.path.getsize(f)
+            for f in glob.glob(os.path.join(model_path, "*.safetensors"))
+        )
+        count = torch.cuda.device_count()
+        share = int(size * 1.2 / count / 2**30) + 1
+        print(f"📌 The judge takes {share} GiB on each of the {count} GPUs")
+        return {i: f"{share}GiB" for i in range(count)}
 
     @torch.no_grad()
     def score_all(self, images: list, prompts: list[str]) -> list[float]:
