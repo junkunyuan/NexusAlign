@@ -1,0 +1,90 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 19.81780310627073,
+    "twintilt_pickscore": 19.820204296149313
+  },
+  {
+    "epoch": 5,
+    "step": 0,
+    "total_step": 5,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_5-step_0-total_step_5",
+    "pickscore": 21.711553901433945,
+    "twintilt_pickscore": 21.709006236866117
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 10,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_10-step_0-total_step_10",
+    "pickscore": 21.681935781612992,
+    "twintilt_pickscore": 21.673999317921698
+  },
+  {
+    "epoch": 15,
+    "step": 0,
+    "total_step": 15,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_15-step_0-total_step_15",
+    "pickscore": 21.61394945718348,
+    "twintilt_pickscore": 21.605456372722983
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_20-step_0-total_step_20",
+    "pickscore": 21.573203740641475,
+    "twintilt_pickscore": 21.567568723112345
+  },
+  {
+    "epoch": 25,
+    "step": 0,
+    "total_step": 25,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_25-step_0-total_step_25",
+    "pickscore": 21.80457919742912,
+    "twintilt_pickscore": 21.800456235185266
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 30,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_30-step_0-total_step_30",
+    "pickscore": 21.77359423134476,
+    "twintilt_pickscore": 21.770466780290008
+  },
+  {
+    "epoch": 35,
+    "step": 0,
+    "total_step": 35,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_35-step_0-total_step_35",
+    "pickscore": 21.5611500935629,
+    "twintilt_pickscore": 21.556203234940767
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_40-step_0-total_step_40",
+    "pickscore": 21.625512544997036,
+    "twintilt_pickscore": 21.62033192254603
+  },
+  {
+    "epoch": 45,
+    "step": 0,
+    "total_step": 45,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_45-step_0-total_step_45",
+    "pickscore": 21.743226166814566,
+    "twintilt_pickscore": 21.739298499189317
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_50-step_0-total_step_50",
+    "pickscore": 21.80241823475808,
+    "twintilt_pickscore": 21.798912942409515
+  }
+]

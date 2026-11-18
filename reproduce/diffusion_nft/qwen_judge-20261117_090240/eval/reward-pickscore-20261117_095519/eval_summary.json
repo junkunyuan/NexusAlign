@@ -1,0 +1,90 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 19.818079790566117,
+    "qwen_judge": 0.5459349562806892
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 10,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_10-step_0-total_step_10",
+    "pickscore": 21.597300549037755,
+    "qwen_judge": 0.7145997922852985
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_20-step_0-total_step_20",
+    "pickscore": 21.70181057229638,
+    "qwen_judge": 0.7446057375163946
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 30,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_30-step_0-total_step_30",
+    "pickscore": 21.71373471338302,
+    "qwen_judge": 0.7537975861923769
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_40-step_0-total_step_40",
+    "pickscore": 21.79290983453393,
+    "qwen_judge": 0.7577783019878552
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_50-step_0-total_step_50",
+    "pickscore": 21.818870523013175,
+    "qwen_judge": 0.763958298790385
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 60,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_60-step_0-total_step_60",
+    "pickscore": 21.871940415352583,
+    "qwen_judge": 0.7682920447150536
+  },
+  {
+    "epoch": 70,
+    "step": 0,
+    "total_step": 70,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_70-step_0-total_step_70",
+    "pickscore": 21.901416982524097,
+    "qwen_judge": 0.7725145215445082
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 80,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_80-step_0-total_step_80",
+    "pickscore": 21.890971223823726,
+    "qwen_judge": 0.7752939726960903
+  },
+  {
+    "epoch": 90,
+    "step": 0,
+    "total_step": 90,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_90-step_0-total_step_90",
+    "pickscore": 21.925460901111364,
+    "qwen_judge": 0.7782576845856966
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_100-step_0-total_step_100",
+    "pickscore": 21.955573193728924,
+    "qwen_judge": 0.7794176753486681
+  }
+]

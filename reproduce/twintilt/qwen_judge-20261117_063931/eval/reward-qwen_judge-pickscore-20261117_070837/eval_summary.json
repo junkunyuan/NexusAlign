@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_0-step_0-total_step_0",
+    "qwen_judge": 0.5457933326770217
+  },
+  {
+    "epoch": 5,
+    "step": 0,
+    "total_step": 5,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_5-step_0-total_step_5",
+    "qwen_judge": 0.720499820617988
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 10,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_10-step_0-total_step_10",
+    "qwen_judge": 0.7394454881286947
+  },
+  {
+    "epoch": 15,
+    "step": 0,
+    "total_step": 15,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_15-step_0-total_step_15",
+    "qwen_judge": 0.7521559687447734
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_20-step_0-total_step_20",
+    "qwen_judge": 0.7530474472223432
+  },
+  {
+    "epoch": 25,
+    "step": 0,
+    "total_step": 25,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_25-step_0-total_step_25",
+    "qwen_judge": 0.7752029255971138
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 30,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_30-step_0-total_step_30",
+    "qwen_judge": 0.780906584157492
+  },
+  {
+    "epoch": 35,
+    "step": 0,
+    "total_step": 35,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_35-step_0-total_step_35",
+    "qwen_judge": 0.7830619425876648
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_40-step_0-total_step_40",
+    "qwen_judge": 0.7841741532029118
+  },
+  {
+    "epoch": 45,
+    "step": 0,
+    "total_step": 45,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_45-step_0-total_step_45",
+    "qwen_judge": 0.7876941763897776
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/twintilt_qwen_judge-20261117_063931/checkpoints/epoch_50-step_0-total_step_50",
+    "qwen_judge": 0.7925516454633907
+  }
+]

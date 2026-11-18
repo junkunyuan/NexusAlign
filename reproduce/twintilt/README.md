@@ -41,6 +41,14 @@
 | PickScore (ours) | 0.52 | 0.67 | **24.35** | 24.43 | 0.268 | 0.323 | 6.41 | 1.35 | 3.43 | 4.26 | 12.79 | [run](pickscore-20261115_153604) |
 | Multi-reward (ours) | **0.82** | 0.45 | **22.26** | 23.56 | **0.282** | **0.352** | 6.21 | 1.40 | 3.29 | 4.47 | 14.10 | [run](multi_reward-20261116_035928) |
 
+**Qwen judge:** SD3.5-M trained on the holistic score of a vision-language judge, evaluated with CFG off.
+
+| Model | #Iter | Qwen | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| SD3.5-M w/o CFG (ours) | 0 | 0.546 | 0.24 | 0.13 | 19.82 | 20.54 | 0.239 | 0.206 | 5.17 | -0.58 | 2.02 | 3.36 | -1.07 | [run](qwen_judge-20261117_191938) |
+| Qwen judge (ours) | 50 | **0.793** | 0.50 | 0.37 | 21.80 | 22.51 | 0.281 | 0.298 | 5.79 | 1.17 | 3.19 | 4.17 | 10.22 | [run](qwen_judge-20261117_063931) |
+| Qwen judge (ours) | 100 | **0.804** | 0.68 | 0.48 | 21.78 | 22.56 | 0.281 | 0.296 | 5.73 | 1.16 | 3.24 | 4.11 | 10.04 | [run](qwen_judge-20261117_191938) |
+
 **HPSv3 on MiniMax-H3-Image:** its native six-step sampler at 768 pixels without CFG, with the student weights.
 
 | Model | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
@@ -49,7 +57,7 @@
 | HPSv3 (ours) | 0.51 | 0.83 | 20.92 | 22.21 | 0.240 | 0.311 | 6.31 | 0.92 | 3.12 | 4.52 | **14.48** | [run](h3_hpsv3-20261116_082643) |
 
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench.
-- **Checkpoints:** the OCR row uses step 170 of a 200-step run, the GenEval row uses step 900 of a 1500-step run, the PickScore row uses step 600 of a 1500-step run, the multi-reward row uses its final step 500, and the HPSv3 row uses its final step 100. The configs now train these lengths. The base rows use step 0.
+- **Checkpoints:** the OCR row uses step 170 of a 200-step run, the GenEval row uses step 900 of a 1500-step run, the PickScore row uses step 600 of a 1500-step run, the multi-reward row uses its final step 500, the Qwen judge rows use their final steps 50 and 100, and the HPSv3 row uses its final step 100. The configs now train these lengths. The base rows use step 0.
 - **Bold:** in-domain results. The multi-reward trains on four of the metrics, so its row bolds four columns.
 
 ## Command

@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_0-step_0-total_step_0",
+    "pickscore": 19.817670982331038
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 10,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_10-step_0-total_step_10",
+    "pickscore": 21.78227008599788
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_20-step_0-total_step_20",
+    "pickscore": 21.63419177569449
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 30,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_30-step_0-total_step_30",
+    "pickscore": 21.608927968889475
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_40-step_0-total_step_40",
+    "pickscore": 21.807010939344764
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_50-step_0-total_step_50",
+    "pickscore": 21.90447522047907
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 60,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_60-step_0-total_step_60",
+    "pickscore": 21.945787170901895
+  },
+  {
+    "epoch": 70,
+    "step": 0,
+    "total_step": 70,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_70-step_0-total_step_70",
+    "pickscore": 21.936440892517567
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 80,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_80-step_0-total_step_80",
+    "pickscore": 21.92415319941938
+  },
+  {
+    "epoch": 90,
+    "step": 0,
+    "total_step": 90,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_90-step_0-total_step_90",
+    "pickscore": 21.938281103037298
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_100-step_0-total_step_100",
+    "pickscore": 21.980625672265887
+  }
+]

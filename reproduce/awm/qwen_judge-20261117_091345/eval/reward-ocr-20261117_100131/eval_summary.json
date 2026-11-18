@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.1327525176603772
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 10,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_10-step_0-total_step_10",
+    "ocr": 0.26134636245244003
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_20-step_0-total_step_20",
+    "ocr": 0.28318152011745035
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 30,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_30-step_0-total_step_30",
+    "ocr": 0.2968268937059817
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_40-step_0-total_step_40",
+    "ocr": 0.3305618759222551
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_50-step_0-total_step_50",
+    "ocr": 0.3757124089696918
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 60,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_60-step_0-total_step_60",
+    "ocr": 0.42221277415004155
+  },
+  {
+    "epoch": 70,
+    "step": 0,
+    "total_step": 70,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_70-step_0-total_step_70",
+    "ocr": 0.44797575631641073
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 80,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_80-step_0-total_step_80",
+    "ocr": 0.46822986921186127
+  },
+  {
+    "epoch": 90,
+    "step": 0,
+    "total_step": 90,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_90-step_0-total_step_90",
+    "ocr": 0.5075329584371164
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/awm_qwen_judge-20261117_091345/checkpoints/epoch_100-step_0-total_step_100",
+    "ocr": 0.5092547758129505
+  }
+]

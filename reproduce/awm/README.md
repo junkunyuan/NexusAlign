@@ -42,6 +42,13 @@
 | SD3.5-M w/o CFG (ours) | 2.047 | 0.24 | 0.13 | 19.82 | 20.54 | 0.239 | 0.206 | 5.17 | -0.58 | 2.03 | 3.36 | -1.06 | [run](multi_reward-20261116_230650) |
 | Multi-reward (ours) | **3.135** | 0.84 | 0.38 | 22.01 | 23.12 | 0.282 | 0.317 | 5.71 | 1.26 | 3.20 | 4.45 | 13.25 | [run](multi_reward-20261116_230650) |
 
+**Qwen judge:** SD3.5-M trained on the holistic score of a vision-language judge, evaluated with CFG off.
+
+| Model | Qwen | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| SD3.5-M w/o CFG (ours) | 0.546 | 0.24 | 0.13 | 19.82 | 20.54 | 0.239 | 0.206 | 5.17 | -0.58 | 2.03 | 3.36 | -1.06 | [run](qwen_judge-20261117_091345) |
+| Qwen judge (ours) | **0.783** | 0.62 | 0.51 | 21.98 | 22.53 | 0.281 | 0.292 | 5.75 | 1.11 | 3.20 | 4.10 | 10.13 | [run](qwen_judge-20261117_091345) |
+
 **HPSv3 on MiniMax-H3-Image:** its native six-step sampler at 768 pixels without CFG, with the student weights.
 
 | Model | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
@@ -50,7 +57,7 @@
 | HPSv3 (ours) | 0.67 | 0.65 | 21.52 | 22.50 | 0.263 | 0.292 | 5.67 | 1.06 | 3.20 | 4.39 | **12.09** | [run](h3_hpsv3-20261117_015506) |
 
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench. Multi† is GenEval + PickScore / 26 + ClipScore logit / 30 + HPSv2.1 on the GenEval test prompts, as DiffusionART reports it.
-- **Checkpoints:** the multi-reward row uses the final epoch 500, and its base row epoch 0. Epoch 400 is higher on 11 of the 12 metrics, all except DeQA (Multi† 3.174, GenEval† 0.87). The HPSv3 row uses its final step 100, where the metrics have reached a plateau.
+- **Checkpoints:** the multi-reward row uses the final epoch 500, and its base row epoch 0. Epoch 400 is higher on 11 of the 12 metrics, all except DeQA (Multi† 3.174, GenEval† 0.87). The HPSv3 row uses its final step 100, where the metrics have reached a plateau. The Qwen judge row also uses its final step 100, which is its best step on 10 of the 12 metrics.
 - **Bold:** in-domain results.
 - **Paper:** Tables 1 and 2 give only the in-domain metric. The OCR and PickScore rows come from its longer runs.
 

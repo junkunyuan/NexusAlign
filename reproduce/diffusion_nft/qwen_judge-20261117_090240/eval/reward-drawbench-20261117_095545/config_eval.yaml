@@ -1,0 +1,154 @@
+algorithm:
+  adv_clip_max: 5.0
+  autocast_dtype: fp16
+  beta: 1.0
+  eta_delay: 0
+  eta_max: 0.5
+  eta_rate: 0.001
+  group_size: 24
+  kl_beta: 0.0001
+  max_sequence_length: 128
+  name: diffusion_nft
+  num_steps: 10
+  resolution: 512
+  solver: dpm2
+  timestep_fraction: 0.99
+data:
+  file: '{split}.txt'
+  name: drawbench
+  path: data_and_model/NVlabs/DiffusionNFT/dataset/drawbench
+  seed: 42
+  split: test
+data_and_model_dir: data_and_model
+evaluator:
+  ckpts:
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_0-step_0-total_step_0
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_10-step_0-total_step_10
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_20-step_0-total_step_20
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_30-step_0-total_step_30
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_40-step_0-total_step_40
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_50-step_0-total_step_50
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_60-step_0-total_step_60
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_70-step_0-total_step_70
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_80-step_0-total_step_80
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_90-step_0-total_step_90
+  - logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_100-step_0-total_step_100
+  data:
+    file: '{split}.txt'
+    name: drawbench
+    path: data_and_model/NVlabs/DiffusionNFT/dataset/drawbench
+    seed: 42
+    split: test
+  dry_run: false
+  eval_dir: logs/diffusion_nft_qwen_judge_100steps-20261117_090240/eval/reward-drawbench-20261117_095545
+  global_seed: 0
+  guidance_scale: 1.0
+  model_key: ema
+  name: reward
+  new_run: false
+  num_steps: 40
+  num_workers: 4
+  per_proc_batch_size: 16
+  split: test
+exp_info: diffusion_nft_qwen_judge_100steps-20261117_090240
+job_type: eval
+log_dir: logs/diffusion_nft_qwen_judge_100steps-20261117_090240
+model:
+  attn_backend: sdpa
+  compile: true
+  dtype: fp32
+  ema_enabled: true
+  frozen_dtype: fp16
+  fsdp:
+    activation_ckpt: false
+    cpu_offload: false
+    param_dtype: fp32
+    reduce_dtype: fp32
+    replicate: -1
+    shard: -1
+    strategy: full_shard
+  lora:
+    alpha: 64
+    init: gaussian
+    rank: 32
+    target_modules:
+    - attn.add_k_proj
+    - attn.add_q_proj
+    - attn.add_v_proj
+    - attn.to_add_out
+    - attn.to_k
+    - attn.to_out.0
+    - attn.to_q
+    - attn.to_v
+  name: sd3_5_medium
+  path: data_and_model/stabilityai/stable-diffusion-3.5-medium
+  text_encoder_dtype: fp16
+  vae_dtype: fp32
+notes: ''
+project_path: .
+provenance:
+  hardware:
+    cpu_count: 224
+    cpu_model: Intel(R) Xeon(R) Platinum 8480+
+    gpu_capability: '9.0'
+    gpu_count: 8
+    gpu_memory_gb: 79.1
+    gpu_name: NVIDIA H100 80GB HBM3
+    os: Linux-5.15.152
+  software:
+    cuda: '12.6'
+    cudnn: 91002
+    nccl: 2.29.3
+    python: 3.11.2
+    torch: 2.12.0+cu126
+  start_time: '2026-11-17 09:55:45'
+rank: 0
+rewards:
+  aesthetic:
+    clip_path: data_and_model/openai/clip-vit-large-patch14
+    mlp_path: data_and_model/aesthetic/sac+logos+ava1-l14-linearMSE.pth
+    name: aesthetic
+  unifiedreward:
+    api_key: flowgrpo
+    model: UnifiedReward-7b-v1.5
+    name: unifiedreward
+    normalize: true
+    timeout: 300
+    url: http://127.0.0.1:17140
+timestamp: true
+trainer:
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1.0e-08
+  adam_weight_decay: 0.0001
+  debug: false
+  deterministic: true
+  ema_decay: 0.9
+  ema_update_interval: 1
+  epochs: 100
+  groups_per_epoch: 48
+  learning_rate: 0.0003
+  load_ckpt_only_model: false
+  log_every_n_steps: 2
+  log_hardware: true
+  log_tensorboard: false
+  max_grad_norm: 1.0
+  name: nft
+  peak_tflops: null
+  plot_every_n_seconds: 30
+  resume_path: null
+  sample_batch_size: 9
+  save_ckpt_every_n_epochs: 10
+  save_ckpt_every_n_steps: null
+  save_ckpt_keep_last_n_epochs: 100
+  save_ckpt_keep_last_n_steps: 10
+  save_ckpt_only_model: false
+  seed: 42
+  shuffle: true
+  updates_per_epoch: 1
+wandb:
+  entity: null
+  mode: disabled
+  name: null
+  project: nexus_align
+world_size: 8

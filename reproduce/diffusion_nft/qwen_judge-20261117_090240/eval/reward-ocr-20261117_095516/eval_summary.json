@@ -1,0 +1,79 @@
+[
+  {
+    "epoch": 0,
+    "step": 0,
+    "total_step": 0,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_0-step_0-total_step_0",
+    "ocr": 0.13382870949627537
+  },
+  {
+    "epoch": 10,
+    "step": 0,
+    "total_step": 10,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_10-step_0-total_step_10",
+    "ocr": 0.3028076458938624
+  },
+  {
+    "epoch": 20,
+    "step": 0,
+    "total_step": 20,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_20-step_0-total_step_20",
+    "ocr": 0.33221149682438683
+  },
+  {
+    "epoch": 30,
+    "step": 0,
+    "total_step": 30,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_30-step_0-total_step_30",
+    "ocr": 0.36419214660951166
+  },
+  {
+    "epoch": 40,
+    "step": 0,
+    "total_step": 40,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_40-step_0-total_step_40",
+    "ocr": 0.3891117890002409
+  },
+  {
+    "epoch": 50,
+    "step": 0,
+    "total_step": 50,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_50-step_0-total_step_50",
+    "ocr": 0.4106228541253616
+  },
+  {
+    "epoch": 60,
+    "step": 0,
+    "total_step": 60,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_60-step_0-total_step_60",
+    "ocr": 0.457478168024026
+  },
+  {
+    "epoch": 70,
+    "step": 0,
+    "total_step": 70,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_70-step_0-total_step_70",
+    "ocr": 0.4927621302089784
+  },
+  {
+    "epoch": 80,
+    "step": 0,
+    "total_step": 80,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_80-step_0-total_step_80",
+    "ocr": 0.5065112664163046
+  },
+  {
+    "epoch": 90,
+    "step": 0,
+    "total_step": 90,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_90-step_0-total_step_90",
+    "ocr": 0.5265923901095239
+  },
+  {
+    "epoch": 100,
+    "step": 0,
+    "total_step": 100,
+    "ckpt": "logs/diffusion_nft_qwen_judge_100steps-20261117_090240/checkpoints/epoch_100-step_0-total_step_100",
+    "ocr": 0.538090112311085
+  }
+]

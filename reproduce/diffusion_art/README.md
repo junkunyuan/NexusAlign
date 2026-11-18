@@ -38,6 +38,13 @@
 | SD3.5-M w/o CFG (ours) | 2.046 | 0.24 | 0.13 | 19.82 | 20.54 | 0.239 | 0.206 | 5.17 | -0.58 | 2.02 | 3.36 | -1.06 | [run](multi_reward-20261116_025704) |
 | Multi-reward (ours) | **2.887** | 0.64 | 0.40 | 19.88 | 21.73 | 0.276 | 0.286 | 4.97 | 0.83 | 2.56 | 2.00 | 5.55 | [run](multi_reward-20261116_025704) |
 
+**Qwen judge:** SD3.5-M trained on the holistic score of a vision-language judge, evaluated with CFG off.
+
+| Model | Qwen | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| SD3.5-M w/o CFG (ours) | 0.546 | 0.24 | 0.13 | 19.82 | 20.54 | 0.239 | 0.206 | 5.17 | -0.58 | 2.02 | 3.36 | -1.06 | [run](qwen_judge-20261117_071715) |
+| Qwen judge (ours) | **0.778** | 0.60 | 0.34 | 21.57 | 22.38 | 0.276 | 0.283 | 5.71 | 0.98 | 3.15 | 3.82 | 8.98 | [run](qwen_judge-20261117_071715) |
+
 **HPSv3 on MiniMax-H3-Image:** its native six-step sampler at 768 pixels without CFG, with the student weights.
 
 | Model | #Iter | GenEval† | OCR† | PickScore† | PickScore | ClipScore | HPSv2.1 | Aesthetic | ImgRwd | UniRwd | DeQA | HPSv3 | Run |
@@ -47,7 +54,7 @@
 | HPSv3 (ours) | 200 | 0.69 | 0.70 | 20.56 | 22.23 | 0.263 | 0.304 | 5.93 | 1.02 | 3.16 | 3.96 | **13.93** | [run](h3_hpsv3-20261117_012220) |
 
 - **Evaluation dataset:** † marks a task-specific dataset. The other columns use DrawBench. Multi† is GenEval + PickScore / 26 + ClipScore logit / 30 + HPSv2.1 on the GenEval test prompts, as the official code reports it.
-- **Checkpoints:** each row uses the final epoch 500, and the base rows use epoch 0. Each HPSv3 row uses its own final step. Step 40 is the best step of both HPSv3 runs, which agree there (PickScore† 21.77 and 21.80, HPSv3 13.65 and 13.66), because they over-optimize the reward after step 50. The 200-step run loses OCR† down to 0.47 at step 160 while its HPSv3 stays near 13.9, so the extra steps give nothing.
+- **Checkpoints:** each row uses the final epoch 500, and the base rows use epoch 0. Each HPSv3 row uses its own final step. Step 40 is the best step of both HPSv3 runs, which agree there (PickScore† 21.77 and 21.80, HPSv3 13.65 and 13.66), because they over-optimize the reward after step 50. The 200-step run loses OCR† down to 0.47 at step 160 while its HPSv3 stays near 13.9, so the extra steps give nothing. The Qwen judge row uses its final step 100, and step 80 is better on 8 of the 12 metrics (Qwen 0.780, PickScore† 21.74, HPSv3 10.55).
 - **Bold:** in-domain results.
 - **Paper:** Fig. 5 gives only the training rewards of the single tasks, and the official code gives no multi-reward results. Our training rewards match these curves to our observation.
 
