@@ -1,8 +1,8 @@
 # @package _global_
 # Train DiffusionART on the holistic score of the Qwen judge with SD3.5-M, CFG-free, on
 # the PickScore prompts.
-# The rollout follows our PickScore run, and the 50 epochs follow the Qwen judge run of
-# TwinTilt, which the minimax-h3-qwen branch of its code trains.
+# The rollout follows our PickScore run, and the 50 epochs follow the Qwen judge task
+# of the TwinTilt code.
 # Launch with: EXP=qwen_judge bash scripts/reproduce/diffusion_art_train.sh
 exp_info: diffusion_art_qwen_judge  # experiment name
 

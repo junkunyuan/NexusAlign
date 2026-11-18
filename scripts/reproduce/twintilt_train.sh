@@ -3,7 +3,8 @@
 # TwinTilt Training.
 # ================================================================================
 # The tasks follow the TwinTilt code: pickscore, geneval, ocr,
-# multi_reward_geneval_clip30 (multi_reward here), and h3_hpsv3 on MiniMax-H3-Image.
+# multi_reward_geneval_clip30 (multi_reward here), and h3_hpsv3 and h3_qwen_judge
+# on MiniMax-H3-Image.
 # Usage:
 #     EXP=pickscore bash scripts/reproduce/twintilt_train.sh (on every node)
 # ================================================================================
@@ -12,7 +13,8 @@ set -e
 # --------------------------------------------------------------------------------
 # Prepare the experiment.
 # --------------------------------------------------------------------------------
-EXP=${EXP:-pickscore}  # pickscore, geneval, ocr, multi_reward, qwen_judge, h3_hpsv3
+EXP=${EXP:-pickscore}  # pickscore, geneval, ocr, multi_reward, qwen_judge,
+                      # h3_hpsv3, h3_qwen_judge
 echo "🚀 twintilt training: EXP=${EXP}"
 
 # --------------------------------------------------------------------------------
@@ -110,6 +112,18 @@ case "$EXP" in
     ALGORITHM=twintilt_minimax_h3_image
     TRAINER=twintilt_minimax_h3_image
     SERVERS=(hpsv3)
+    source scripts/tools/h3_overlay.sh
+    ;;
+  h3_qwen_judge)
+    # The judge task of h3_hpsv3: one judge per node, across its GPUs.
+    prepare MiniMaxAI/MiniMax-H3-Image
+    prepare Qwen/Qwen3.8-27B
+    DATA=pickscore
+    REWARD=qwen_judge
+    MODEL=minimax_h3_image
+    ALGORITHM=twintilt_minimax_h3_image
+    TRAINER=twintilt_minimax_h3_image
+    SERVERS=(qwen_judge)
     source scripts/tools/h3_overlay.sh
     ;;
   *) echo "❌ Unknown EXP: ${EXP}"; exit 1 ;;

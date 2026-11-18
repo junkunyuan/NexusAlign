@@ -1,0 +1,18 @@
+# @package _global_
+# Train TwinTilt on the holistic score of the Qwen judge with MiniMax-H3-Image, on the
+# PickScore prompts.
+# The TwinTilt code trains H3-Image with this judge. The model, the algorithm, and
+# the trainer follow our h3_hpsv3 task.
+# Each rank holds one whole group of 24 images, so the 48 groups need 48 ranks. On 8
+# GPUs per node, that is 6 nodes.
+# Launch with: EXP=h3_qwen_judge bash scripts/reproduce/twintilt_train.sh
+exp_info: twintilt_h3_qwen_judge  # experiment name
+
+reward:
+  # A group of 768-pixel images needs tens of GB in the judge, as HPSv3 does.
+  batch_size: 4  # images per request
+
+trainer:
+  epochs: 100  # training epochs; 100 steps, as our h3_hpsv3 task trains
+  # The run saves 11 checkpoints, at epochs 0, 10, ..., 100.
+  save_ckpt_every_n_epochs: 10  # save every N epochs, plus the initial weights at epoch 0
